@@ -1,0 +1,13 @@
+# Agents
+.ai-workspace/
+prompts/
+
+# Python
+__pycache__/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
