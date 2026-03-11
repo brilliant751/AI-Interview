@@ -1,6 +1,6 @@
 # Agents
 .ai-workspace/
-prompts/
+txt/
 
 # Python
 __pycache__/
