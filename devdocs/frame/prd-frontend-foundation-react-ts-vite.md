@@ -27,8 +27,8 @@
 - 路由体系（占位页可运行）：
   - `/login` 登录页
   - `/` 首页
-  - `/interview/:sessionId?` 面试页
-  - `/report/:reportId?` 报告页
+  - `/interview/:sessionId` 面试页
+  - `/report/:reportId` 报告页
 - 目录规范：`components/`、`pages/`、`services/` 等最佳实践分层。
 - 文档交付：
   - `frontend/README.md`（项目结构、运行方式、开发规范）
@@ -101,6 +101,17 @@
   - `status: 'INIT'|'RUNNING'|'PAUSED'|'FINISHED'`
   - `currentRound: number`
   - `remainingSeconds: number`
+
+> **说明（API -> Store 映射约定）**
+> - 前端全局状态 `InterviewSessionState` 中的状态枚举为：`'IDLE'|'RUNNING'|'PAUSED'|'ENDED'`，字段名为 `status`。
+> - API 返回字段与前端 Store 的映射关系如下：
+>   - `status: 'INIT'` -> `InterviewSessionState.status: 'IDLE'`
+>   - `status: 'RUNNING'` -> `InterviewSessionState.status: 'RUNNING'`
+>   - `status: 'PAUSED'` -> `InterviewSessionState.status: 'PAUSED'`
+>   - `status: 'FINISHED'` -> `InterviewSessionState.status: 'ENDED'`
+> - 轮次字段映射：
+>   - API：`currentRound: number`
+>   - Store：`round: number`
 
 ### 3.4 报告接口（占位）
 
@@ -245,12 +256,13 @@
 - `libraryId=/axios/axios-docs`，关键词：`axios.create`, `request/response interceptors`, `401 refresh and retry`
 
 关键结论：
-- Vite 推荐通过 `create-vite` 脚手架创建项目；当前文档显示 Node 版本基线需较新（文档片段为 `20.19+ / 22.12+`）。
+- Vite 推荐通过 `create-vite` 脚手架创建项目；当前官方文档片段提示其支持较新的 Node 版本范围（示例为 `20.19+ / 22.12+`），但**本仓库仍以 Node 20 LTS 为统一基线**。
 - Zustand 推荐以 `TypeScript + persist` 组合实现可恢复状态，并建议在“组合后的总 store”层应用中间件。
 - Axios 官方文档支持通过实例拦截器处理鉴权头、统一错误与 401 后刷新重试。
 
 版本适用说明：
-- 本 PRD 以当前 Context7 返回的官方文档片段为准；具体落地版本应在 Agent 2 规划时与仓库锁定版本再次对齐。
+- 本仓库前端与工具链统一使用 **Node 20 LTS**：Node.js `>=20.11`，建议实际运行和 CI 环境锁定至 `20.19.x`，与 `plan/PLAN.md` 保持一致。
+- Vite 官方额外声明对 Node `22.12+` 的兼容性，本 PRD 将其仅视为**上游兼容范围 / 可选说明**；若后续确需在本仓库中采用 Node 22，则需在规划阶段单独评估并与仓库计划文档再次对齐。
 
 ## 11. 落盘信息
 - 目标路径：`devdocs/frame/prd-frontend-foundation-react-ts-vite.md`
