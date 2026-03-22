@@ -1,0 +1,18 @@
+﻿services:
+  funasr-asr:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: funasr-asr
+    restart: unless-stopped
+    ports:
+      - "10095:10095"
+    environment:
+      MODEL_NAME: paraformer-zh
+      VAD_MODEL: fsmn-vad
+      PUNC_MODEL: ct-punc
+      DEVICE: cpu
+      BATCH_SIZE_S: "300"
+    volumes:
+      - ./cache/modelscope:/root/.cache/modelscope
+      - ./cache/huggingface:/root/.cache/huggingface
