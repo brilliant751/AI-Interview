@@ -1,0 +1,17 @@
+:root {
+  font-family: "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  color: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+

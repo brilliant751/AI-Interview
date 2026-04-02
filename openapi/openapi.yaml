@@ -1,0 +1,169 @@
+openapi: 3.0.3
+info:
+  title: AI Interview API
+  version: "v1"
+servers:
+  - url: http://localhost:8000
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/resumes:
+    post:
+      summary: 上传简历
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required:
+                - file
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resume_id:
+                    type: string
+                  parse_status:
+                    type: string
+  /api/v1/interviews:
+    post:
+      summary: 创建面试会话
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resume_id, job_role]
+              properties:
+                resume_id: { type: string }
+                job_role: { type: string, enum: [java, web] }
+                difficulty: { type: string, enum: [easy, medium, hard] }
+                input_mode: { type: string, enum: [text, voice] }
+                output_mode: { type: string, enum: [text, voice] }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/{interview_id}/status:
+    get:
+      summary: 查询面试会话状态
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+        "404":
+          description: 会话不存在
+  /api/v1/interviews/{interview_id}/turns:
+    post:
+      summary: 提交面试轮次
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string }
+                answer_text: { type: string }
+                asr_text: { type: string }
+      responses:
+        "200":
+          description: 成功
+        "409":
+          description: 状态冲突
+  /api/v1/interviews/{interview_id}/finish:
+    post:
+      summary: 结束面试并触发报告
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      responses:
+        "202":
+          description: 已接收
+  /api/v1/report/{interview_id}:
+    get:
+      summary: 查询面试报告
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/report/{interview_id}/retry:
+    post:
+      summary: 重试报告生成
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 已触发重试
+  /api/v1/interviews/history:
+    get:
+      summary: 查询历史记录
+      parameters:
+        - in: query
+          name: job_role
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/admin/imports/materials:
+    post:
+      summary: 触发材料导入
+      responses:
+        "200":
+          description: 成功
+        "403":
+          description: 权限不足
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

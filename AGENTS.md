@@ -24,6 +24,17 @@
 - 每次如果有新的接口添加，或有接口经过任何改动，都需要同步更新对应的 API 集合与文档（如 Postman Collection / OpenAPI，缺失时需创建）
 - 接口文档文件需保持官方支持的标准 JSON/YAML 格式
 
+## Material 数据源约定
+
+- 岗位材料统一放在 `material/` 目录，并按岗位拆分子目录。
+- 当前材料位置：
+  - Java 题库：`material/java/java-interview/`
+  - Java 知识库：`material/java/java-knowledge/`
+  - Web 题库：`material/web/interview.md`
+  - Web 知识库：`material/web/knowledge.md`
+- 任何 Agent 规划/实现“题库导入、知识库向量化、检索构建”任务时，必须以上述路径为唯一输入来源，若新增来源需先在本文件登记。
+- 数据导入必须提供可复用脚本（支持重复执行、幂等、失败重试、校验报告），禁止仅通过一次性手工导入完成交付。
+
 ## Multi-Agent Workflow
 
 ### Goal
@@ -74,6 +85,7 @@
 - Agent 4 只能改动 测试文件，不得改动 业务代码。
 - Agent 4 编写与维护的测试必须符合最佳实践（可读、可复现、稳定、覆盖正常/异常/边界路径）。
 - Agent 4 必须自动执行测试命令并记录结果（含前端、后端、端到端与质量门禁结果，按项目实际适用）。
+- Agent 4 在执行前端端到端测试时，必须直接使用 Playwright MCP 工具链执行与取证；非必要不使用本地 Playwright CLI 命令替代。
 - Agent 4 目标测试覆盖率不低于 80%（若仓库已有更高门槛，以仓库门槛为准）。
 
 ### Process Gates
