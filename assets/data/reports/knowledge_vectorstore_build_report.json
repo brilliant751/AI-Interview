@@ -1,9 +1,9 @@
 {
-  "total_rows": 357,
-  "written_rows": 357,
+  "total_rows": 468,
+  "written_rows": 468,
   "dimension": 64,
   "roles": {
-    "java": 123,
+    "java": 234,
     "web": 234
   },
   "dry_run": false
