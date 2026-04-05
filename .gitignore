@@ -11,3 +11,10 @@ __pycache__/
 .idea/
 .DS_Store
 
+
+# Node.js
+node_modules/
+dist/
+build/
+*.log
+.pytest_cache/

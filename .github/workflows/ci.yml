@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  backend-and-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastapi uvicorn pydantic pydantic-settings pytest httpx python-multipart
+
+      - name: Compile Check
+        run: python -m compileall backend/app scripts/data tests/backend
+
+      - name: Data Validation Gate
+        run: |
+          python scripts/data/validate_materials.py --strict
+          python scripts/data/normalize_materials.py --dry-run
+          python scripts/data/build_question_bank.py --dry-run
+          python scripts/data/build_knowledge_vectorstore.py --dry-run
+
+      - name: Backend Tests
+        run: python -m unittest discover -s tests/backend -p "test_*.py"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Frontend Tests
+        run: npm run test
