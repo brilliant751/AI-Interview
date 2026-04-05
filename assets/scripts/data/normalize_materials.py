@@ -166,65 +166,36 @@ def split_web_knowledge_segments(content: str) -> list[Segment]:
 
 
 def split_java_knowledge_segments(content: str) -> list[Segment]:
-    """按 Java 知识库层级切分条目，最细到四级标题，最粗到二级标题。"""
+    """按 Java 知识库中的三级标题切分条目。"""
     heading_matches = list(HEADING_PATTERN.finditer(content))
-    headings: list[HeadingNode] = []
-    for match in heading_matches:
-        level = len(match.group(1))
-        if level > 4:
-            continue
-        start = match.start()
-        line_end = content.find("\n", start)
-        headings.append(
-            HeadingNode(
-                level=level,
-                start=start,
-                line_end=len(content) if line_end == -1 else line_end + 1,
-                title=match.group(2).strip(),
-            )
-        )
-
-    def find_section_end(index: int) -> int:
-        """查找当前标题作用域的结束位置。"""
-        current_level = headings[index].level
-        for candidate in headings[index + 1 :]:
-            if candidate.level <= current_level:
-                return candidate.start
-        return len(content)
-
-    def build_heading_context(index: int) -> list[tuple[int, str]]:
-        """构建当前标题的层级上下文。"""
-        context: dict[int, str] = {}
-        current_level = headings[index].level
-        for item in headings[: index + 1]:
-            if item.level <= current_level:
-                context[item.level] = item.title
-        return [(level, context[level]) for level in range(1, current_level + 1) if level in context]
-
+    headings = [(len(match.group(1)), match.start(), match.group(2).strip()) for match in heading_matches]
+    h3_indices = [idx for idx, item in enumerate(headings) if item[0] == 3]
     segments: list[Segment] = []
-    seg_no = 0
-    for index, heading in enumerate(headings):
-        if heading.level < 2 or heading.level > 4:
-            continue
-        section_end = find_section_end(index)
-        child_positions = [
-            item.start
-            for item in headings[index + 1 :]
-            if item.start < section_end and item.level == heading.level + 1
-        ]
-        body_end = child_positions[0] if child_positions else section_end
-        body = content[heading.line_end:body_end].strip()
-        if not body:
-            continue
-
-        context = build_heading_context(index)
-        content_parts = [f"{'#' * level} {title}" for level, title in context]
-        content_parts.append(body)
-        seg_no += 1
+    for seg_no, heading_index in enumerate(h3_indices, start=1):
+        _, heading_start, heading_text = headings[heading_index]
+        next_h3_start = len(content)
+        for candidate_index in h3_indices:
+            if candidate_index <= heading_index:
+                continue
+            next_h3_start = headings[candidate_index][1]
+            break
+        line_end = content.find("\n", heading_start)
+        body_start = len(content) if line_end == -1 else line_end + 1
+        body = content[body_start:next_h3_start].strip()
+        h1_title = find_last_heading(headings, 1, heading_start)
+        h2_title = find_last_heading(headings, 2, heading_start)
+        content_parts = []
+        if h1_title:
+            content_parts.append(f"# {h1_title}")
+        if h2_title:
+            content_parts.append(f"## {h2_title}")
+        content_parts.append(f"### {heading_text}")
+        if body:
+            content_parts.append(body)
         segments.append(
             Segment(
                 order=seg_no,
-                title=heading.title,
+                title=heading_text,
                 body="\n\n".join(content_parts).strip(),
             )
         )
