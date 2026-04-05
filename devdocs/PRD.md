@@ -34,7 +34,7 @@
   - 表达维度：语速、清晰度、自信度。
   - 结构化报告：得分、亮点、不足、改进建议。
 - 历史沉淀：保存面试记录和报告，下一次面试参考历史短板调整策略。
-- 数据前置构建（离线）：基于 `material/` 的题库与知识材料，离线完成标准化、校验、入库与向量化，再进入联调开发。
+- 数据前置构建（离线）：基于 `assets/material/` 的题库与知识材料，离线完成标准化、校验、入库与向量化，再进入联调开发。
 
 ### 2.2 Out of Scope
 - 非计算机类岗位面试体系建设。
@@ -371,19 +371,19 @@
 - SQLite 推荐导入阶段使用事务与 WAL 模式，降低锁冲突并提升批量写入稳定性。
 - LangChain 文档加载/切分流程强调保留 `source` 等 metadata，便于后续追溯与过滤检索。
 
-### 7.7 材料可导入性抽检结论（基于 material）
+### 7.7 材料可导入性抽检结论（基于 assets/material）
 
 抽检样本：
-- `material/java/java-interview/high-concurrency.md`（结构正常，含“题干/类别/解析”）
-- `material/web/interview.md`（结构正常，含“第N题 + 题干/类别/解析”）
-- `material/web/knowledge.md`（结构可解析，但为“主题 + 编号问答”格式）
-- `material/java/java-interview/java-interview-additional.md`（已修复，结构可解析）
+- `assets/material/java/java-interview/high-concurrency.md`（结构正常，含“题干/类别/解析”）
+- `assets/material/web/interview.md`（结构正常，含“第N题 + 题干/类别/解析”）
+- `assets/material/web/knowledge.md`（结构可解析，但为“主题 + 编号问答”格式）
+- `assets/material/java/java-interview/java-interview-additional.md`（已修复，结构可解析）
 
 结构一致性结论：
-- Java 题库（`material/java/java-interview/`）全部文件满足关键标题可提取要求（`题干/类别/解析`），可进入自动导入流程。
-- Web 题库（`material/web/interview.md`）满足关键标题可提取要求（`第N题 + 题干/类别/解析`）。
-- Java 知识库（`material/java/java-knowledge/`）为层级标题结构（H1/H2/H3），可按标题分段导入。
-- Web 知识库（`material/web/knowledge.md`）为“`## 主题 + 编号问答`”结构，可导入，但解析规则需与 Java 知识库分开实现。
+- Java 题库（`assets/material/java/java-interview/`）全部文件满足关键标题可提取要求（`题干/类别/解析`），可进入自动导入流程。
+- Web 题库（`assets/material/web/interview.md`）满足关键标题可提取要求（`第N题 + 题干/类别/解析`）。
+- Java 知识库（`assets/material/java/java-knowledge/`）为层级标题结构（H1/H2/H3），可按标题分段导入。
+- Web 知识库（`assets/material/web/knowledge.md`）为“`## 主题 + 编号问答`”结构，可导入，但解析规则需与 Java 知识库分开实现。
 
 ### 7.8 数据前置流程与脚本化要求（强制）
 
@@ -397,10 +397,10 @@ G0 必须产出：
 
 脚本交付要求（可复用）：
 - 必须提供可重复执行脚本，建议路径：
-  - `scripts/data/normalize_materials.py`
-  - `scripts/data/build_question_bank.py`
-  - `scripts/data/build_knowledge_vectorstore.py`
-  - `scripts/data/validate_materials.py`
+  - `assets/scripts/data/normalize_materials.py`
+  - `assets/scripts/data/build_question_bank.py`
+  - `assets/scripts/data/build_knowledge_vectorstore.py`
+  - `assets/scripts/data/validate_materials.py`
 - 脚本必须支持：
   - 幂等导入（同一条数据重复执行不产生重复记录，使用稳定主键与 `upsert`）。
   - `--dry-run` 模式（仅校验不写入）。
@@ -420,7 +420,7 @@ G0 必须产出：
 ## 8. 验收标准（Given-When-Then）
 
 ### AC-00 数据前置门禁通过
-- Given `material/` 已提供岗位题库与知识库材料。
+- Given `assets/material/` 已提供岗位题库与知识库材料。
 - When 执行离线数据构建脚本。
 - Then 生成标准化产物、SQLite、Chroma 持久化目录与质量报告，且阻断级错误为 0。
 

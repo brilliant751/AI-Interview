@@ -31,10 +31,10 @@
 - 已执行命令与结果：
   - `rtk python -m unittest discover -s tests/backend -p 'test_*.py' -v` -> 4 passed
   - `rtk npm --prefix frontend test` -> 2 files passed, 3 tests passed
-  - `rtk python scripts/data/validate_materials.py --strict` -> 通过（13/13）
-  - `rtk python scripts/data/normalize_materials.py --dry-run` -> 通过
-  - `rtk python scripts/data/build_question_bank.py --dry-run` -> 通过
-  - `rtk python scripts/data/build_knowledge_vectorstore.py --dry-run` -> 通过
+  - `rtk python assets/scripts/data/validate_materials.py --strict` -> 通过（13/13）
+  - `rtk python assets/scripts/data/normalize_materials.py --dry-run` -> 通过
+  - `rtk python assets/scripts/data/build_question_bank.py --dry-run` -> 通过
+  - `rtk python assets/scripts/data/build_knowledge_vectorstore.py --dry-run` -> 通过
   - `rtk npm --prefix frontend run build` -> 构建成功
 - 覆盖率：
   - 前端覆盖率命令 `rtk npm --prefix frontend test -- --coverage` 失败：缺少 `@vitest/coverage-v8`

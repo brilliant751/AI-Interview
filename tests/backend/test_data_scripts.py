@@ -18,7 +18,7 @@ class DataScriptsTestCase(unittest.TestCase):
     def test_validate_and_normalize(self) -> None:
         """验证校验脚本与规范化 dry-run 可执行。"""
         validate = subprocess.run(
-            ["python", "scripts/data/validate_materials.py", "--strict"],
+            ["python", "assets/scripts/data/validate_materials.py", "--strict"],
             cwd=self.repo_root,
             capture_output=True,
             text=True,
@@ -27,7 +27,7 @@ class DataScriptsTestCase(unittest.TestCase):
         self.assertEqual(0, validate.returncode, msg=validate.stderr)
 
         normalize = subprocess.run(
-            ["python", "scripts/data/normalize_materials.py", "--dry-run"],
+            ["python", "assets/scripts/data/normalize_materials.py", "--dry-run"],
             cwd=self.repo_root,
             capture_output=True,
             text=True,
@@ -37,13 +37,13 @@ class DataScriptsTestCase(unittest.TestCase):
 
     def test_question_bank_build_is_idempotent(self) -> None:
         """验证题库构建脚本可重复执行。"""
-        cmd = ["python", "scripts/data/build_question_bank.py", "--dry-run"]
+        cmd = ["python", "assets/scripts/data/build_question_bank.py", "--dry-run"]
         first = subprocess.run(cmd, cwd=self.repo_root, capture_output=True, text=True, check=False)
         second = subprocess.run(cmd, cwd=self.repo_root, capture_output=True, text=True, check=False)
         self.assertEqual(0, first.returncode, msg=first.stderr)
         self.assertEqual(0, second.returncode, msg=second.stderr)
 
-        report_path = self.repo_root / "data" / "reports" / "question_bank_build_report.json"
+        report_path = self.repo_root / "assets" / "data" / "reports" / "question_bank_build_report.json"
         report = json.loads(report_path.read_text(encoding="utf-8"))
         self.assertIn("total_rows", report)
         self.assertTrue(report["dry_run"])
@@ -51,4 +51,3 @@ class DataScriptsTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

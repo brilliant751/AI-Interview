@@ -1,0 +1,10 @@
+{
+  "total_rows": 357,
+  "written_rows": 357,
+  "dimension": 64,
+  "roles": {
+    "java": 123,
+    "web": 234
+  },
+  "dry_run": false
+}

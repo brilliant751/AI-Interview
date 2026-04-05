@@ -7,8 +7,8 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-MATERIAL_ROOT = REPO_ROOT / "material"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+MATERIAL_ROOT = REPO_ROOT / "assets" / "material"
 
 
 def discover_material_files() -> list[dict[str, str]]:
@@ -62,4 +62,3 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> int:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             count += 1
     return count
-
