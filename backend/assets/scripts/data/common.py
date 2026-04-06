@@ -7,8 +7,11 @@ import json
 from pathlib import Path
 from typing import Iterable
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
-MATERIAL_ROOT = REPO_ROOT / "assets" / "material"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+ASSETS_ROOT = BACKEND_ROOT / "assets"
+MATERIAL_ROOT = ASSETS_ROOT / "material"
+DATA_ROOT = ASSETS_ROOT / "data"
 
 
 def discover_material_files() -> list[dict[str, str]]:

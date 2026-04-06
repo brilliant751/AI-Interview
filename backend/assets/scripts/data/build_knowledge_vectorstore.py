@@ -9,7 +9,7 @@ import math
 import re
 from pathlib import Path
 
-from common import REPO_ROOT, write_json, write_jsonl
+from common import DATA_ROOT, write_json, write_jsonl
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,17 +17,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="构建知识库向量索引")
     parser.add_argument(
         "--input-dir",
-        default=str(REPO_ROOT / "assets" / "data" / "normalized"),
+        default=str(DATA_ROOT / "normalized"),
         help="规范化输入目录",
     )
     parser.add_argument(
         "--output-dir",
-        default=str(REPO_ROOT / "assets" / "data" / "chroma"),
+        default=str(DATA_ROOT / "chroma"),
         help="向量索引输出目录",
     )
     parser.add_argument(
         "--report",
-        default=str(REPO_ROOT / "assets" / "data" / "reports" / "knowledge_vectorstore_build_report.json"),
+        default=str(DATA_ROOT / "reports" / "knowledge_vectorstore_build_report.json"),
         help="报告输出路径",
     )
     parser.add_argument(

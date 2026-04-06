@@ -6,7 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
-from common import REPO_ROOT, write_json
+from common import DATA_ROOT, MATERIAL_ROOT, write_json
+from normalize_materials import split_java_knowledge_segments
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,35 +15,31 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="校验 Java 知识库条目数")
     parser.add_argument(
         "--java-material-dir",
-        default=str(REPO_ROOT / "assets" / "material" / "java" / "java-knowledge"),
+        default=str(MATERIAL_ROOT / "java" / "java-knowledge"),
         help="Java 知识文档目录",
     )
     parser.add_argument(
         "--normalized-path",
-        default=str(REPO_ROOT / "assets" / "data" / "normalized" / "java_knowledge.jsonl"),
+        default=str(DATA_ROOT / "normalized" / "java_knowledge.jsonl"),
         help="标准化知识库 JSONL 路径",
     )
     parser.add_argument(
         "--vector-index-path",
-        default=str(REPO_ROOT / "assets" / "data" / "chroma" / "kb_java" / "knowledge_index.jsonl"),
+        default=str(DATA_ROOT / "chroma" / "kb_java" / "knowledge_index.jsonl"),
         help="向量索引 JSONL 路径",
     )
     parser.add_argument(
         "--report",
-        default=str(REPO_ROOT / "assets" / "data" / "reports" / "java_knowledge_count_compare.json"),
+        default=str(DATA_ROOT / "reports" / "java_knowledge_count_compare.json"),
         help="比对报告输出路径",
     )
     return parser.parse_args()
 
 
-def count_h3_entries(file_path: Path) -> int:
-    """按三级标题统计单个文档条目数。"""
-    count = 0
-    with file_path.open("r", encoding="utf-8") as f:
-        for line in f:
-            if line.startswith("### "):
-                count += 1
-    return count
+def count_expected_entries(file_path: Path) -> int:
+    """按当前导入切分规则统计单个文档条目数。"""
+    content = file_path.read_text(encoding="utf-8")
+    return len(split_java_knowledge_segments(content))
 
 
 def load_jsonl_count_by_source(jsonl_path: Path, source_prefix: str) -> dict[str, int]:
@@ -70,15 +67,15 @@ def main() -> int:
     java_material_dir = Path(args.java_material_dir)
     expected_by_doc: dict[str, int] = {}
     for file_path in sorted(java_material_dir.glob("*.md")):
-        expected_by_doc[file_path.name] = count_h3_entries(file_path)
+        expected_by_doc[file_path.name] = count_expected_entries(file_path)
 
     normalized_counter = load_jsonl_count_by_source(
         Path(args.normalized_path),
-        "assets/material/java/java-knowledge/",
+        "backend/assets/material/java/java-knowledge/",
     )
     vector_counter = load_jsonl_count_by_source(
         Path(args.vector_index_path),
-        "assets/material/java/java-knowledge/",
+        "backend/assets/material/java/java-knowledge/",
     )
 
     mismatched_docs: list[dict[str, int | str]] = []

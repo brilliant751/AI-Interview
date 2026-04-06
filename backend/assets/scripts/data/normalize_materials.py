@@ -1,4 +1,4 @@
-"""将 assets/material 目录标准化为可导入 JSONL。"""
+"""将 backend/assets/material 目录标准化为可导入 JSONL。"""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from common import REPO_ROOT, discover_material_files, stable_id, write_jsonl
+from common import DATA_ROOT, REPO_ROOT, discover_material_files, stable_id, write_jsonl
 
 QUESTION_PATTERN = re.compile(r"^#{2,3}\s*第\s*(\d+)\s*题[：:]\s*(.+?)\s*$", re.MULTILINE)
 WEB_KNOWLEDGE_PATTERN = re.compile(r"^\s*(\d+)\.\s+(.+?)\s*$", re.MULTILINE)
@@ -38,7 +38,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="标准化材料为 JSONL")
     parser.add_argument(
         "--output-dir",
-        default=str(REPO_ROOT / "assets" / "data" / "normalized"),
+        default=str(DATA_ROOT / "normalized"),
         help="规范化输出目录",
     )
     parser.add_argument("--dry-run", action="store_true", help="仅统计，不写出文件")

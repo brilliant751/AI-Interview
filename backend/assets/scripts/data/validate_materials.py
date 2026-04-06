@@ -1,4 +1,4 @@
-"""校验 assets/material 目录材料质量，并输出可追溯报告。"""
+"""校验 backend/assets/material 目录材料质量，并输出可追溯报告。"""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from common import REPO_ROOT, discover_material_files, write_json
+from common import DATA_ROOT, discover_material_files, write_json
 
 
 @dataclass
@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="校验材料文件并输出报告")
     parser.add_argument(
         "--report",
-        default=str(REPO_ROOT / "assets" / "data" / "reports" / "material_validation_report.json"),
+        default=str(DATA_ROOT / "reports" / "material_validation_report.json"),
         help="报告输出路径",
     )
     parser.add_argument(

@@ -17,10 +17,10 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 async def import_materials(_: str = Depends(require_admin)) -> dict:
     """触发材料导入流水线。"""
     cmds = [
-        ["python", "assets/scripts/data/validate_materials.py", "--strict"],
-        ["python", "assets/scripts/data/normalize_materials.py"],
-        ["python", "assets/scripts/data/build_question_bank.py"],
-        ["python", "assets/scripts/data/build_knowledge_vectorstore.py"],
+        ["python", "backend/assets/scripts/data/validate_materials.py", "--strict"],
+        ["python", "backend/assets/scripts/data/normalize_materials.py"],
+        ["python", "backend/assets/scripts/data/build_question_bank.py"],
+        ["python", "backend/assets/scripts/data/build_knowledge_vectorstore.py"],
     ]
     for cmd in cmds:
         result = subprocess.run(cmd, capture_output=True, text=True, cwd=REPO_ROOT)

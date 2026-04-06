@@ -7,7 +7,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from common import REPO_ROOT, write_json
+from common import DATA_ROOT, write_json
 
 
 def parse_args() -> argparse.Namespace:
@@ -15,17 +15,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="构建题库 SQLite 数据")
     parser.add_argument(
         "--input-dir",
-        default=str(REPO_ROOT / "assets" / "data" / "normalized"),
+        default=str(DATA_ROOT / "normalized"),
         help="规范化输入目录",
     )
     parser.add_argument(
         "--db-path",
-        default=str(REPO_ROOT / "assets" / "data" / "sqlite" / "interview.db"),
+        default=str(DATA_ROOT / "sqlite" / "interview.db"),
         help="SQLite 输出路径",
     )
     parser.add_argument(
         "--report",
-        default=str(REPO_ROOT / "assets" / "data" / "reports" / "question_bank_build_report.json"),
+        default=str(DATA_ROOT / "reports" / "question_bank_build_report.json"),
         help="构建报告输出路径",
     )
     parser.add_argument("--dry-run", action="store_true", help="仅统计，不写入数据库")

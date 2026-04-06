@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ASSETS_ROOT = BACKEND_ROOT / "assets"
 
 
 class Settings(BaseSettings):
@@ -19,8 +23,8 @@ class Settings(BaseSettings):
 
     app_env: str = "dev"
     app_name: str = "AI Interview API"
-    db_path: str = "assets/data/sqlite/interview.db"
-    chroma_dir: str = "assets/data/chroma"
+    db_path: str = str(ASSETS_ROOT / "data" / "sqlite" / "interview.db")
+    chroma_dir: str = str(ASSETS_ROOT / "data" / "chroma")
     llm_provider: str = "mock"
     asr_provider: str = "mock"
     tts_provider: str = "mock"
