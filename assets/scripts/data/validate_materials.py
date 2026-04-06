@@ -1,4 +1,4 @@
-"""校验 material 目录材料质量，并输出可追溯报告。"""
+"""校验 assets/material 目录材料质量，并输出可追溯报告。"""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="校验材料文件并输出报告")
     parser.add_argument(
         "--report",
-        default=str(REPO_ROOT / "data" / "reports" / "material_validation_report.json"),
+        default=str(REPO_ROOT / "assets" / "data" / "reports" / "material_validation_report.json"),
         help="报告输出路径",
     )
     parser.add_argument(
@@ -185,4 +185,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

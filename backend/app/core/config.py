@@ -19,8 +19,8 @@ class Settings(BaseSettings):
 
     app_env: str = "dev"
     app_name: str = "AI Interview API"
-    db_path: str = "data/sqlite/interview.db"
-    chroma_dir: str = "data/chroma"
+    db_path: str = "assets/data/sqlite/interview.db"
+    chroma_dir: str = "assets/data/chroma"
     llm_provider: str = "mock"
     asr_provider: str = "mock"
     tts_provider: str = "mock"
@@ -33,4 +33,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """获取全局单例配置对象。"""
     return Settings()
-

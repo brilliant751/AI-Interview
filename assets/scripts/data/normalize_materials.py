@@ -1,4 +1,4 @@
-"""将 material 目录标准化为可导入 JSONL。"""
+"""将 assets/material 目录标准化为可导入 JSONL。"""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from pathlib import Path
 from common import REPO_ROOT, discover_material_files, stable_id, write_jsonl
 
 QUESTION_PATTERN = re.compile(r"^#{2,3}\s*第\s*(\d+)\s*题[：:]\s*(.+?)\s*$", re.MULTILINE)
+WEB_KNOWLEDGE_PATTERN = re.compile(r"^\s*(\d+)\.\s+(.+?)\s*$", re.MULTILINE)
+HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 
 
 @dataclass
@@ -21,12 +23,22 @@ class Segment:
     body: str
 
 
+@dataclass
+class HeadingNode:
+    """表示知识文档中的标题节点。"""
+
+    level: int
+    start: int
+    line_end: int
+    title: str
+
+
 def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="标准化材料为 JSONL")
     parser.add_argument(
         "--output-dir",
-        default=str(REPO_ROOT / "data" / "normalized"),
+        default=str(REPO_ROOT / "assets" / "data" / "normalized"),
         help="规范化输出目录",
     )
     parser.add_argument("--dry-run", action="store_true", help="仅统计，不写出文件")
@@ -109,22 +121,143 @@ def chunk_knowledge_text(text: str, chunk_size: int = 1200, overlap: int = 150) 
     return chunks
 
 
+def find_last_heading(headings: list[tuple[int, int, str]], level: int, pos: int) -> str:
+    """在指定位置前查找最近的指定级别标题。"""
+    latest = ""
+    for heading_level, heading_pos, heading_text in headings:
+        if heading_level != level:
+            continue
+        if heading_pos >= pos:
+            break
+        latest = heading_text
+    return latest
+
+
+def split_web_knowledge_segments(content: str) -> list[Segment]:
+    """按 Web 知识库中的编号题干切分条目。"""
+    entry_matches = list(WEB_KNOWLEDGE_PATTERN.finditer(content))
+    section_matches = [
+        (2, match.start(), match.group(2).strip())
+        for match in HEADING_PATTERN.finditer(content)
+        if len(match.group(1)) == 2
+    ]
+    segments: list[Segment] = []
+    for idx, match in enumerate(entry_matches):
+        start = match.end()
+        end = entry_matches[idx + 1].start() if idx + 1 < len(entry_matches) else len(content)
+        body = content[start:end].strip()
+        question_no = int(match.group(1))
+        question_title = match.group(2).strip()
+        section_title = find_last_heading(section_matches, 2, match.start())
+        content_parts = []
+        if section_title:
+            content_parts.append(f"## {section_title}")
+        content_parts.append(f"{question_no}. {question_title}")
+        if body:
+            content_parts.append(body)
+        segments.append(
+            Segment(
+                order=question_no,
+                title=question_title,
+                body="\n\n".join(content_parts).strip(),
+            )
+        )
+    return segments
+
+
+def split_java_knowledge_segments(content: str) -> list[Segment]:
+    """按 Java 知识库层级切分条目，最细到四级标题，最粗到二级标题。"""
+    heading_matches = list(HEADING_PATTERN.finditer(content))
+    headings: list[HeadingNode] = []
+    for match in heading_matches:
+        level = len(match.group(1))
+        if level > 4:
+            continue
+        start = match.start()
+        line_end = content.find("\n", start)
+        headings.append(
+            HeadingNode(
+                level=level,
+                start=start,
+                line_end=len(content) if line_end == -1 else line_end + 1,
+                title=match.group(2).strip(),
+            )
+        )
+
+    def find_section_end(index: int) -> int:
+        """查找当前标题作用域的结束位置。"""
+        current_level = headings[index].level
+        for candidate in headings[index + 1 :]:
+            if candidate.level <= current_level:
+                return candidate.start
+        return len(content)
+
+    def build_heading_context(index: int) -> list[tuple[int, str]]:
+        """构建当前标题的层级上下文。"""
+        context: dict[int, str] = {}
+        current_level = headings[index].level
+        for item in headings[: index + 1]:
+            if item.level <= current_level:
+                context[item.level] = item.title
+        return [(level, context[level]) for level in range(1, current_level + 1) if level in context]
+
+    segments: list[Segment] = []
+    seg_no = 0
+    for index, heading in enumerate(headings):
+        if heading.level < 2 or heading.level > 4:
+            continue
+        section_end = find_section_end(index)
+        child_positions = [
+            item.start
+            for item in headings[index + 1 :]
+            if item.start < section_end and item.level == heading.level + 1
+        ]
+        body_end = child_positions[0] if child_positions else section_end
+        body = content[heading.line_end:body_end].strip()
+        if not body:
+            continue
+
+        context = build_heading_context(index)
+        content_parts = [f"{'#' * level} {title}" for level, title in context]
+        content_parts.append(body)
+        seg_no += 1
+        segments.append(
+            Segment(
+                order=seg_no,
+                title=heading.title,
+                body="\n\n".join(content_parts).strip(),
+            )
+        )
+    return segments
+
+
 def normalize_knowledge_file(role: str, source_path: Path, content: str) -> list[dict]:
     """标准化单个知识库文件为分块记录。"""
     source_rel_path = str(source_path.relative_to(REPO_ROOT))
-    chunks = chunk_knowledge_text(content)
+    if role == "web":
+        segments = split_web_knowledge_segments(content)
+    elif role == "java":
+        segments = split_java_knowledge_segments(content)
+    else:
+        segments = []
+    if not segments:
+        fallback_chunks = chunk_knowledge_text(content)
+        segments = [
+            Segment(order=idx, title=source_path.stem, body=chunk)
+            for idx, chunk in enumerate(fallback_chunks, start=1)
+        ]
     rows: list[dict] = []
-    for idx, chunk in enumerate(chunks, start=1):
-        record_id = stable_id(role, source_rel_path, str(idx), chunk[:80])
+    for seg in segments:
+        record_id = stable_id(role, source_rel_path, str(seg.order), seg.title)
         rows.append(
             {
                 "record_id": record_id,
                 "role": role,
                 "content_type": "knowledge",
                 "source_path": source_rel_path,
-                "chunk_no": idx,
-                "title": source_path.stem,
-                "content": chunk,
+                "chunk_no": seg.order,
+                "title": seg.title,
+                "content": seg.body,
             }
         )
     return rows
@@ -185,4 +318,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
