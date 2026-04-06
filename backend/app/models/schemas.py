@@ -38,6 +38,26 @@ class InterviewTurnRequest(BaseModel):
     stage: str
     answer_text: str = ""
     asr_text: str = ""
+    answer_audio_url: str = ""
+    answer_audio_format: str = "mp3"
+
+
+class PipelineProviders(BaseModel):
+    """链路 provider 信息。"""
+
+    asr: str | None = None
+    llm: str | None = None
+    tts: str | None = None
+
+
+class PipelineMeta(BaseModel):
+    """链路元数据。"""
+
+    input_source: str
+    providers: PipelineProviders
+    degrade_flags: list[str] = Field(default_factory=list)
+    trace_id: str
+    latency_ms: int = 0
 
 
 class InterviewTurnResponse(BaseModel):
@@ -50,6 +70,7 @@ class InterviewTurnResponse(BaseModel):
     live_score: int
     output_mode: str
     tts_audio_url: str | None = None
+    pipeline_meta: PipelineMeta | None = None
 
 
 class InterviewFinishResponse(BaseModel):

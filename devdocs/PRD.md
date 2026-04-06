@@ -397,24 +397,10 @@ G0 必须产出：
 
 脚本交付要求（可复用）：
 - 必须提供可重复执行脚本，建议路径：
-<<<<<<< HEAD
   - `backend/assets/scripts/data/normalize_materials.py`
   - `backend/assets/scripts/data/build_question_bank.py`
   - `backend/assets/scripts/data/build_knowledge_vectorstore.py`
   - `backend/assets/scripts/data/validate_materials.py`
-=======
-<<<<<<< HEAD
-  - `assets/scripts/data/normalize_materials.py`
-  - `assets/scripts/data/build_question_bank.py`
-  - `assets/scripts/data/build_knowledge_vectorstore.py`
-  - `assets/scripts/data/validate_materials.py`
-=======
-  - `scripts/data/normalize_materials.py`
-  - `scripts/data/build_question_bank.py`
-  - `scripts/data/build_knowledge_vectorstore.py`
-  - `scripts/data/validate_materials.py`
->>>>>>> 5a37598 (setup)
->>>>>>> a4c5834 (setup)
 - 脚本必须支持：
   - 幂等导入（同一条数据重复执行不产生重复记录，使用稳定主键与 `upsert`）。
   - `--dry-run` 模式（仅校验不写入）。
@@ -434,15 +420,7 @@ G0 必须产出：
 ## 8. 验收标准（Given-When-Then）
 
 ### AC-00 数据前置门禁通过
-<<<<<<< HEAD
 - Given `backend/assets/material/` 已提供岗位题库与知识库材料。
-=======
-<<<<<<< HEAD
-- Given `assets/material/` 已提供岗位题库与知识库材料。
-=======
-- Given `material/` 已提供岗位题库与知识库材料。
->>>>>>> 5a37598 (setup)
->>>>>>> a4c5834 (setup)
 - When 执行离线数据构建脚本。
 - Then 生成标准化产物、SQLite、Chroma 持久化目录与质量报告，且阻断级错误为 0。
 

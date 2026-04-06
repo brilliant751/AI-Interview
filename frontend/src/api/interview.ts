@@ -21,6 +21,24 @@ export interface SubmitTurnPayload {
   stage: string
   answer_text: string
   asr_text?: string
+  answer_audio_url?: string
+  answer_audio_format?: string
+}
+
+/** 链路 provider 信息。 */
+export interface PipelineProviders {
+  asr?: string
+  llm?: string
+  tts?: string
+}
+
+/** 链路元数据。 */
+export interface PipelineMeta {
+  input_source: string
+  providers: PipelineProviders
+  degrade_flags: string[]
+  trace_id: string
+  latency_ms: number
 }
 
 /** 轮次提交响应。 */
@@ -32,6 +50,7 @@ export interface SubmitTurnResponse {
   live_score: number
   output_mode: 'text' | 'voice'
   tts_audio_url?: string
+  pipeline_meta?: PipelineMeta
 }
 
 /** 报告响应。 */

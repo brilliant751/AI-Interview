@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -69,6 +70,13 @@ class InterviewRepository:
                   answer_text TEXT NOT NULL,
                   next_question TEXT NOT NULL,
                   live_score INTEGER NOT NULL,
+                  input_source TEXT,
+                  asr_provider TEXT,
+                  llm_provider TEXT,
+                  tts_provider TEXT,
+                  degrade_flags TEXT NOT NULL DEFAULT '[]',
+                  trace_id TEXT,
+                  latency_ms INTEGER NOT NULL DEFAULT 0,
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
 
@@ -133,6 +141,13 @@ class InterviewRepository:
             )
             self._ensure_column(conn, "interview_sessions", "technical_count", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "interview_sessions", "follow_up_count", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "interview_turns", "input_source", "TEXT")
+            self._ensure_column(conn, "interview_turns", "asr_provider", "TEXT")
+            self._ensure_column(conn, "interview_turns", "llm_provider", "TEXT")
+            self._ensure_column(conn, "interview_turns", "tts_provider", "TEXT")
+            self._ensure_column(conn, "interview_turns", "degrade_flags", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(conn, "interview_turns", "trace_id", "TEXT")
+            self._ensure_column(conn, "interview_turns", "latency_ms", "INTEGER NOT NULL DEFAULT 0")
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
         """确保表包含指定列，缺失则补齐。"""
@@ -207,17 +222,49 @@ class InterviewRepository:
                 (interview_id,),
             )
 
-    def add_turn(self, interview_id: str, stage: str, answer_text: str, next_question: str, score: int) -> None:
-        """写入单轮面试记录。"""
+    def add_turn(
+        self,
+        interview_id: str,
+        stage: str,
+        answer_text: str,
+        next_question: str,
+        score: int,
+        input_source: str | None = None,
+        asr_provider: str | None = None,
+        llm_provider: str | None = None,
+        tts_provider: str | None = None,
+        degrade_flags: list[str] | None = None,
+        trace_id: str | None = None,
+        latency_ms: int = 0,
+    ) -> str:
+        """写入单轮面试记录并返回 turn_id。"""
         turn_id = f"turn_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(
                 """
-                INSERT INTO interview_turns(turn_id, interview_id, stage, answer_text, next_question, live_score)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO interview_turns(
+                  turn_id, interview_id, stage, answer_text, next_question, live_score,
+                  input_source, asr_provider, llm_provider, tts_provider, degrade_flags, trace_id, latency_ms
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (turn_id, interview_id, stage, answer_text, next_question, score),
+                (
+                    turn_id,
+                    interview_id,
+                    stage,
+                    answer_text,
+                    next_question,
+                    score,
+                    input_source,
+                    asr_provider,
+                    llm_provider,
+                    tts_provider,
+                    json.dumps(degrade_flags or [], ensure_ascii=False),
+                    trace_id,
+                    latency_ms,
+                ),
             )
+        return turn_id
 
     def list_turns(self, interview_id: str) -> list[dict]:
         """获取会话所有轮次。"""

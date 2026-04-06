@@ -29,12 +29,35 @@ describe('interviewStore', () => {
       question: '请描述一次性能优化',
       score: 78,
       followUpCount: 1,
+      ttsAudioUrl: 'https://mock-tts.local/test.mp3',
+      pipelineMeta: {
+        input_source: 'TEXT',
+        trace_id: 'trace_123',
+        latency_ms: 99,
+        providers: { asr: undefined, llm: 'mock', tts: 'mock' },
+        degrade_flags: [],
+      },
     })
     const state = useInterviewStore.getState()
     expect(state.currentStage).toBe('TECHNICAL')
     expect(state.currentQuestion).toContain('性能优化')
     expect(state.liveScore).toBe(78)
     expect(state.followUpCount).toBe(1)
+    expect(state.ttsAudioUrl).toContain('mock-tts.local')
+    expect(state.lastInputSource).toBe('TEXT')
+  })
+
+  test('should handle missing pipeline meta gracefully', () => {
+    useInterviewStore.getState().updateTurnResult({
+      stage: 'BEHAVIORAL',
+      question: '请描述一次跨团队协作冲突解决经历',
+      score: 82,
+      followUpCount: 2,
+    })
+    const state = useInterviewStore.getState()
+    expect(state.currentStage).toBe('BEHAVIORAL')
+    expect(state.pipelineMeta).toBeNull()
+    expect(state.lastInputSource).toBe('')
+    expect(state.ttsAudioUrl).toBe('')
   })
 })
-

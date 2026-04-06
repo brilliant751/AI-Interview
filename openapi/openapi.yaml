@@ -172,10 +172,50 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InterviewTurnRequest'
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string }
+                answer_text: { type: string }
+                asr_text: { type: string }
+                answer_audio_url: { type: string }
+                answer_audio_format: { type: string, default: mp3 }
       responses:
         "200":
           description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  stage: { type: string }
+                  next_question: { type: string }
+                  follow_up_count: { type: integer }
+                  live_score: { type: integer }
+                  output_mode: { type: string }
+                  tts_audio_url: { type: string, nullable: true }
+                  pipeline_meta:
+                    type: object
+                    properties:
+                      input_source: { type: string }
+                      providers:
+                        type: object
+                        properties:
+                          asr: { type: string, nullable: true }
+                          llm: { type: string, nullable: true }
+                          tts: { type: string, nullable: true }
+                      degrade_flags:
+                        type: array
+                        items: { type: string }
+                      trace_id: { type: string }
+                      latency_ms: { type: integer }
+        "409":
+          description: 状态冲突
+        "502":
+          description: 上游服务失败
+        "504":
+          description: 上游超时
   /api/v1/interviews/{interview_id}/finish:
     post:
       summary: 结束面试并触发报告
@@ -252,6 +292,26 @@ paths:
       responses:
         "200":
           description: 成功
+        "403":
+          description: 权限不足
+  /api/v1/admin/providers/health:
+    get:
+      summary: 查询 provider 健康状态
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall: { type: string, enum: [UP, DOWN, DEGRADED] }
+                  providers:
+                    type: object
+                    properties:
+                      asr: { type: string, enum: [UP, DOWN, DEGRADED] }
+                      llm: { type: string, enum: [UP, DOWN, DEGRADED] }
+                      tts: { type: string, enum: [UP, DOWN, DEGRADED] }
 components:
   securitySchemes:
     bearerAuth:

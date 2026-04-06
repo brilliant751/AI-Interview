@@ -117,9 +117,56 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"res_xxx\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"text\",\n  \"output_mode\": \"text\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
             },
             "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "Submit Turn",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stage\": \"SELF_INTRO\",\n  \"answer_text\": \"我有三年前后端开发经验。\",\n  \"answer_audio_url\": \"https://example.com/answer.mp3\",\n  \"answer_audio_format\": \"mp3\"\n}"
+            },
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns"
+          }
+        },
+        {
+          "name": "Get Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/status"
+          }
+        },
+        {
+          "name": "Finish Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/finish"
+          }
+        },
+        {
+          "name": "Get Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report/{{interview_id}}"
+          }
+        },
+        {
+          "name": "Retry Report",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report/{{interview_id}}/retry"
           }
         },
         {
@@ -127,7 +174,7 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
-            "url": "{{base_url}}/interviews/history"
+            "url": "{{base_url}}/interviews/history?page=1&page_size=10"
           }
         }
       ]
@@ -148,6 +195,22 @@
               "raw": "{\n  \"rebuild_mode\": \"incremental\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": true,\n  \"chunk_model\": \"qwen2.5:7b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
             },
             "url": "{{base_url}}/admin/imports/materials"
+          }
+        },
+        {
+          "name": "Get Material Import Task",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/admin/imports/materials/{{task_id}}"
+          }
+        },
+        {
+          "name": "Provider Health",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/admin/providers/health"
           }
         }
       ]

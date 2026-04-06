@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
+from app.core.errors import ApiError  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
@@ -37,6 +38,24 @@ class InterviewFlowTestCase(unittest.TestCase):
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
         os.environ.pop("AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED", None)
         os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
+
+    def _create_interview(self, output_mode: str = "text") -> str:
+        """创建测试用会话并返回 interview_id。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertEqual(200, resume_resp.status_code)
+        resume_id = resume_resp.json()["resume_id"]
+
+        create_payload = {
+            "resume_id": resume_id,
+            "job_role": "java",
+            "difficulty": "medium",
+            "input_mode": "voice" if output_mode == "voice" else "text",
+            "output_mode": output_mode,
+        }
+        create_resp = self.client.post("/api/v1/interviews", json=create_payload, headers=self.user_headers)
+        self.assertEqual(200, create_resp.status_code)
+        return create_resp.json()["interview_id"]
 
     def test_interview_flow(self) -> None:
         """验证主流程接口连通与状态可用。"""
@@ -82,6 +101,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual(200, turn_resp.status_code)
         self.assertIn("next_question", turn_resp.json())
         self.assertEqual("TECHNICAL", turn_resp.json()["stage"])
+        self.assertIn("pipeline_meta", turn_resp.json())
 
         for _ in range(2):
             tech_turn = self.client.post(
@@ -108,6 +128,90 @@ class InterviewFlowTestCase(unittest.TestCase):
         history_resp = self.client.get("/api/v1/interviews/history", headers=self.user_headers)
         self.assertEqual(200, history_resp.status_code)
         self.assertGreaterEqual(history_resp.json()["total"], 1)
+
+    def test_input_priority_prefers_asr_text(self) -> None:
+        """验证输入优先级为 asr_text > answer_text。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "asr_text": "这是客户端 ASR 结果",
+                "answer_text": "这是普通文本",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        self.assertEqual("ASR_CLIENT", pipeline_meta["input_source"])
+
+    def test_llm_and_tts_fallback(self) -> None:
+        """验证 LLM 与 TTS 失败时返回降级标记。"""
+        interview_id = self._create_interview(output_mode="voice")
+        service = self.client.app.state.interview_service
+        service.question_workflow.llm_provider = "openai"
+
+        def _raise_llm(*args, **kwargs):
+            raise RuntimeError("llm fail")
+
+        def _raise_tts(*args, **kwargs):
+            raise ApiError(code="TTS_UPSTREAM_FAILED", message="tts fail", status_code=502)
+
+        service.question_workflow.generate_by_llm = _raise_llm
+        service.voice_service.tts = _raise_tts
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "我负责过高并发服务优化"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        flags = turn_resp.json()["pipeline_meta"]["degrade_flags"]
+        self.assertIn("LLM_FALLBACK_TEMPLATE", flags)
+        self.assertIn("TTS_FALLBACK_TEXT", flags)
+        self.assertIsNone(turn_resp.json()["tts_audio_url"])
+
+    def test_asr_failure_without_text_fallback(self) -> None:
+        """验证仅音频输入且 ASR 失败时返回上游错误。"""
+        interview_id = self._create_interview()
+        service = self.client.app.state.interview_service
+
+        def _raise_asr(*args, **kwargs):
+            raise ApiError(code="ASR_UPSTREAM_FAILED", message="asr fail", status_code=502)
+
+        service.voice_service.asr = _raise_asr
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "answer_audio_url": "https://example.com/a.mp3",
+                "answer_audio_format": "mp3",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(502, turn_resp.status_code)
+        self.assertEqual("ASR_UPSTREAM_FAILED", turn_resp.json()["error"]["code"])
+
+    def test_audio_input_uses_server_asr_when_success(self) -> None:
+        """验证音频输入成功时走服务端 ASR 路径并记录来源。"""
+        interview_id = self._create_interview()
+        service = self.client.app.state.interview_service
+        service.voice_service.asr = lambda *_args, **_kwargs: "这是服务端语音识别文本"
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "answer_audio_url": "https://example.com/ok.mp3",
+                "answer_audio_format": "mp3",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        self.assertEqual("ASR_SERVER", pipeline_meta["input_source"])
+        self.assertEqual(service.voice_service.asr_provider, pipeline_meta["providers"]["asr"])
 
     def test_admin_import_requires_admin_role(self) -> None:
         """验证管理接口权限控制生效。"""
