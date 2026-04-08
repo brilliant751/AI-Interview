@@ -107,9 +107,25 @@
       "request": {
         "method": "POST",
         "header": [
+          { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Idempotency-Key", "value": "{{$guid}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"rebuild_mode\": \"full\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": false,\n  \"chunk_model\": \"qwen3.5-2b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
+        },
+        "url": "{{base_url}}/api/v1/admin/imports/materials"
+      }
+    },
+    {
+      "name": "查询导入任务状态",
+      "request": {
+        "method": "GET",
+        "header": [
           { "key": "Authorization", "value": "Bearer {{admin_token}}" }
         ],
-        "url": "{{base_url}}/api/v1/admin/imports/materials"
+        "url": "{{base_url}}/api/v1/admin/imports/materials/{{import_task_id}}"
       }
     }
   ],
@@ -118,6 +134,7 @@
     { "key": "user_token", "value": "user-token" },
     { "key": "admin_token", "value": "admin-token" },
     { "key": "resume_id", "value": "" },
-    { "key": "interview_id", "value": "" }
+    { "key": "interview_id", "value": "" },
+    { "key": "import_task_id", "value": "" }
   ]
 }

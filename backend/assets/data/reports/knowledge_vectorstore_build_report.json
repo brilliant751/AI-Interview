@@ -1,10 +1,25 @@
 {
+  "status": "SUCCESS",
   "total_rows": 468,
+  "updated_rows": 468,
   "written_rows": 468,
-  "dimension": 64,
+  "embedding_dimensions": {
+    "java": 768,
+    "web": 768
+  },
+  "rebuild_mode": "full",
+  "embed_model": "nomic-embed-text",
+  "ollama_base_url": "http://127.0.0.1:11434",
+  "embed_batch_size": 32,
   "roles": {
     "java": 234,
     "web": 234
   },
+  "collection_version": {
+    "java": "kb_java_v1",
+    "web": "kb_web_v1"
+  },
+  "task_id": "manual-20260408-rerun",
+  "errors": [],
   "dry_run": false
 }

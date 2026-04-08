@@ -33,6 +33,14 @@ class HeadingNode:
     title: str
 
 
+def estimate_tokens(text: str) -> int:
+    """估算文本 token 数量，供构建统计与分块质量观察。"""
+    compact = re.sub(r"\s+", " ", text).strip()
+    if not compact:
+        return 0
+    return max(1, len(compact) // 2)
+
+
 def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="标准化材料为 JSONL")
@@ -249,6 +257,7 @@ def normalize_knowledge_file(role: str, source_path: Path, content: str) -> list
     rows: list[dict] = []
     for seg in segments:
         record_id = stable_id(role, source_rel_path, str(seg.order), seg.title)
+        chunk_tokens = estimate_tokens(seg.body)
         rows.append(
             {
                 "record_id": record_id,
@@ -258,6 +267,10 @@ def normalize_knowledge_file(role: str, source_path: Path, content: str) -> list
                 "chunk_no": seg.order,
                 "title": seg.title,
                 "content": seg.body,
+                "section_path": seg.title,
+                "chunk_chars": len(seg.body),
+                "chunk_tokens": chunk_tokens,
+                "chunk_model": "qwen3.5-2b",
             }
         )
     return rows

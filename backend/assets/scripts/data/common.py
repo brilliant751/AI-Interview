@@ -65,3 +65,10 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> int:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             count += 1
     return count
+
+
+def write_build_report(path: Path, payload: dict) -> None:
+    """写入构建报告并维护 latest 指针副本。"""
+    write_json(path, payload)
+    latest_path = path.parent / "knowledge_vectorstore_build_report_latest.json"
+    write_json(latest_path, payload)

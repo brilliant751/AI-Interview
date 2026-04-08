@@ -155,10 +155,75 @@ paths:
           description: 成功
   /api/v1/admin/imports/materials:
     post:
-      summary: 触发材料导入
+      summary: 触发材料导入异步任务
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rebuild_mode: { type: string, enum: [full, incremental], default: full }
+                roles:
+                  type: array
+                  items: { type: string, enum: [java, web] }
+                dry_run: { type: boolean, default: false }
+                chunk_model: { type: string, default: qwen3.5-2b }
+                embedding_model: { type: string, default: nomic-embed-text }
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+                  stage: { type: string }
+                  progress: { type: integer }
+                  idempotency_hit: { type: boolean }
+        "409":
+          description: 全量任务冲突
+        "424":
+          description: 依赖不可用
+        "502":
+          description: 模型服务不可用
+        "403":
+          description: 权限不足
+  /api/v1/admin/imports/materials/{task_id}:
+    get:
+      summary: 查询材料导入任务状态
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema: { type: string }
       responses:
         "200":
           description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+                  stage: { type: string }
+                  progress: { type: integer }
+                  rebuild_mode: { type: string, enum: [full, incremental] }
+                  roles:
+                    type: array
+                    items: { type: string, enum: [java, web] }
+                  dry_run: { type: boolean }
+                  last_error: { type: string }
+                  report_path: { type: string }
+        "400":
+          description: 任务不存在或参数错误
         "403":
           description: 权限不足
 components:

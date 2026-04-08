@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     token_secret: str = "dev-token-secret"
     user_token: str = "user-token"
     admin_token: str = "admin-token"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    chunk_model: str = "qwen3.5-2b"
+    embedding_model: str = "nomic-embed-text"
+    embed_batch_size: int = 32
+    retrieval_fallback_enabled: bool = False
+    kb_collection_alias_file: str = str(ASSETS_ROOT / "data" / "chroma" / "aliases.json")
 
 
 @lru_cache(maxsize=1)

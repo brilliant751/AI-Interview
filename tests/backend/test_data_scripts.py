@@ -50,6 +50,36 @@ class DataScriptsTestCase(unittest.TestCase):
         self.assertIn("total_rows", report)
         self.assertTrue(report["dry_run"])
 
+    def test_vectorstore_build_dry_run(self) -> None:
+        """验证向量索引构建 dry-run 可执行并输出关键字段。"""
+        cmd = [
+            "python",
+            "backend/assets/scripts/data/build_knowledge_vectorstore.py",
+            "--dry-run",
+            "--rebuild-mode",
+            "incremental",
+            "--roles",
+            "java",
+        ]
+        result = subprocess.run(cmd, cwd=self.repo_root, capture_output=True, text=True, check=False)
+        self.assertEqual(0, result.returncode, msg=result.stderr)
+        report_path = (
+            self.repo_root / "backend" / "assets" / "data" / "reports" / "knowledge_vectorstore_build_report.json"
+        )
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        self.assertIn("collection_version", report)
+        self.assertTrue(report["dry_run"])
+
+    def test_retrieval_eval_script(self) -> None:
+        """验证检索评测脚本可执行并输出基础指标。"""
+        cmd = ["python", "backend/assets/scripts/data/evaluate_retrieval.py"]
+        result = subprocess.run(cmd, cwd=self.repo_root, capture_output=True, text=True, check=False)
+        self.assertEqual(0, result.returncode, msg=result.stderr)
+        report_path = self.repo_root / "backend" / "assets" / "data" / "reports" / "retrieval_eval_report.json"
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        self.assertIn("hit_at_3", report)
+        self.assertIn("mrr", report)
+
 
 if __name__ == "__main__":
     unittest.main()

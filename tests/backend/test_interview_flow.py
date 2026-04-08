@@ -22,6 +22,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         """初始化测试环境与客户端。"""
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["AI_INTERVIEW_DB_PATH"] = os.path.join(self.tmpdir.name, "test.db")
+        os.environ["AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED"] = "true"
         get_settings.cache_clear()
         self.client = TestClient(create_app())
         self.client.__enter__()
@@ -33,6 +34,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.tmpdir.cleanup()
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
+        os.environ.pop("AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED", None)
 
     def test_interview_flow(self) -> None:
         """验证主流程接口连通与状态可用。"""
@@ -107,7 +109,11 @@ class InterviewFlowTestCase(unittest.TestCase):
 
     def test_admin_import_requires_admin_role(self) -> None:
         """验证管理接口权限控制生效。"""
-        forbidden_resp = self.client.post("/api/v1/admin/imports/materials", headers=self.user_headers)
+        forbidden_resp = self.client.post(
+            "/api/v1/admin/imports/materials",
+            json={"dry_run": True, "roles": ["java"], "rebuild_mode": "incremental"},
+            headers=self.user_headers,
+        )
         self.assertEqual(403, forbidden_resp.status_code)
 
 
