@@ -22,7 +22,7 @@ export function AdminImportsPage() {
     rebuild_mode: 'full' as const,
     roles: ['java', 'web'] as Array<'java' | 'web'>,
     dry_run: false,
-    chunk_model: 'qwen3.5-2b',
+    chunk_model: 'qwen2.5:7b',
     embedding_model: 'nomic-embed-text',
   })
 
@@ -72,7 +72,7 @@ export function AdminImportsPage() {
   }) => {
     triggerMutation.mutate({
       ...values,
-      chunk_model: 'qwen3.5-2b',
+      chunk_model: 'qwen2.5:7b',
       embedding_model: 'nomic-embed-text',
     })
   }
@@ -109,7 +109,7 @@ export function AdminImportsPage() {
           </Form.Item>
           <Form.Item label="模型（固定）">
             <Space>
-              <Tag color="processing">chunk: qwen3.5-2b</Tag>
+              <Tag color="processing">chunk: qwen2.5:7b</Tag>
               <Tag color="purple">embed: nomic-embed-text</Tag>
             </Space>
           </Form.Item>

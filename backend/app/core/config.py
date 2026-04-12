@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     user_token: str = "user-token"
     admin_token: str = "admin-token"
     ollama_base_url: str = "http://127.0.0.1:11434"
-    chunk_model: str = "qwen3.5-2b"
+    chunk_model: str = "qwen2.5:7b"
     embedding_model: str = "nomic-embed-text"
     embed_batch_size: int = 32
     retrieval_fallback_enabled: bool = False

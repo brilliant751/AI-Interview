@@ -270,7 +270,7 @@ def normalize_knowledge_file(role: str, source_path: Path, content: str) -> list
                 "section_path": seg.title,
                 "chunk_chars": len(seg.body),
                 "chunk_tokens": chunk_tokens,
-                "chunk_model": "qwen3.5-2b",
+                "chunk_model": "qwen2.5:7b",
             }
         )
     return rows

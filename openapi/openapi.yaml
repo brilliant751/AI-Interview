@@ -172,7 +172,7 @@ paths:
                   type: array
                   items: { type: string, enum: [java, web] }
                 dry_run: { type: boolean, default: false }
-                chunk_model: { type: string, default: qwen3.5-2b }
+                chunk_model: { type: string, default: qwen2.5:7b }
                 embedding_model: { type: string, default: nomic-embed-text }
       responses:
         "202":

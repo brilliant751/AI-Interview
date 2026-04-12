@@ -113,7 +113,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"rebuild_mode\": \"full\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": false,\n  \"chunk_model\": \"qwen3.5-2b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
+          "raw": "{\n  \"rebuild_mode\": \"full\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": false,\n  \"chunk_model\": \"qwen2.5:7b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
         },
         "url": "{{base_url}}/api/v1/admin/imports/materials"
       }

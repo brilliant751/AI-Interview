@@ -103,7 +103,7 @@ class MaterialImportRequest(BaseModel):
     rebuild_mode: Literal["full", "incremental"] = "full"
     roles: list[Literal["java", "web"]] = Field(default_factory=lambda: ["java", "web"])
     dry_run: bool = False
-    chunk_model: str = "qwen3.5-2b"
+    chunk_model: str = "qwen2.5:7b"
     embedding_model: str = "nomic-embed-text"
 
 
