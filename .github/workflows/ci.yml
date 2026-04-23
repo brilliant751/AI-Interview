@@ -23,14 +23,14 @@ jobs:
           pip install fastapi uvicorn pydantic pydantic-settings pytest httpx python-multipart
 
       - name: Compile Check
-        run: python -m compileall backend/app assets/scripts/data tests/backend
+        run: python -m compileall backend/app backend/assets/scripts/data tests/backend
 
       - name: Data Validation Gate
         run: |
-          python assets/scripts/data/validate_materials.py --strict
-          python assets/scripts/data/normalize_materials.py --dry-run
-          python assets/scripts/data/build_question_bank.py --dry-run
-          python assets/scripts/data/build_knowledge_vectorstore.py --dry-run
+          python backend/assets/scripts/data/validate_materials.py --strict
+          python backend/assets/scripts/data/normalize_materials.py --dry-run
+          python backend/assets/scripts/data/build_question_bank.py --dry-run
+          python backend/assets/scripts/data/build_knowledge_vectorstore.py --dry-run
 
       - name: Backend Tests
         run: python -m unittest discover -s tests/backend -p "test_*.py"

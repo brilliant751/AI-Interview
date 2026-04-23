@@ -38,12 +38,12 @@
 
 ## Material 数据源约定
 
-- 岗位材料统一放在 `assets/material/` 目录，并按岗位拆分子目录。
+- 岗位材料统一放在 `backend/assets/material/` 目录，并按岗位拆分子目录。
 - 当前材料位置：
-  - Java 题库：`assets/material/java/java-interview/`
-  - Java 知识库：`assets/material/java/java-knowledge/`
-  - Web 题库：`assets/material/web/interview.md`
-  - Web 知识库：`assets/material/web/knowledge.md`
+  - Java 题库：`backend/assets/material/java/java-interview/`
+  - Java 知识库：`backend/assets/material/java/java-knowledge/`
+  - Web 题库：`backend/assets/material/web/interview.md`
+  - Web 知识库：`backend/assets/material/web/knowledge.md`
 - 任何 Agent 规划/实现“题库导入、知识库向量化、检索构建”任务时，必须以上述路径为唯一输入来源，若新增来源需先在本文件登记。
 - 数据导入必须提供可复用脚本（支持重复执行、幂等、失败重试、校验报告），禁止仅通过一次性手工导入完成交付。
 

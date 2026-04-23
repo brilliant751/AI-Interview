@@ -95,3 +95,37 @@ class HistoryResponse(BaseModel):
 
     items: list[HistoryItem]
     total: int
+
+
+class MaterialImportRequest(BaseModel):
+    """触发材料导入请求。"""
+
+    rebuild_mode: Literal["full", "incremental"] = "full"
+    roles: list[Literal["java", "web"]] = Field(default_factory=lambda: ["java", "web"])
+    dry_run: bool = False
+    chunk_model: str = "qwen2.5:7b"
+    embedding_model: str = "nomic-embed-text"
+
+
+class MaterialImportTriggerResponse(BaseModel):
+    """触发材料导入响应。"""
+
+    task_id: str
+    status: Literal["PENDING", "RUNNING", "SUCCESS", "FAILED", "PARTIAL_SUCCESS"]
+    stage: str
+    progress: int
+    idempotency_hit: bool = False
+
+
+class MaterialImportTaskResponse(BaseModel):
+    """材料导入任务状态响应。"""
+
+    task_id: str
+    status: Literal["PENDING", "RUNNING", "SUCCESS", "FAILED", "PARTIAL_SUCCESS"]
+    stage: str
+    progress: int
+    rebuild_mode: Literal["full", "incremental"]
+    roles: list[Literal["java", "web"]]
+    dry_run: bool
+    last_error: str = ""
+    report_path: str = ""

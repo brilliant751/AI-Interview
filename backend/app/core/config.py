@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ASSETS_ROOT = BACKEND_ROOT / "assets"
 
 
 class Settings(BaseSettings):
@@ -19,14 +23,20 @@ class Settings(BaseSettings):
 
     app_env: str = "dev"
     app_name: str = "AI Interview API"
-    db_path: str = "assets/data/sqlite/interview.db"
-    chroma_dir: str = "assets/data/chroma"
+    db_path: str = str(ASSETS_ROOT / "data" / "sqlite" / "interview.db")
+    chroma_dir: str = str(ASSETS_ROOT / "data" / "chroma")
     llm_provider: str = "mock"
     asr_provider: str = "mock"
     tts_provider: str = "mock"
     token_secret: str = "dev-token-secret"
     user_token: str = "user-token"
     admin_token: str = "admin-token"
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    chunk_model: str = "qwen2.5:7b"
+    embedding_model: str = "nomic-embed-text"
+    embed_batch_size: int = 32
+    retrieval_fallback_enabled: bool = False
+    kb_collection_alias_file: str = str(ASSETS_ROOT / "data" / "chroma" / "aliases.json")
 
 
 @lru_cache(maxsize=1)

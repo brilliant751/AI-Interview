@@ -7,12 +7,19 @@ const { Header, Content } = Layout
 /** 应用布局组件。 */
 export function AppLayout(props: { children: ReactNode }) {
   const location = useLocation()
+  const token =
+    typeof window !== 'undefined' && typeof window.localStorage?.getItem === 'function'
+      ? (window.localStorage.getItem('ai_interview_token') ?? 'user-token')
+      : 'user-token'
   const links = [
     { to: '/upload', label: '上传简历' },
     { to: '/interview', label: '模拟面试' },
     { to: '/report', label: '面试报告' },
     { to: '/history', label: '历史记录' },
   ]
+  if (token === 'admin-token') {
+    links.push({ to: '/admin/imports', label: '知识库重建' })
+  }
 
   return (
     <Layout style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)' }}>

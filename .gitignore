@@ -5,6 +5,14 @@ txt/
 # Python
 __pycache__/
 .venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+*.py[cod]
+*.pyo
 
 # IDE
 .vscode/
@@ -17,4 +25,19 @@ node_modules/
 dist/
 build/
 *.log
-.pytest_cache/
+coverage/
+.vite/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Backend runtime data
+backend/assets/data/sqlite/*.db
+backend/assets/data/reports/*_report.json
+backend/assets/data/reports/*_latest.json
+backend/assets/data/reports/vectorstore_checkpoint.json
+backend/assets/data/normalized/chunk_preview*.jsonl
+
+# Chroma generated indexes (keep alias mapping)
+backend/assets/data/chroma/*
+!backend/assets/data/chroma/aliases.json

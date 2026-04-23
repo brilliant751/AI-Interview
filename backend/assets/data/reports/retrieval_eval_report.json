@@ -1,0 +1,121 @@
+{
+  "status": "SUCCESS",
+  "sample_count": 160,
+  "roles": {
+    "java": 80,
+    "web": 80
+  },
+  "hit_at_1": 0.72,
+  "hit_at_3": 0.82,
+  "hit_at_5": 0.89,
+  "mrr": 0.66,
+  "quality_gate": {
+    "min_hit_at_3": 0.75,
+    "min_mrr": 0.6,
+    "min_samples_per_role": 80,
+    "passed": true,
+    "issues": []
+  },
+  "top20_failures": [
+    {
+      "role": "java",
+      "query": "JVM 调优实践 1",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 2",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 3",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 4",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 5",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 6",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 7",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 8",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 9",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 10",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 11",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 12",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 13",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 14",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 15",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 16",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 17",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 18",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 19",
+      "expected": "backend/assets/material/java/java-knowledge"
+    },
+    {
+      "role": "java",
+      "query": "JVM 调优实践 20",
+      "expected": "backend/assets/material/java/java-knowledge"
+    }
+  ]
+}

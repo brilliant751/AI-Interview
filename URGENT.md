@@ -50,7 +50,7 @@
 ### 5. 管理导入接口缺少异步任务化与状态追踪
 - 当前状态：未完成
 - 现状证据：
-  - `backend/app/api/v1/admin.py` 以同步子进程串行执行导入（当前仅路径迁移到 `assets/scripts/data/**`）
+  - `backend/app/api/v1/admin.py` 以同步子进程串行执行导入（当前仅路径迁移到 `backend/assets/scripts/data/**`）
 - 完成标准：
   - 返回 `task_id`
   - 提供任务查询接口（运行中/成功/失败 + 错误信息）
