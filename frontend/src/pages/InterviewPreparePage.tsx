@@ -1,7 +1,11 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Button, Card, Form, Radio, Select, message } from 'antd'
+import { AxiosError } from 'axios'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { fetchProviderHealth } from '../api/admin'
+import { ProviderHealthBanner } from '../components/ProviderHealthBanner'
 import { createInterview } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
@@ -10,6 +14,25 @@ export function InterviewPreparePage() {
   const navigate = useNavigate()
   const resumeId = useInterviewStore((state) => state.resumeId)
   const setSessionConfig = useInterviewStore((state) => state.setSessionConfig)
+  const setProviderHealth = useInterviewStore((state) => state.setProviderHealth)
+
+  /** 查询 provider 健康状态。 */
+  const healthQuery = useQuery({
+    queryKey: ['provider-health'],
+    queryFn: fetchProviderHealth,
+    retry: false,
+  })
+  const healthQueryError =
+    (healthQuery.error as AxiosError<{ error?: { message?: string } }> | null)?.response?.data?.error
+      ?.message ||
+    (healthQuery.error as Error | null)?.message ||
+    ''
+
+  useEffect(() => {
+    if (healthQuery.data) {
+      setProviderHealth(healthQuery.data)
+    }
+  }, [healthQuery.data, setProviderHealth])
 
   /** 创建面试会话。 */
   const createMutation = useMutation({
@@ -34,6 +57,13 @@ export function InterviewPreparePage() {
 
   return (
     <Card title="面试准备" bordered={false}>
+      <div style={{ marginBottom: 16 }}>
+        <ProviderHealthBanner
+          health={healthQuery.data ?? null}
+          loading={healthQuery.isLoading}
+          errorMessage={healthQueryError}
+        />
+      </div>
       <Form
         layout="vertical"
         initialValues={{
@@ -97,4 +127,3 @@ export function InterviewPreparePage() {
     </Card>
   )
 }
-

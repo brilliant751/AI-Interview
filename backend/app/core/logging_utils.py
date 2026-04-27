@@ -6,7 +6,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("app.pipeline")
 
@@ -24,20 +24,22 @@ def now_ms() -> int:
 def log_pipeline_event(
     event: str,
     interview_id: str,
-    turn_id: str | None,
+    turn_id: Optional[str],
     trace_id: str,
-    providers: dict[str, str | None],
-    degrade_flags: list[str],
+    providers: Dict[str, Optional[str]],
+    degrade_flags: List[str],
     latency_ms: int,
-    extra: dict[str, Any] | None = None,
+    extra: Optional[Dict[str, Any]] = None,
 ) -> None:
     """输出结构化链路日志。"""
+    provider_list = [name for name in [providers.get("asr"), providers.get("llm"), providers.get("tts")] if name]
     payload = {
         "event": event,
         "trace_id": trace_id,
         "interview_id": interview_id,
         "turn_id": turn_id,
         "providers": providers,
+        "provider": ",".join(provider_list) if provider_list else "unknown",
         "degrade_flags": degrade_flags,
         "latency_ms": latency_ms,
     }

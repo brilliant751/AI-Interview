@@ -9,6 +9,7 @@ from app.models.schemas import (
     MaterialImportRequest,
     MaterialImportTaskResponse,
     MaterialImportTriggerResponse,
+    ProviderHealthResponse,
 )
 from app.services.interview_service import InterviewService
 from app.services.material_import_service import MaterialImportService
@@ -52,10 +53,10 @@ async def get_import_task(task_id: str, request: Request, _: str = Depends(requi
     return service.get_task(task_id)
 
 
-@router.get("/providers/health")
+@router.get("/providers/health", response_model=ProviderHealthResponse)
 async def provider_health(
     _: str = Depends(require_admin),
     service: InterviewService = Depends(_get_interview_service),
-) -> dict:
+) -> ProviderHealthResponse:
     """查询语音与 LLM provider 健康状态。"""
-    return service.provider_health()
+    return ProviderHealthResponse(**service.provider_health())

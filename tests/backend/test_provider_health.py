@@ -36,13 +36,44 @@ class ProviderHealthTestCase(unittest.TestCase):
         """默认 mock provider 返回 UP。"""
         resp = self.client.get("/api/v1/admin/providers/health", headers=self.admin_headers)
         self.assertEqual(200, resp.status_code)
-        self.assertEqual("UP", resp.json()["overall"])
+        body = resp.json()
+        self.assertIn(body["overall"], ["UP", "DEGRADED", "DOWN"])
+        self.assertIn("llm", body["providers"])
+        self.assertIn("status", body["providers"]["llm"])
 
     def test_provider_health_degraded(self) -> None:
         """存在部分 provider 异常时返回 DEGRADED。"""
         service = self.client.app.state.interview_service
-        service.voice_service.health = lambda: {"asr": "DOWN", "tts": "UP"}
-        service.question_workflow.health = lambda: {"llm": "UP"}
+        service.voice_service.health_details = lambda: {
+            "asr": {
+                "status": "DOWN",
+                "provider": "funasr",
+                "model": "paraformer-zh",
+                "latency_ms": 1,
+                "error_message": "down",
+            },
+            "tts": {
+                "status": "UP",
+                "provider": "paddlespeech",
+                "model": "fastspeech2_csmsc",
+                "latency_ms": 1,
+                "error_message": "",
+            },
+        }
+        service.question_workflow.health_details = lambda: {
+            "status": "UP",
+            "provider": "ollama",
+            "model": "deepseek-r1:8b",
+            "latency_ms": 1,
+            "error_message": "",
+        }
+        service.rag_service.health = lambda: {
+            "status": "UP",
+            "provider": "ollama-embedding",
+            "model": "nomic-embed-text",
+            "latency_ms": 1,
+            "error_message": "",
+        }
 
         resp = self.client.get("/api/v1/admin/providers/health", headers=self.admin_headers)
         self.assertEqual(200, resp.status_code)

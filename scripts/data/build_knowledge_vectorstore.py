@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import math
-import re
 from pathlib import Path
 
 from common import REPO_ROOT, write_json, write_jsonl
+from embeddings import create_embedding_client
 
 
 def parse_args() -> argparse.Namespace:
@@ -40,30 +38,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def tokenize(text: str) -> list[str]:
-    """将文本分词为中英文 token 序列。"""
-    return re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_]+", text.lower())
-
-
-def hash_token(token: str, dim: int) -> int:
-    """将 token 映射到固定维度桶。"""
-    digest = hashlib.sha1(token.encode("utf-8")).hexdigest()
-    return int(digest[:8], 16) % dim
-
-
-def embed_text(text: str, dim: int) -> list[float]:
-    """使用 Hashing Trick 生成归一化向量。"""
-    vector = [0.0] * dim
-    tokens = tokenize(text)
-    for token in tokens:
-        idx = hash_token(token, dim)
-        vector[idx] += 1.0
-    norm = math.sqrt(sum(v * v for v in vector))
-    if norm == 0:
-        return vector
-    return [round(v / norm, 6) for v in vector]
-
-
 def iter_knowledge_rows(input_dir: Path) -> dict[str, list[dict]]:
     """按岗位读取知识 JSONL 记录。"""
     by_role: dict[str, list[dict]] = {}
@@ -90,7 +64,9 @@ def main() -> int:
     summary: dict[str, int] = {}
     total_rows = 0
     total_written = 0
+    provider_summary: dict[str, int] = {}
     output_dir.mkdir(parents=True, exist_ok=True)
+    embed_text = create_embedding_client()
 
     chroma_client = None
     try:
@@ -105,7 +81,8 @@ def main() -> int:
         summary[role] = len(rows)
         index_rows: list[dict] = []
         for row in rows:
-            embedding = embed_text(row.get("content", ""), args.dimension)
+            embedding, provider = embed_text(row.get("content", ""), args.dimension)
+            provider_summary[provider] = provider_summary.get(provider, 0) + 1
             index_rows.append(
                 {
                     "id": row["record_id"],
@@ -152,6 +129,7 @@ def main() -> int:
         "written_rows": total_written if not args.dry_run else 0,
         "dimension": args.dimension,
         "roles": summary,
+        "embedding_providers": provider_summary,
         "dry_run": args.dry_run,
     }
     write_json(Path(args.report), report)

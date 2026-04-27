@@ -35,7 +35,9 @@ describe('interviewStore', () => {
         trace_id: 'trace_123',
         latency_ms: 99,
         providers: { asr: undefined, llm: 'mock', tts: 'mock' },
+        provider_status: { asr: 'UP', llm: 'UP', tts: 'UP' },
         degrade_flags: [],
+        generation_mode: 'mock',
       },
     })
     const state = useInterviewStore.getState()

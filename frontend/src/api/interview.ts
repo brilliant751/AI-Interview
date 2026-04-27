@@ -25,6 +25,12 @@ export interface SubmitTurnPayload {
   answer_audio_format?: string
 }
 
+/** 音频轮次提交请求体。 */
+export interface SubmitAudioTurnPayload {
+  stage: string
+  file: File
+}
+
 /** 链路 provider 信息。 */
 export interface PipelineProviders {
   asr?: string
@@ -36,9 +42,15 @@ export interface PipelineProviders {
 export interface PipelineMeta {
   input_source: string
   providers: PipelineProviders
+  provider_status: {
+    asr: string
+    llm: string
+    tts: string
+  }
   degrade_flags: string[]
   trace_id: string
   latency_ms: number
+  generation_mode: 'local_ai' | 'fallback_template' | 'mock'
 }
 
 /** 轮次提交响应。 */
@@ -75,6 +87,15 @@ export interface HistoryResponse {
   }>
 }
 
+/** 会话状态响应。 */
+export interface InterviewStatusResponse {
+  interview_id: string
+  status: string
+  current_stage: string
+  follow_up_count: number
+  technical_count: number
+}
+
 /** 上传简历并返回简历 ID。 */
 export async function uploadResume(file: File): Promise<{ resume_id: string; parse_status: string }> {
   const formData = new FormData()
@@ -100,6 +121,20 @@ export async function submitTurn(
   return data
 }
 
+/** 提交音频轮次。 */
+export async function submitAudioTurn(
+  interviewId: string,
+  payload: SubmitAudioTurnPayload,
+): Promise<SubmitTurnResponse> {
+  const formData = new FormData()
+  formData.append('stage', payload.stage)
+  formData.append('file', payload.file)
+  const { data } = await apiClient.post(`/interviews/${interviewId}/turns/audio`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data
+}
+
 /** 结束面试并触发报告。 */
 export async function finishInterview(interviewId: string): Promise<{ report_status: string }> {
   const { data } = await apiClient.post(`/interviews/${interviewId}/finish`)
@@ -121,5 +156,11 @@ export async function retryReport(interviewId: string): Promise<{ status: string
 /** 查询历史记录。 */
 export async function fetchHistory(params: { page: number; page_size: number; job_role?: string }) {
   const { data } = await apiClient.get<HistoryResponse>('/interviews/history', { params })
+  return data
+}
+
+/** 查询会话当前状态。 */
+export async function fetchInterviewStatus(interviewId: string): Promise<InterviewStatusResponse> {
+  const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`)
   return data
 }

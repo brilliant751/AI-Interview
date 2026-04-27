@@ -42,6 +42,7 @@ test-results/
 # Backend runtime data
 backend/.cache/
 backend/.venv/
+backend/.coverage
 backend/assets/data/sqlite/*.db
 backend/assets/data/sqlite/*.db-shm
 backend/assets/data/sqlite/*.db-wal
@@ -54,3 +55,6 @@ backend/assets/data/normalized/chunk_preview*.jsonl
 # Chroma generated indexes (keep alias mapping)
 backend/assets/data/chroma/*
 !backend/assets/data/chroma/aliases.json
+assets/data/chroma/chroma.sqlite3
+*.db-wal
+*.db-shm

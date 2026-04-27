@@ -70,6 +70,7 @@ class InterviewRepository:
                   answer_text TEXT NOT NULL,
                   next_question TEXT NOT NULL,
                   live_score INTEGER NOT NULL,
+                                    generation_mode TEXT NOT NULL DEFAULT 'mock',
                   input_source TEXT,
                   asr_provider TEXT,
                   llm_provider TEXT,
@@ -148,6 +149,7 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_turns", "degrade_flags", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_turns", "trace_id", "TEXT")
             self._ensure_column(conn, "interview_turns", "latency_ms", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "interview_turns", "generation_mode", "TEXT NOT NULL DEFAULT 'mock'")
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
         """确保表包含指定列，缺失则补齐。"""
@@ -229,6 +231,7 @@ class InterviewRepository:
         answer_text: str,
         next_question: str,
         score: int,
+        generation_mode: str = "mock",
         input_source: str | None = None,
         asr_provider: str | None = None,
         llm_provider: str | None = None,
@@ -243,10 +246,10 @@ class InterviewRepository:
             conn.execute(
                 """
                 INSERT INTO interview_turns(
-                  turn_id, interview_id, stage, answer_text, next_question, live_score,
+                                    turn_id, interview_id, stage, answer_text, next_question, live_score, generation_mode,
                   input_source, asr_provider, llm_provider, tts_provider, degrade_flags, trace_id, latency_ms
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     turn_id,
@@ -255,6 +258,7 @@ class InterviewRepository:
                     answer_text,
                     next_question,
                     score,
+                                        generation_mode,
                     input_source,
                     asr_provider,
                     llm_provider,

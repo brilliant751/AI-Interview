@@ -51,3 +51,24 @@ export async function getImportTask(taskId: string): Promise<ImportTaskResponse>
   const { data } = await apiClient.get<ImportTaskResponse>(`/admin/imports/materials/${taskId}`)
   return data
 }
+
+/** Provider 健康项。 */
+export interface ProviderHealthItem {
+  status: 'UP' | 'DOWN' | 'DEGRADED'
+  provider: string
+  model: string
+  latency_ms: number
+  error_message: string
+}
+
+/** Provider 健康响应。 */
+export interface ProviderHealthResponse {
+  overall: 'UP' | 'DOWN' | 'DEGRADED'
+  providers: Record<string, ProviderHealthItem>
+}
+
+/** 获取 provider 健康状态。 */
+export async function fetchProviderHealth(): Promise<ProviderHealthResponse> {
+  const { data } = await apiClient.get<ProviderHealthResponse>('/admin/providers/health')
+  return data
+}

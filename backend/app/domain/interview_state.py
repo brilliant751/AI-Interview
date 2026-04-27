@@ -11,13 +11,15 @@ class InterviewStage(str, Enum):
     """面试阶段枚举。"""
 
     SELF_INTRO = "SELF_INTRO"
+    PROJECT_DEEP_DIVE = "PROJECT_DEEP_DIVE"
     TECHNICAL = "TECHNICAL"
     BEHAVIORAL = "BEHAVIORAL"
     END = "END"
 
 
 ALLOWED_TRANSITIONS: dict[InterviewStage, set[InterviewStage]] = {
-    InterviewStage.SELF_INTRO: {InterviewStage.TECHNICAL},
+    InterviewStage.SELF_INTRO: {InterviewStage.PROJECT_DEEP_DIVE},
+    InterviewStage.PROJECT_DEEP_DIVE: {InterviewStage.TECHNICAL},
     InterviewStage.TECHNICAL: {InterviewStage.TECHNICAL, InterviewStage.BEHAVIORAL, InterviewStage.END},
     InterviewStage.BEHAVIORAL: {InterviewStage.BEHAVIORAL, InterviewStage.END},
     InterviewStage.END: set(),

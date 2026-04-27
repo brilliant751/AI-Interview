@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -35,7 +35,7 @@ class InterviewCreateResponse(BaseModel):
 class InterviewTurnRequest(BaseModel):
     """提交轮次请求。"""
 
-    stage: str
+    stage: Literal["SELF_INTRO", "PROJECT_DEEP_DIVE", "TECHNICAL", "BEHAVIORAL", "END"]
     answer_text: str = ""
     asr_text: str = ""
     answer_audio_url: str = ""
@@ -45,9 +45,17 @@ class InterviewTurnRequest(BaseModel):
 class PipelineProviders(BaseModel):
     """链路 provider 信息。"""
 
-    asr: str | None = None
-    llm: str | None = None
-    tts: str | None = None
+    asr: Optional[str] = None
+    llm: Optional[str] = None
+    tts: Optional[str] = None
+
+
+class PipelineProviderStatus(BaseModel):
+    """链路 provider 状态。"""
+
+    asr: str = "UNKNOWN"
+    llm: str = "UNKNOWN"
+    tts: str = "UNKNOWN"
 
 
 class PipelineMeta(BaseModel):
@@ -55,9 +63,11 @@ class PipelineMeta(BaseModel):
 
     input_source: str
     providers: PipelineProviders
+    provider_status: PipelineProviderStatus = Field(default_factory=PipelineProviderStatus)
     degrade_flags: list[str] = Field(default_factory=list)
     trace_id: str
     latency_ms: int = 0
+    generation_mode: Literal["local_ai", "fallback_template", "mock"] = "mock"
 
 
 class InterviewTurnResponse(BaseModel):
@@ -69,8 +79,35 @@ class InterviewTurnResponse(BaseModel):
     follow_up_count: int
     live_score: int
     output_mode: str
-    tts_audio_url: str | None = None
-    pipeline_meta: PipelineMeta | None = None
+    tts_audio_url: Optional[str] = None
+    pipeline_meta: Optional[PipelineMeta] = None
+
+
+class InterviewTurnItemResponse(BaseModel):
+    """单轮面试记录响应。"""
+
+    turn_id: str
+    interview_id: str
+    stage: str
+    answer_text: str
+    next_question: str
+    live_score: int
+    generation_mode: str
+    input_source: Optional[str] = None
+    asr_provider: Optional[str] = None
+    llm_provider: Optional[str] = None
+    tts_provider: Optional[str] = None
+    degrade_flags: list[str] = Field(default_factory=list)
+    trace_id: Optional[str] = None
+    latency_ms: int = 0
+    created_at: str
+
+
+class InterviewTurnsResponse(BaseModel):
+    """面试轮次列表响应。"""
+
+    interview_id: str
+    items: list[InterviewTurnItemResponse] = Field(default_factory=list)
 
 
 class InterviewFinishResponse(BaseModel):
@@ -95,11 +132,11 @@ class ReportResponse(BaseModel):
 
     interview_id: str
     status: Literal["GENERATING", "READY", "FAILED"]
-    overall_score: int | None = None
+    overall_score: Optional[int] = None
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
-    error_message: str | None = None
+    error_message: Optional[str] = None
 
 
 class HistoryItem(BaseModel):
@@ -107,7 +144,7 @@ class HistoryItem(BaseModel):
 
     interview_id: str
     job_role: str
-    overall_score: int | None = None
+    overall_score: Optional[int] = None
     created_at: str
 
 
@@ -229,3 +266,20 @@ class AuthMeResponse(BaseModel):
     """当前登录用户响应。"""
 
     user: AuthUserProfile
+
+
+class ProviderHealthItem(BaseModel):
+    """单个 provider 健康状态（基于 SDK 初始化与最小调用）。"""
+
+    status: Literal["UP", "DOWN", "DEGRADED"]
+    provider: str
+    model: str
+    latency_ms: int = 0
+    error_message: str = ""
+
+
+class ProviderHealthResponse(BaseModel):
+    """provider 健康检查响应（非 URL 可达性检查）。"""
+
+    overall: Literal["UP", "DOWN", "DEGRADED"]
+    providers: dict[str, ProviderHealthItem]

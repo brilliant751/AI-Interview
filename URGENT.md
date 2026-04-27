@@ -6,14 +6,7 @@
 
 ## P0（阻断放行）
 
-### 1. 面试阶段状态机缺失 `PROJECT_DEEP_DIVE`
-- 当前状态：未完成
-- 现状证据：
-  - `backend/app/domain/interview_state.py` 缺少 `PROJECT_DEEP_DIVE`
-  - `backend/app/services/interview_service.py` 从 `SELF_INTRO` 直接进入 `TECHNICAL`
-- 完成标准：
-  - 状态机补齐 `SELF_INTRO -> PROJECT_DEEP_DIVE -> TECHNICAL -> BEHAVIORAL -> END`
-  - 对应接口、服务、测试用例同步覆盖
+无。
 
 ### 2. 前端布局组件触发无限更新，单测直接失败
 - 当前状态：未完成
@@ -45,14 +38,15 @@
   - PRD、OpenAPI、后端 schema、前端 API 类型四处一致
   - Postman 集合同步更新并可回放通过
 
-### 5. 语音与问答链路仍为占位实现
+### 5. 本地问答链路的阶段控制未闭环
 - 当前状态：未完成
 - 现状证据：
-  - `backend/app/services/voice_service.py` 为 mock ASR/TTS
-  - `backend/app/services/question_workflow.py` 为模板化提问
+  - `backend/app/services/question_workflow.py` 中 `generate()` 对 `openai/ollama` 直接走 `generate_by_llm()`，`stage/technical_count/follow_up_count` 没有参与真实 LLM 提示词控制
+  - `backend/app/services/rag_service.py` 只有在 `llm_provider == "ollama"` 时才走本地 embedding，其他配置会退回 hashing trick，导致检索质量与健康状态不一致
 - 完成标准：
-  - 接入真实 ASR/TTS/LLM（至少 dev 环境可用）
-  - 失败时保留可观测的降级路径
+  - 真实 LLM 分支必须按阶段和轮次注入差异化 prompt
+  - embedding provider 必须独立于 LLM provider 配置，且 fallback 要能被 health 明确暴露
+  - 对应接口与测试用例同步覆盖
 
 ### 6. 报告结构未达 PRD 目标
 - 当前状态：未完成
@@ -82,3 +76,13 @@
 - 完成标准：
   - 返回 `task_id`
   - 提供任务查询接口（运行中/成功/失败 + 错误信息）
+
+### 6. 本地 provider 客户端受系统代理影响
+- 当前状态：未完成
+- 现状证据：
+  - `backend/app/services/providers/funasr_provider.py`、`backend/app/services/providers/ollama_provider.py`、`backend/app/services/providers/paddlespeech_provider.py` 使用默认 `httpx.Client(...)`
+  - `backend/app/services/voice_service.py` 的 `_download_audio()` 使用默认 `httpx.get(...)`
+  - 在 macOS 带 `ALL_PROXY/HTTP_PROXY` 的环境里，httpx 会继承 SOCKS 代理；若缺少 `socksio`，provider 初始化和回归测试会直接失败
+- 完成标准：
+  - 本地 provider 客户端默认不继承系统代理，或在启动脚本/文档中显式清理代理环境
+  - 相关测试在代理环境下可稳定通过

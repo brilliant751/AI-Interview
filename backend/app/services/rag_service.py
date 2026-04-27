@@ -2,12 +2,34 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
+import re
 from pathlib import Path
 from typing import Any
 
 from app.core.config import get_settings
 from app.core.errors import kb_build_error
+from app.services.providers import OllamaProviderClient
+
+
+def _tokenize(text: str) -> list[str]:
+    """将文本切为中英文 token。"""
+    return re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_]+", text.lower())
+
+
+def _embed_text(text: str, dim: int) -> list[float]:
+    """使用 Hashing Trick 构建归一化向量。"""
+    vector = [0.0] * dim
+    for token in _tokenize(text):
+        digest = hashlib.sha1(token.encode("utf-8")).hexdigest()
+        idx = int(digest[:8], 16) % dim
+        vector[idx] += 1.0
+    norm = math.sqrt(sum(v * v for v in vector))
+    if norm == 0:
+        return vector
+    return [round(v / norm, 6) for v in vector]
 
 
 class RAGService:
@@ -18,6 +40,25 @@ class RAGService:
         self.settings = get_settings()
         self._chroma_client = self._build_chroma_client()
         self._alias_map = self._load_alias_map()
+        self._ollama_client: OllamaProviderClient | None = None
+        self.vector_dim = 1024
+
+    def _get_ollama_client(self) -> OllamaProviderClient:
+        """惰性初始化 Ollama embedding 客户端。"""
+        if self._ollama_client is None:
+            self._ollama_client = OllamaProviderClient()
+        return self._ollama_client
+
+    def _embed_query(self, query: str) -> list[float]:
+        """优先使用本地 embedding，失败回退 hashing 向量。"""
+        if self.settings.llm_provider == "ollama":
+            try:
+                vector = self._get_ollama_client().embed_text(query)
+                if vector:
+                    return vector
+            except Exception:
+                pass
+        return _embed_text(query, self.vector_dim)
 
     def _build_chroma_client(self):  # type: ignore[no-untyped-def]
         """构建 Chroma 客户端。"""
@@ -53,7 +94,7 @@ class RAGService:
         try:
             collection = self._chroma_client.get_collection(collection_name)
             result = collection.query(
-                query_texts=[query],
+                query_embeddings=[self._embed_query(query)],
                 n_results=top_k,
                 include=["documents", "metadatas", "distances"],
             )
@@ -115,3 +156,31 @@ class RAGService:
                     raise
             fallback = self._retrieve_from_jsonl(job_role, query, top_k)
             return fallback
+
+    def health(self) -> dict[str, Any]:
+        """返回 embedding 与向量库健康状态。"""
+        if self.settings.llm_provider == "ollama":
+            try:
+                self._get_ollama_client().embed_text("health check")
+                return {
+                    "status": "UP",
+                    "provider": "ollama-embedding",
+                    "model": self.settings.embed_model,
+                    "latency_ms": 0,
+                    "error_message": "",
+                }
+            except Exception as exc:
+                return {
+                    "status": "DEGRADED",
+                    "provider": "hash-embedding-fallback",
+                    "model": self.settings.embed_model,
+                    "latency_ms": 0,
+                    "error_message": str(exc),
+                }
+        return {
+            "status": "UP",
+            "provider": "hash-embedding",
+            "model": "hashing-trick",
+            "latency_ms": 0,
+            "error_message": "",
+        }

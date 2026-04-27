@@ -138,6 +138,29 @@
           }
         },
         {
+          "name": "Submit Audio Turn",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "stage", "value": "SELF_INTRO", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns/audio"
+          }
+        },
+        {
+          "name": "Get Turns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns"
+          }
+        },
+        {
           "name": "Get Status",
           "request": {
             "method": "GET",

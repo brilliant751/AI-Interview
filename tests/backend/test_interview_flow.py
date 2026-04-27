@@ -100,8 +100,17 @@ class InterviewFlowTestCase(unittest.TestCase):
         )
         self.assertEqual(200, turn_resp.status_code)
         self.assertIn("next_question", turn_resp.json())
-        self.assertEqual("TECHNICAL", turn_resp.json()["stage"])
+        self.assertEqual("PROJECT_DEEP_DIVE", turn_resp.json()["stage"])
         self.assertIn("pipeline_meta", turn_resp.json())
+        self.assertIn("generation_mode", turn_resp.json()["pipeline_meta"])
+
+        deep_dive_turn = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "PROJECT_DEEP_DIVE", "answer_text": "我在项目中负责了架构改造与核心模块落地。"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, deep_dive_turn.status_code)
+        self.assertEqual("TECHNICAL", deep_dive_turn.json()["stage"])
 
         for _ in range(2):
             tech_turn = self.client.post(
@@ -128,6 +137,21 @@ class InterviewFlowTestCase(unittest.TestCase):
         history_resp = self.client.get("/api/v1/interviews/history", headers=self.user_headers)
         self.assertEqual(200, history_resp.status_code)
         self.assertGreaterEqual(history_resp.json()["total"], 1)
+
+    def test_list_turns_endpoint(self) -> None:
+        """验证查询轮次列表接口返回有效数据。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        list_resp = self.client.get(f"/api/v1/interviews/{interview_id}/turns", headers=self.user_headers)
+        self.assertEqual(200, list_resp.status_code)
+        self.assertEqual(interview_id, list_resp.json()["interview_id"])
+        self.assertGreaterEqual(len(list_resp.json()["items"]), 1)
+        self.assertEqual("SELF_INTRO", list_resp.json()["items"][0]["stage"])
 
     def test_input_priority_prefers_asr_text(self) -> None:
         """验证输入优先级为 asr_text > answer_text。"""
@@ -166,9 +190,12 @@ class InterviewFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(200, turn_resp.status_code)
-        flags = turn_resp.json()["pipeline_meta"]["degrade_flags"]
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        flags = pipeline_meta["degrade_flags"]
         self.assertIn("LLM_FALLBACK_TEMPLATE", flags)
         self.assertIn("TTS_FALLBACK_TEXT", flags)
+        self.assertEqual("openai", pipeline_meta["providers"]["llm"])
+        self.assertIn(pipeline_meta["provider_status"]["llm"], ["UP", "DOWN"])
         self.assertIsNone(turn_resp.json()["tts_audio_url"])
 
     def test_asr_failure_without_text_fallback(self) -> None:
@@ -212,6 +239,21 @@ class InterviewFlowTestCase(unittest.TestCase):
         pipeline_meta = turn_resp.json()["pipeline_meta"]
         self.assertEqual("ASR_SERVER", pipeline_meta["input_source"])
         self.assertEqual(service.voice_service.asr_provider, pipeline_meta["providers"]["asr"])
+
+    def test_audio_upload_endpoint(self) -> None:
+        """验证 multipart 音频上传接口可用。"""
+        interview_id = self._create_interview(output_mode="text")
+        service = self.client.app.state.interview_service
+        service.voice_service.asr = lambda **_kwargs: "上传音频识别文本"
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns/audio",
+            data={"stage": "SELF_INTRO"},
+            files={"file": ("sample.wav", b"fake-audio", "audio/wav")},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        self.assertEqual("PROJECT_DEEP_DIVE", turn_resp.json()["stage"])
 
     def test_admin_import_requires_admin_role(self) -> None:
         """验证管理接口权限控制生效。"""

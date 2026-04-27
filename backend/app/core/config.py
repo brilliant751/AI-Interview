@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     app_name: str = "AI Interview API"
     db_path: str = str(ASSETS_ROOT / "data" / "sqlite" / "interview.db")
     chroma_dir: str = str(ASSETS_ROOT / "data" / "chroma")
+    cors_allow_origin_regex: str = r"http://localhost:5173"
     llm_provider: str = "mock"
     asr_provider: str = "mock"
     tts_provider: str = "mock"
@@ -54,13 +55,23 @@ class Settings(BaseSettings):
     ]
 
     openai_api_key: str = ""
-    asr_model: str = "whisper-1"
-    tts_model: str = "tts-1"
+    asr_model: str = "paraformer-zh"
+    asr_device: str = "cpu"
+    tts_model: str = "fastspeech2_csmsc"
+    tts_device: str = "cpu"
+    tts_sample_rate: int = 24000
     tts_voice: str = "alloy"
-    llm_model: str = "gpt-5.2"
+    llm_model: str = "deepseek-r1:8b"
+    embed_model: str = "nomic-embed-text"
+    split_model: str = "qwen3.5-2b"
     provider_timeout_seconds: float = 20.0
     provider_max_retries: int = 2
     provider_base_url: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    # 兼容期配置：SDK 模式默认不依赖 URL，可用于灰度或历史配置兼容。
+    funasr_base_url: str = "http://localhost:10095"
+    # 兼容期配置：SDK 模式默认不依赖 URL，可用于灰度或历史配置兼容。
+    paddlespeech_base_url: str = "http://localhost:8888"
 
     @model_validator(mode="after")
     def validate_openai_key_for_dev(self) -> Settings:

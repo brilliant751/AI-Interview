@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+from typing import Optional
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, File, Form, Header, Request, UploadFile
 
 from app.core.security import require_user
 from app.core.errors import ApiError
@@ -14,7 +15,9 @@ from app.models.schemas import (
     InterviewFinishResponse,
     InterviewStatusResponse,
     InterviewTurnRequest,
+    InterviewTurnItemResponse,
     InterviewTurnResponse,
+    InterviewTurnsResponse,
 )
 from app.services.interview_service import InterviewService
 from app.repositories.interview_repository import InterviewRepository
@@ -35,7 +38,7 @@ def get_repo(request: Request) -> InterviewRepository:
 @router.post("", response_model=InterviewCreateResponse)
 async def create_interview(
     payload: InterviewCreateRequest,
-    idempotency_key: str | None = Header(default=None, alias="X-Idempotency-Key"),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
     _: str = Depends(require_user),
     service: InterviewService = Depends(get_service),
     repo: InterviewRepository = Depends(get_repo),
@@ -56,7 +59,7 @@ async def create_interview(
 async def submit_turn(
     interview_id: str,
     payload: InterviewTurnRequest,
-    idempotency_key: str | None = Header(default=None, alias="X-Idempotency-Key"),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
     _: str = Depends(require_user),
     service: InterviewService = Depends(get_service),
     repo: InterviewRepository = Depends(get_repo),
@@ -73,10 +76,79 @@ async def submit_turn(
     return InterviewTurnResponse(**result)
 
 
+@router.get("/{interview_id}/turns", response_model=InterviewTurnsResponse)
+async def list_turns(
+    interview_id: str,
+    _: str = Depends(require_user),
+    repo: InterviewRepository = Depends(get_repo),
+) -> InterviewTurnsResponse:
+    """查询会话已提交轮次列表。"""
+    session = repo.get_session(interview_id)
+    if not session:
+        raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+    turns = repo.list_turns(interview_id)
+    items: list[InterviewTurnItemResponse] = []
+    for turn in turns:
+        degrade_flags: list[str] = []
+        raw_flags = turn.get("degrade_flags")
+        if isinstance(raw_flags, str) and raw_flags.strip():
+            try:
+                parsed_flags = json.loads(raw_flags)
+                if isinstance(parsed_flags, list):
+                    degrade_flags = [str(flag) for flag in parsed_flags]
+            except Exception:
+                degrade_flags = []
+        elif isinstance(raw_flags, list):
+            degrade_flags = [str(flag) for flag in raw_flags]
+        items.append(
+            InterviewTurnItemResponse(
+                turn_id=turn["turn_id"],
+                interview_id=turn["interview_id"],
+                stage=turn["stage"],
+                answer_text=turn["answer_text"],
+                next_question=turn["next_question"],
+                live_score=int(turn["live_score"]),
+                generation_mode=str(turn.get("generation_mode") or "mock"),
+                input_source=turn.get("input_source"),
+                asr_provider=turn.get("asr_provider"),
+                llm_provider=turn.get("llm_provider"),
+                tts_provider=turn.get("tts_provider"),
+                degrade_flags=degrade_flags,
+                trace_id=turn.get("trace_id"),
+                latency_ms=int(turn.get("latency_ms") or 0),
+                created_at=str(turn["created_at"]),
+            )
+        )
+    return InterviewTurnsResponse(interview_id=interview_id, items=items)
+
+
+@router.post("/{interview_id}/turns/audio", response_model=InterviewTurnResponse)
+async def submit_turn_audio(
+    interview_id: str,
+    stage: str = Form(...),
+    file: UploadFile = File(...),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
+    _: str = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+    repo: InterviewRepository = Depends(get_repo),
+) -> InterviewTurnResponse:
+    """上传音频并提交轮次。"""
+    endpoint = f"POST:/interviews/{interview_id}/turns/audio"
+    if idempotency_key:
+        cached = repo.get_idempotent_response(endpoint, idempotency_key)
+        if cached:
+            return InterviewTurnResponse(**json.loads(cached))
+    content = await file.read()
+    result = service.submit_turn_with_audio(interview_id, stage=stage, audio_bytes=content, filename=file.filename or "answer.wav")
+    if idempotency_key:
+        repo.save_idempotent_response(endpoint, idempotency_key, json.dumps(result, ensure_ascii=False))
+    return InterviewTurnResponse(**result)
+
+
 @router.post("/{interview_id}/finish", response_model=InterviewFinishResponse, status_code=202)
 async def finish_interview(
     interview_id: str,
-    idempotency_key: str | None = Header(default=None, alias="X-Idempotency-Key"),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
     _: str = Depends(require_user),
     service: InterviewService = Depends(get_service),
     repo: InterviewRepository = Depends(get_repo),

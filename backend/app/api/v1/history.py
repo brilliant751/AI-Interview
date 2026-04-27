@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, Depends, Query, Request
 
 from app.core.security import require_user
@@ -18,7 +20,7 @@ def get_repo(request: Request) -> InterviewRepository:
 
 @router.get("", response_model=HistoryResponse)
 async def list_history(
-    job_role: str | None = Query(default=None),
+    job_role: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=50),
     _: str = Depends(require_user),

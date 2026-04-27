@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, Request, UploadFile
 
@@ -21,7 +22,7 @@ def get_repo(request: Request) -> InterviewRepository:
 @router.post("", response_model=ResumeUploadResponse)
 async def upload_resume(
     file: UploadFile,
-    idempotency_key: str | None = Header(default=None, alias="X-Idempotency-Key"),
+    idempotency_key: Optional[str] = Header(default=None, alias="X-Idempotency-Key"),
     _: str = Depends(require_user),
     repo: InterviewRepository = Depends(get_repo),
 ) -> ResumeUploadResponse:
