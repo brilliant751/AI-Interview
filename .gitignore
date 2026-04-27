@@ -32,7 +32,11 @@ test-results/
 *.tsbuildinfo
 
 # Backend runtime data
+backend/.cache/
 backend/assets/data/sqlite/*.db
+backend/assets/data/sqlite/*.db-shm
+backend/assets/data/sqlite/*.db-wal
+backend/assets/data/sqlite/*.db-journal
 backend/assets/data/reports/*_report.json
 backend/assets/data/reports/*_latest.json
 backend/assets/data/reports/vectorstore_checkpoint.json
