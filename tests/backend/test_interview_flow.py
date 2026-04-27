@@ -194,6 +194,21 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual(200, resume_resp.status_code)
         self.assertEqual("ACTIVE", resume_resp.json()["status"])
 
+    def test_list_turns_endpoint(self) -> None:
+        """验证查询轮次列表接口返回有效数据。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        list_resp = self.client.get(f"/api/v1/interviews/{interview_id}/turns", headers=self.user_headers)
+        self.assertEqual(200, list_resp.status_code)
+        self.assertEqual(interview_id, list_resp.json()["interview_id"])
+        self.assertGreaterEqual(len(list_resp.json()["items"]), 1)
+        self.assertEqual("SELF_INTRO", list_resp.json()["items"][0]["stage"])
+
     def test_input_priority_prefers_asr_text(self) -> None:
         """验证输入优先级为 asr_text > answer_text。"""
         interview_id = self._create_interview()
