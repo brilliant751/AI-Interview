@@ -1,140 +1,161 @@
 {
   "info": {
-    "name": "AI-Interview",
-    "_postman_id": "9f5d4e67-93ef-4ab0-9a8b-c0f886e9f001",
-    "description": "AI 面试平台 MVP 调试集合",
+    "name": "AI Interview",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "上传简历",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "body": {
-          "mode": "formdata",
-          "formdata": [
-            { "key": "file", "type": "file", "src": "" }
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"display_name\": \"Demo User\"\n}"
+            },
+            "url": "{{base_url}}/auth/register"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Passw0rd123\"\n}"
+            },
+            "url": "{{base_url}}/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const payload = pm.response.json();",
+                  "pm.environment.set('access_token', payload.access_token);",
+                  "pm.environment.set('refresh_token', payload.refresh_token);"
+                ]
+              }
+            }
           ]
         },
-        "url": "{{base_url}}/api/v1/resumes"
-      }
-    },
-    {
-      "name": "创建面试",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" },
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"text\",\n  \"output_mode\": \"text\"\n}"
+        {
+          "name": "Refresh",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/refresh"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const payload = pm.response.json();",
+                  "pm.environment.set('access_token', payload.access_token);",
+                  "pm.environment.set('refresh_token', payload.refresh_token);"
+                ]
+              }
+            }
+          ]
         },
-        "url": "{{base_url}}/api/v1/interviews"
-      }
-    },
-    {
-      "name": "提交轮次",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" },
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"stage\": \"SELF_INTRO\",\n  \"answer_text\": \"我有三年前后端开发经验。\"\n}"
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": "{{base_url}}/auth/logout"
+          }
         },
-        "url": "{{base_url}}/api/v1/interviews/{{interview_id}}/turns"
-      }
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/auth/me"
+          }
+        }
+      ]
     },
     {
-      "name": "查询会话状态",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/interviews/{{interview_id}}/status"
-      }
-    },
-    {
-      "name": "结束面试",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/interviews/{{interview_id}}/finish"
-      }
-    },
-    {
-      "name": "查询报告",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/report/{{interview_id}}"
-      }
-    },
-    {
-      "name": "重试报告",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/report/{{interview_id}}/retry"
-      }
-    },
-    {
-      "name": "查询历史",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{user_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/interviews/history?page=1&page_size=10"
-      }
-    },
-    {
-      "name": "管理导入",
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{admin_token}}" },
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "X-Idempotency-Key", "value": "{{$guid}}" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"rebuild_mode\": \"full\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": false,\n  \"chunk_model\": \"qwen2.5:7b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
+      "name": "Interview",
+      "item": [
+        {
+          "name": "Upload Resume",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+            },
+            "url": "{{base_url}}/resumes"
+          }
         },
-        "url": "{{base_url}}/api/v1/admin/imports/materials"
-      }
+        {
+          "name": "Create Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resume_id\": \"res_xxx\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"text\",\n  \"output_mode\": \"text\"\n}"
+            },
+            "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "History",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/history"
+          }
+        }
+      ]
     },
     {
-      "name": "查询导入任务状态",
-      "request": {
-        "method": "GET",
-        "header": [
-          { "key": "Authorization", "value": "Bearer {{admin_token}}" }
-        ],
-        "url": "{{base_url}}/api/v1/admin/imports/materials/{{import_task_id}}"
-      }
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Trigger Material Import",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rebuild_mode\": \"incremental\",\n  \"roles\": [\"java\", \"web\"],\n  \"dry_run\": true,\n  \"chunk_model\": \"qwen2.5:7b\",\n  \"embedding_model\": \"nomic-embed-text\"\n}"
+            },
+            "url": "{{base_url}}/admin/imports/materials"
+          }
+        }
+      ]
     }
   ],
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8000" },
-    { "key": "user_token", "value": "user-token" },
-    { "key": "admin_token", "value": "admin-token" },
-    { "key": "resume_id", "value": "" },
-    { "key": "interview_id", "value": "" },
-    { "key": "import_task_id", "value": "" }
+    { "key": "base_url", "value": "http://localhost:8000/api/v1" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
   ]
 }

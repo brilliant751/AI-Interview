@@ -2,6 +2,21 @@ import { expect, test } from '@playwright/test'
 
 /** 主流程 E2E：上传 -> 准备 -> 面试 -> 报告 -> 历史。 */
 test('main flow should work with mocked backend', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('ai_interview_access_token', 'mock-access')
+    localStorage.setItem('ai_interview_refresh_token', 'mock-refresh')
+    localStorage.setItem(
+      'ai_interview_user',
+      JSON.stringify({
+        user_id: 'usr_test',
+        email: 'user@example.com',
+        display_name: '测试用户',
+        role: 'user',
+        status: 'active',
+      }),
+    )
+  })
+
   await page.route('**/api/v1/**', async (route) => {
     const request = route.request()
     const method = request.method()

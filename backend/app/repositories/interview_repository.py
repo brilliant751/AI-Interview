@@ -90,6 +90,45 @@ class InterviewRepository:
                   created_at TEXT NOT NULL DEFAULT (datetime('now')),
                   PRIMARY KEY(endpoint, idempotency_key)
                 );
+
+                CREATE TABLE IF NOT EXISTS user_accounts (
+                  user_id TEXT PRIMARY KEY,
+                  email TEXT NOT NULL UNIQUE,
+                  password_hash TEXT NOT NULL,
+                  display_name TEXT NOT NULL,
+                  role TEXT NOT NULL DEFAULT 'user',
+                  status TEXT NOT NULL DEFAULT 'active',
+                  email_verified INTEGER NOT NULL DEFAULT 0,
+                  last_login_at TEXT,
+                  password_changed_at TEXT,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS auth_refresh_tokens (
+                  token_id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  token_hash TEXT NOT NULL UNIQUE,
+                  issued_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  expires_at TEXT NOT NULL,
+                  revoked_at TEXT,
+                  replaced_by_token_id TEXT,
+                  ip TEXT,
+                  user_agent TEXT
+                );
+
+                CREATE TABLE IF NOT EXISTS auth_password_reset_tokens (
+                  reset_id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  token_hash TEXT NOT NULL UNIQUE,
+                  expires_at TEXT NOT NULL,
+                  used_at TEXT,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_user_accounts_email ON user_accounts(email);
+                CREATE INDEX IF NOT EXISTS idx_refresh_user_expires ON auth_refresh_tokens(user_id, expires_at);
+                CREATE INDEX IF NOT EXISTS idx_reset_user_expires ON auth_password_reset_tokens(user_id, expires_at);
                 """
             )
             self._ensure_column(conn, "interview_sessions", "technical_count", "INTEGER NOT NULL DEFAULT 0")
@@ -272,3 +311,193 @@ class InterviewRepository:
                 [*params, limit, offset],
             ).fetchall()
         return [dict(r) for r in rows], int(total)
+
+    def create_user(self, user_id: str, email: str, password_hash: str, display_name: str, role: str) -> dict:
+        """创建用户账号。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO user_accounts(user_id, email, password_hash, display_name, role, status)
+                VALUES (?, ?, ?, ?, ?, 'active')
+                """,
+                (user_id, email.lower(), password_hash, display_name, role),
+            )
+            row = conn.execute("SELECT * FROM user_accounts WHERE user_id = ?", (user_id,)).fetchone()
+        return dict(row)
+
+    def get_user_by_email(self, email: str) -> dict | None:
+        """按邮箱查询账号。"""
+        with self._session() as conn:
+            row = conn.execute("SELECT * FROM user_accounts WHERE email = ?", (email.lower(),)).fetchone()
+        return dict(row) if row else None
+
+    def get_user_by_id(self, user_id: str) -> dict | None:
+        """按用户 ID 查询账号。"""
+        with self._session() as conn:
+            row = conn.execute("SELECT * FROM user_accounts WHERE user_id = ?", (user_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_user_last_login(self, user_id: str) -> None:
+        """更新用户最后登录时间。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE user_accounts
+                SET last_login_at = datetime('now'), updated_at = datetime('now')
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            )
+
+    def update_user_password(self, user_id: str, password_hash: str) -> None:
+        """更新用户密码哈希。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE user_accounts
+                SET password_hash = ?, password_changed_at = datetime('now'), updated_at = datetime('now')
+                WHERE user_id = ?
+                """,
+                (password_hash, user_id),
+            )
+
+    def insert_refresh_token(
+        self,
+        token_id: str,
+        user_id: str,
+        token_hash: str,
+        expires_at: str,
+        ip: str,
+        user_agent: str,
+    ) -> None:
+        """写入刷新令牌。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO auth_refresh_tokens(token_id, user_id, token_hash, expires_at, ip, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (token_id, user_id, token_hash, expires_at, ip, user_agent),
+            )
+
+    def get_active_refresh_token_by_hash(self, token_hash: str) -> dict | None:
+        """按哈希查询有效刷新令牌。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT t.token_id, t.user_id, t.expires_at, u.role
+                FROM auth_refresh_tokens t
+                JOIN user_accounts u ON u.user_id = t.user_id
+                WHERE t.token_hash = ?
+                  AND t.revoked_at IS NULL
+                  AND datetime(t.expires_at) > datetime('now')
+                LIMIT 1
+                """,
+                (token_hash,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def rotate_refresh_token(
+        self,
+        old_token_id: str,
+        new_token_id: str,
+        user_id: str,
+        new_token_hash: str,
+        expires_at: str,
+        ip: str,
+        user_agent: str,
+    ) -> None:
+        """轮换刷新令牌并撤销旧令牌。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO auth_refresh_tokens(token_id, user_id, token_hash, expires_at, ip, user_agent)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (new_token_id, user_id, new_token_hash, expires_at, ip, user_agent),
+            )
+            conn.execute(
+                """
+                UPDATE auth_refresh_tokens
+                SET revoked_at = datetime('now'), replaced_by_token_id = ?
+                WHERE token_id = ? AND revoked_at IS NULL
+                """,
+                (new_token_id, old_token_id),
+            )
+
+    def revoke_refresh_token(self, token_id: str) -> None:
+        """撤销单个刷新令牌。"""
+        with self._session() as conn:
+            conn.execute(
+                "UPDATE auth_refresh_tokens SET revoked_at = datetime('now') WHERE token_id = ? AND revoked_at IS NULL",
+                (token_id,),
+            )
+
+    def revoke_all_refresh_tokens(self, user_id: str) -> None:
+        """撤销用户全部刷新令牌。"""
+        with self._session() as conn:
+            conn.execute(
+                "UPDATE auth_refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL",
+                (user_id,),
+            )
+
+    def insert_password_reset_token(self, reset_id: str, user_id: str, token_hash: str, expires_at: str) -> None:
+        """写入密码重置令牌。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO auth_password_reset_tokens(reset_id, user_id, token_hash, expires_at)
+                VALUES (?, ?, ?, ?)
+                """,
+                (reset_id, user_id, token_hash, expires_at),
+            )
+
+    def get_active_reset_token_by_hash(self, token_hash: str) -> dict | None:
+        """按哈希查询有效重置令牌。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT reset_id, user_id
+                FROM auth_password_reset_tokens
+                WHERE token_hash = ?
+                  AND used_at IS NULL
+                  AND datetime(expires_at) > datetime('now')
+                LIMIT 1
+                """,
+                (token_hash,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def mark_reset_token_used(self, reset_id: str, conn: sqlite3.Connection | None = None) -> None:
+        """标记重置令牌已使用。"""
+        if conn is not None:
+            conn.execute(
+                "UPDATE auth_password_reset_tokens SET used_at = datetime('now') WHERE reset_id = ?",
+                (reset_id,),
+            )
+            return
+        with self._session() as session:
+            session.execute(
+                "UPDATE auth_password_reset_tokens SET used_at = datetime('now') WHERE reset_id = ?",
+                (reset_id,),
+            )
+
+    def reset_password_and_revoke_tokens(self, user_id: str, password_hash: str, reset_id: str) -> None:
+        """事务化更新密码并撤销用户 refresh token。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE user_accounts
+                SET password_hash = ?, password_changed_at = datetime('now'), updated_at = datetime('now')
+                WHERE user_id = ?
+                """,
+                (password_hash, user_id),
+            )
+            conn.execute(
+                "UPDATE auth_password_reset_tokens SET used_at = datetime('now') WHERE reset_id = ?",
+                (reset_id,),
+            )
+            conn.execute(
+                "UPDATE auth_refresh_tokens SET revoked_at = datetime('now') WHERE user_id = ? AND revoked_at IS NULL",
+                (user_id,),
+            )

@@ -12,6 +12,8 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.errors import ApiError, api_error_handler
 from app.repositories.interview_repository import InterviewRepository
+from app.services.audit_service import AuditService
+from app.services.auth_service import AuthService
 from app.services.interview_service import InterviewService
 from app.services.material_import_service import MaterialImportService
 from app.services.report_worker import ReportWorker
@@ -28,9 +30,13 @@ async def lifespan(app: FastAPI):
     repo.init_schema()
     report_worker = ReportWorker(repo=repo)
     material_import_service = MaterialImportService(repo_root=REPO_ROOT)
+    audit_service = AuditService()
+    auth_service = AuthService(repo=repo, audit_service=audit_service)
     app.state.repo = repo
     app.state.report_worker = report_worker
     app.state.material_import_service = material_import_service
+    app.state.audit_service = audit_service
+    app.state.auth_service = auth_service
     app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker)
     logger.info("应用启动完成，数据库与服务已初始化")
     yield

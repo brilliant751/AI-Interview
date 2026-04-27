@@ -7,6 +7,109 @@ servers:
 security:
   - bearerAuth: []
 paths:
+  /api/v1/auth/register:
+    post:
+      summary: 注册账号
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+  /api/v1/auth/login:
+    post:
+      summary: 登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+  /api/v1/auth/refresh:
+    post:
+      summary: 刷新令牌
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+      responses:
+        "200":
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+  /api/v1/auth/logout:
+    post:
+      summary: 登出
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        "204":
+          description: 登出成功
+  /api/v1/auth/forgot-password:
+    post:
+      summary: 忘记密码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordResponse'
+  /api/v1/auth/reset-password:
+    post:
+      summary: 重置密码
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        "204":
+          description: 重置成功
+  /api/v1/auth/me:
+    get:
+      summary: 获取当前用户
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
   /api/v1/resumes:
     post:
       summary: 上传简历
@@ -29,15 +132,6 @@ paths:
       responses:
         "200":
           description: 成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  resume_id:
-                    type: string
-                  parse_status:
-                    type: string
   /api/v1/interviews:
     post:
       summary: 创建面试会话
@@ -50,14 +144,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required: [resume_id, job_role]
-              properties:
-                resume_id: { type: string }
-                job_role: { type: string, enum: [java, web] }
-                difficulty: { type: string, enum: [easy, medium, hard] }
-                input_mode: { type: string, enum: [text, voice] }
-                output_mode: { type: string, enum: [text, voice] }
+              $ref: '#/components/schemas/InterviewCreateRequest'
       responses:
         "200":
           description: 成功
@@ -72,8 +159,6 @@ paths:
       responses:
         "200":
           description: 成功
-        "404":
-          description: 会话不存在
   /api/v1/interviews/{interview_id}/turns:
     post:
       summary: 提交面试轮次
@@ -82,25 +167,15 @@ paths:
           name: interview_id
           required: true
           schema: { type: string }
-        - in: header
-          name: X-Idempotency-Key
-          schema: { type: string }
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [stage]
-              properties:
-                stage: { type: string }
-                answer_text: { type: string }
-                asr_text: { type: string }
+              $ref: '#/components/schemas/InterviewTurnRequest'
       responses:
         "200":
           description: 成功
-        "409":
-          description: 状态冲突
   /api/v1/interviews/{interview_id}/finish:
     post:
       summary: 结束面试并触发报告
@@ -108,9 +183,6 @@ paths:
         - in: path
           name: interview_id
           required: true
-          schema: { type: string }
-        - in: header
-          name: X-Idempotency-Key
           schema: { type: string }
       responses:
         "202":
@@ -165,36 +237,10 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                rebuild_mode: { type: string, enum: [full, incremental], default: full }
-                roles:
-                  type: array
-                  items: { type: string, enum: [java, web] }
-                dry_run: { type: boolean, default: false }
-                chunk_model: { type: string, default: qwen2.5:7b }
-                embedding_model: { type: string, default: nomic-embed-text }
+              $ref: '#/components/schemas/MaterialImportRequest'
       responses:
         "202":
           description: 已受理
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  task_id: { type: string }
-                  status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
-                  stage: { type: string }
-                  progress: { type: integer }
-                  idempotency_hit: { type: boolean }
-        "409":
-          description: 全量任务冲突
-        "424":
-          description: 依赖不可用
-        "502":
-          description: 模型服务不可用
-        "403":
-          description: 权限不足
   /api/v1/admin/imports/materials/{task_id}:
     get:
       summary: 查询材料导入任务状态
@@ -206,29 +252,102 @@ paths:
       responses:
         "200":
           description: 成功
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  task_id: { type: string }
-                  status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
-                  stage: { type: string }
-                  progress: { type: integer }
-                  rebuild_mode: { type: string, enum: [full, incremental] }
-                  roles:
-                    type: array
-                    items: { type: string, enum: [java, web] }
-                  dry_run: { type: boolean }
-                  last_error: { type: string }
-                  report_path: { type: string }
-        "400":
-          description: 任务不存在或参数错误
-        "403":
-          description: 权限不足
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        display_name: { type: string }
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    TokenRefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        message: { type: string }
+    ResetPasswordRequest:
+      type: object
+      required: [reset_token, new_password]
+      properties:
+        reset_token: { type: string }
+        new_password: { type: string, minLength: 8 }
+    AuthUserProfile:
+      type: object
+      properties:
+        user_id: { type: string }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [user, admin] }
+        status: { type: string, enum: [active, disabled] }
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [bearer] }
+        expires_in: { type: integer }
+        refresh_token: { type: string }
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    AuthMeResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    InterviewCreateRequest:
+      type: object
+      required: [resume_id, job_role]
+      properties:
+        resume_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        input_mode: { type: string, enum: [text, voice] }
+        output_mode: { type: string, enum: [text, voice] }
+    InterviewTurnRequest:
+      type: object
+      required: [stage]
+      properties:
+        stage: { type: string }
+        answer_text: { type: string }
+        asr_text: { type: string }
+    MaterialImportRequest:
+      type: object
+      properties:
+        rebuild_mode: { type: string, enum: [full, incremental], default: full }
+        roles:
+          type: array
+          items: { type: string, enum: [java, web] }
+        dry_run: { type: boolean, default: false }
+        chunk_model: { type: string, default: qwen2.5:7b }
+        embedding_model: { type: string, default: nomic-embed-text }

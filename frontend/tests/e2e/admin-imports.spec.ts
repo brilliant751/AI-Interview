@@ -3,7 +3,18 @@ import { expect, test } from '@playwright/test'
 /** 管理端重建任务页面 E2E。 */
 test('admin imports should trigger and poll task status', async ({ page }) => {
   await page.addInitScript(() => {
-    localStorage.setItem('ai_interview_token', 'admin-token')
+    localStorage.setItem('ai_interview_access_token', 'mock-admin-access')
+    localStorage.setItem('ai_interview_refresh_token', 'mock-admin-refresh')
+    localStorage.setItem(
+      'ai_interview_user',
+      JSON.stringify({
+        user_id: 'admin-default',
+        email: 'admin@example.com',
+        display_name: '管理员',
+        role: 'admin',
+        status: 'active',
+      }),
+    )
   })
 
   await page.route('**/api/v1/admin/imports/materials', async (route) => {

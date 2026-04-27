@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class ResumeUploadResponse(BaseModel):
@@ -75,9 +75,9 @@ class ReportResponse(BaseModel):
     interview_id: str
     status: Literal["GENERATING", "READY", "FAILED"]
     overall_score: int | None = None
-    strengths: list[str] = []
-    weaknesses: list[str] = []
-    suggestions: list[str] = []
+    strengths: list[str] = Field(default_factory=list)
+    weaknesses: list[str] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
     error_message: str | None = None
 
 
@@ -129,3 +129,82 @@ class MaterialImportTaskResponse(BaseModel):
     dry_run: bool
     last_error: str = ""
     report_path: str = ""
+
+
+class RegisterRequest(BaseModel):
+    """注册请求。"""
+
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    display_name: str = Field(min_length=1, max_length=64)
+
+
+class LoginRequest(BaseModel):
+    """登录请求。"""
+
+    email: EmailStr
+    password: str = Field(min_length=1, max_length=128)
+
+
+class TokenRefreshRequest(BaseModel):
+    """刷新令牌请求。"""
+
+    refresh_token: str = Field(min_length=20)
+
+
+class LogoutRequest(BaseModel):
+    """登出请求。"""
+
+    refresh_token: str = Field(min_length=20)
+
+
+class ForgotPasswordRequest(BaseModel):
+    """忘记密码请求。"""
+
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    """重置密码请求。"""
+
+    reset_token: str = Field(min_length=20)
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+class AuthUserProfile(BaseModel):
+    """认证用户信息。"""
+
+    user_id: str
+    email: EmailStr
+    display_name: str
+    role: Literal["user", "admin"]
+    status: Literal["active", "disabled"]
+
+
+class AuthTokenResponse(BaseModel):
+    """认证令牌响应。"""
+
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
+    refresh_token: str
+    user: AuthUserProfile
+
+
+class RegisterResponse(BaseModel):
+    """注册响应。"""
+
+    user: AuthUserProfile
+
+
+class ForgotPasswordResponse(BaseModel):
+    """忘记密码响应。"""
+
+    accepted: bool = True
+    message: str = "如邮箱存在，我们已发送重置邮件"
+
+
+class AuthMeResponse(BaseModel):
+    """当前登录用户响应。"""
+
+    user: AuthUserProfile
