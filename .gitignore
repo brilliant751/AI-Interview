@@ -19,6 +19,13 @@ venv/
 .idea/
 .DS_Store
 
+# Local env files
+.env
+.env.*
+backend/.env
+frontend/.env
+frontend/.env.*
+
 
 # Node.js
 node_modules/
@@ -30,9 +37,11 @@ coverage/
 playwright-report/
 test-results/
 *.tsbuildinfo
+*.pid
 
 # Backend runtime data
 backend/.cache/
+backend/.venv/
 backend/assets/data/sqlite/*.db
 backend/assets/data/sqlite/*.db-shm
 backend/assets/data/sqlite/*.db-wal

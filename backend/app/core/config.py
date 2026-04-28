@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     embed_batch_size: int = 32
     retrieval_fallback_enabled: bool = False
     kb_collection_alias_file: str = str(ASSETS_ROOT / "data" / "chroma" / "aliases.json")
+    cors_allow_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ]
 
 
 @lru_cache(maxsize=1)
