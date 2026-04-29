@@ -31,12 +31,26 @@ class Settings(BaseSettings):
     token_secret: str = "dev-token-secret"
     user_token: str = "user-token"
     admin_token: str = "admin-token"
+    jwt_secret: str = "dev-jwt-secret"
+    jwt_algorithm: str = "HS256"
+    access_token_ttl_minutes: int = 30
+    refresh_token_ttl_days: int = 7
+    reset_token_ttl_minutes: int = 30
+    auth_enable_dev_static_token: bool = False
+    auth_login_limit_window_seconds: int = 300
+    auth_login_limit_threshold: int = 10
     ollama_base_url: str = "http://127.0.0.1:11434"
     chunk_model: str = "qwen2.5:7b"
     embedding_model: str = "nomic-embed-text"
     embed_batch_size: int = 32
     retrieval_fallback_enabled: bool = False
     kb_collection_alias_file: str = str(ASSETS_ROOT / "data" / "chroma" / "aliases.json")
+    cors_allow_origins: list[str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+    ]
 
 
 @lru_cache(maxsize=1)

@@ -23,6 +23,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["AI_INTERVIEW_DB_PATH"] = os.path.join(self.tmpdir.name, "test.db")
         os.environ["AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED"] = "true"
+        os.environ["AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN"] = "true"
         get_settings.cache_clear()
         self.client = TestClient(create_app())
         self.client.__enter__()
@@ -35,6 +36,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.tmpdir.cleanup()
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
         os.environ.pop("AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED", None)
+        os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
 
     def test_interview_flow(self) -> None:
         """验证主流程接口连通与状态可用。"""

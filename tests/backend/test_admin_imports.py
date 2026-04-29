@@ -26,6 +26,7 @@ class AdminImportsTestCase(unittest.TestCase):
         """初始化测试环境与客户端。"""
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["AI_INTERVIEW_DB_PATH"] = os.path.join(self.tmpdir.name, "test.db")
+        os.environ["AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN"] = "true"
         get_settings.cache_clear()
         self.client = TestClient(create_app())
         self.client.__enter__()
@@ -36,6 +37,7 @@ class AdminImportsTestCase(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.tmpdir.cleanup()
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
+        os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
         get_settings.cache_clear()
 
     def test_trigger_task_and_query_status(self) -> None:

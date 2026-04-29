@@ -1,24 +1,47 @@
-import { Layout, Typography } from 'antd'
+import { Button, Layout, Typography } from 'antd'
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+
+import { logout } from '../api/auth'
+import { useAuthStore } from '../stores/authStore'
 
 const { Header, Content } = Layout
 
 /** 应用布局组件。 */
 export function AppLayout(props: { children: ReactNode }) {
   const location = useLocation()
-  const token =
-    typeof window !== 'undefined' && typeof window.localStorage?.getItem === 'function'
-      ? (window.localStorage.getItem('ai_interview_token') ?? 'user-token')
-      : 'user-token'
-  const links = [
-    { to: '/upload', label: '上传简历' },
-    { to: '/interview', label: '模拟面试' },
-    { to: '/report', label: '面试报告' },
-    { to: '/history', label: '历史记录' },
-  ]
-  if (token === 'admin-token') {
+  const navigate = useNavigate()
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const user = useAuthStore((state) => state.user)
+  const refreshToken = useAuthStore((state) => state.refreshToken)
+  const clearSession = useAuthStore((state) => state.clearSession)
+
+  const links = isAuthenticated
+    ? [
+        { to: '/upload', label: '上传简历' },
+        { to: '/interview', label: '模拟面试' },
+        { to: '/report', label: '面试报告' },
+        { to: '/history', label: '历史记录' },
+      ]
+    : [
+        { to: '/login', label: '登录' },
+        { to: '/register', label: '注册' },
+      ]
+
+  if (user?.role === 'admin') {
     links.push({ to: '/admin/imports', label: '知识库重建' })
+  }
+
+  /** 执行退出登录。 */
+  const handleLogout = async () => {
+    try {
+      if (refreshToken) {
+        await logout(refreshToken)
+      }
+    } finally {
+      clearSession()
+      navigate('/login', { replace: true })
+    }
   }
 
   return (
@@ -30,12 +53,13 @@ export function AppLayout(props: { children: ReactNode }) {
           justifyContent: 'space-between',
           background: '#10243f',
           color: '#fff',
+          gap: 16,
         }}
       >
         <Typography.Title level={4} style={{ margin: 0, color: '#fff' }}>
           AI Interview
         </Typography.Title>
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {links.map((item) => (
             <Link
               key={item.to}
@@ -48,6 +72,11 @@ export function AppLayout(props: { children: ReactNode }) {
               {item.label}
             </Link>
           ))}
+          {isAuthenticated ? (
+            <Button size="small" onClick={handleLogout}>
+              退出登录
+            </Button>
+          ) : null}
         </div>
       </Header>
       <Content style={{ padding: '24px 16px', maxWidth: 980, margin: '0 auto', width: '100%' }}>
