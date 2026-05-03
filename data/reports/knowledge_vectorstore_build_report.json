@@ -1,10 +1,13 @@
 {
   "total_rows": 152,
-  "written_rows": 0,
+  "written_rows": 152,
   "dimension": 64,
   "roles": {
     "java": 117,
     "web": 35
   },
-  "dry_run": true
+  "embedding_providers": {
+    "ollama": 152
+  },
+  "dry_run": false
 }

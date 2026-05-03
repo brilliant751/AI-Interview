@@ -55,6 +55,7 @@ backend/assets/data/normalized/chunk_preview*.jsonl
 # Chroma generated indexes (keep alias mapping)
 backend/assets/data/chroma/*
 !backend/assets/data/chroma/aliases.json
-assets/data/chroma/chroma.sqlite3
+data/chroma/chroma.sqlite3
+data/chroma/*-*-*-*-*/
 *.db-wal
 *.db-shm

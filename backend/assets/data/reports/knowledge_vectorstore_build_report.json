@@ -1,22 +1,25 @@
 {
   "status": "SUCCESS",
-  "total_rows": 234,
-  "updated_rows": 0,
-  "written_rows": 0,
+  "total_rows": 468,
+  "updated_rows": 468,
+  "written_rows": 468,
   "embedding_dimensions": {
-    "java": 0
+    "java": 768,
+    "web": 768
   },
-  "rebuild_mode": "incremental",
+  "rebuild_mode": "full",
   "embed_model": "nomic-embed-text",
   "ollama_base_url": "http://127.0.0.1:11434",
   "embed_batch_size": 32,
   "roles": {
-    "java": 234
+    "java": 234,
+    "web": 234
   },
   "collection_version": {
-    "java": "kb_java_v2"
+    "java": "kb_java_v2",
+    "web": "kb_web_v2"
   },
   "task_id": "",
   "errors": [],
-  "dry_run": true
+  "dry_run": false
 }

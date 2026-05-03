@@ -41,7 +41,18 @@ class RAGService:
         self._chroma_client = self._build_chroma_client()
         self._alias_map = self._load_alias_map()
         self._ollama_client: OllamaProviderClient | None = None
-        self.vector_dim = 1024
+        self.vector_dim = 768
+
+    def _resolve_collection_dim(self, collection: Any) -> int:
+        """从 collection 探测向量维度，失败时回退默认维度。"""
+        try:
+            sample = collection.get(limit=1, include=["embeddings"])
+            embeddings = sample.get("embeddings") if isinstance(sample, dict) else None
+            if embeddings and embeddings[0]:
+                return len(embeddings[0])
+        except Exception:
+            pass
+        return self.vector_dim
 
     def _get_ollama_client(self) -> OllamaProviderClient:
         """惰性初始化 Ollama embedding 客户端。"""
@@ -93,6 +104,7 @@ class RAGService:
         collection_name = self._resolve_collection_name(job_role)
         try:
             collection = self._chroma_client.get_collection(collection_name)
+            self.vector_dim = self._resolve_collection_dim(collection)
             result = collection.query(
                 query_embeddings=[self._embed_query(query)],
                 n_results=top_k,

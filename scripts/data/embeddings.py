@@ -38,7 +38,8 @@ def create_embedding_client(
     resolved_model = model or os.getenv("AI_INTERVIEW_EMBED_MODEL", "nomic-embed-text")
     resolved_base_url = (base_url or os.getenv("AI_INTERVIEW_OLLAMA_BASE_URL", "http://localhost:11434")).rstrip("/")
 
-    client = httpx.Client(timeout=timeout_seconds)
+    # 仅访问本地 Ollama，禁用环境代理，避免 SOCKS 代理缺少依赖导致初始化失败。
+    client = httpx.Client(timeout=timeout_seconds, trust_env=False)
 
     def embed_text(text: str, dim: int) -> tuple[list[float], str]:
         """生成向量并返回 provider 标识。"""

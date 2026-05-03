@@ -8,7 +8,13 @@ FRONTEND_DIR="$ROOT_DIR/frontend"
 BACKEND_VENV="$BACKEND_DIR/.venv"
 BACKEND_PYTHON="$BACKEND_VENV/bin/python"
 BACKEND_UVICORN="$BACKEND_VENV/bin/uvicorn"
-BACKEND_DB="$ROOT_DIR/assets/data/sqlite/interview.db"
+BACKEND_DB="$BACKEND_DIR/assets/data/sqlite/interview.db"
+BACKEND_HOST="${BACKEND_HOST:-0.0.0.0}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+FRONTEND_HOST="${FRONTEND_HOST:-0.0.0.0}"
+FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+START_FRONTEND="${START_FRONTEND:-1}"
+BACKEND_RELOAD="${BACKEND_RELOAD:-0}"
 MODELSCOPE_CACHE_DIR="$BACKEND_DIR/.cache/modelscope"
 MODELSCOPE_DOMAIN_VALUE="${AI_INTERVIEW_MODELSCOPE_DOMAIN:-www.modelscope.cn}"
 MODELSCOPE_DOWNLOAD_PARALLELS_VALUE="${AI_INTERVIEW_MODELSCOPE_DOWNLOAD_PARALLELS:-4}"
@@ -35,7 +41,10 @@ ensure_backend_python() {
 }
 
 release_occupied_ports() {
-  local ports=("8000" "5173" "8173")
+  local ports=("$BACKEND_PORT")
+  if [[ "$START_FRONTEND" == "1" ]]; then
+    ports+=("$FRONTEND_PORT")
+  fi
   local port
   local pids
   local pid
@@ -91,6 +100,9 @@ prepare_model_cache_dirs() {
 }
 
 ensure_frontend_dependencies() {
+  if [[ "$START_FRONTEND" != "1" ]]; then
+    return 0
+  fi
   if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
     (cd "$FRONTEND_DIR" && npm install)
   fi
@@ -98,10 +110,10 @@ ensure_frontend_dependencies() {
 
 ensure_initial_data() {
   if [[ ! -f "$BACKEND_DB" ]]; then
-    python3 "$ROOT_DIR/scripts/data/validate_materials.py" --strict
-    python3 "$ROOT_DIR/scripts/data/normalize_materials.py"
-    python3 "$ROOT_DIR/scripts/data/build_question_bank.py"
-    python3 "$ROOT_DIR/scripts/data/build_knowledge_vectorstore.py"
+    python3 "$BACKEND_DIR/assets/scripts/data/validate_materials.py" --strict
+    python3 "$BACKEND_DIR/assets/scripts/data/normalize_materials.py"
+    python3 "$BACKEND_DIR/assets/scripts/data/build_question_bank.py"
+    python3 "$BACKEND_DIR/assets/scripts/data/build_knowledge_vectorstore.py"
   fi
 }
 
@@ -147,7 +159,11 @@ echo "[额外检查] 本地模型服务可达性..."
 check_local_ai_readiness
 
 echo "[4/4] 启动服务..."
-PYTHONPATH="$BACKEND_DIR" "$BACKEND_UVICORN" app.main:app --host 0.0.0.0 --port 8000 &
+if [[ "$BACKEND_RELOAD" == "1" ]]; then
+  PYTHONPATH="$BACKEND_DIR" "$BACKEND_UVICORN" app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" --reload &
+else
+  PYTHONPATH="$BACKEND_DIR" "$BACKEND_UVICORN" app.main:app --host "$BACKEND_HOST" --port "$BACKEND_PORT" &
+fi
 BACKEND_PID=$!
 
 wait_for_backend_ready() {
@@ -157,10 +173,10 @@ wait_for_backend_ready() {
       wait "$BACKEND_PID"
       return 1
     fi
-    if python3 - <<'PY' >/dev/null 2>&1
+    if python3 - <<PY >/dev/null 2>&1
 import socket
 
-with socket.create_connection(("127.0.0.1", 8000), timeout=1):
+with socket.create_connection(("127.0.0.1", int("${BACKEND_PORT}")), timeout=1):
     pass
 PY
     then
@@ -177,11 +193,17 @@ if ! wait_for_backend_ready; then
   exit 1
 fi
 
-(cd "$FRONTEND_DIR" && npm run dev -- --host 0.0.0.0) &
-FRONTEND_PID=$!
+if [[ "$START_FRONTEND" == "1" ]]; then
+  (cd "$FRONTEND_DIR" && npm run dev -- --host "$FRONTEND_HOST" --port "$FRONTEND_PORT") &
+  FRONTEND_PID=$!
+fi
 
-echo "后端：http://localhost:8000"
-echo "前端：http://localhost:5173"
+echo "后端：http://localhost:${BACKEND_PORT}"
+if [[ "$START_FRONTEND" == "1" ]]; then
+  echo "前端：http://localhost:${FRONTEND_PORT}"
+else
+  echo "前端：已跳过（START_FRONTEND=0）"
+fi
 echo "按 Ctrl+C 可同时停止两个服务。"
 
 while true; do
@@ -192,12 +214,14 @@ while true; do
     echo "后端进程已退出，启动失败。"
     exit 1
   fi
-  if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
-    wait "$FRONTEND_PID" || true
-    kill "$BACKEND_PID" 2>/dev/null || true
-    wait "$BACKEND_PID" 2>/dev/null || true
-    echo "前端进程已退出，启动失败。"
-    exit 1
+  if [[ "$START_FRONTEND" == "1" ]]; then
+    if ! kill -0 "$FRONTEND_PID" 2>/dev/null; then
+      wait "$FRONTEND_PID" || true
+      kill "$BACKEND_PID" 2>/dev/null || true
+      wait "$BACKEND_PID" 2>/dev/null || true
+      echo "前端进程已退出，启动失败。"
+      exit 1
+    fi
   fi
   sleep 1
 done
