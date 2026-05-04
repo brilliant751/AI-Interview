@@ -31,7 +31,11 @@ class OpenAIProviderClient:
 
         response = httpx.get(audio_url, timeout=self.settings.provider_timeout_seconds)
         response.raise_for_status()
-        stream = BytesIO(response.content)
+        return self.transcribe_audio_bytes(response.content, audio_format=audio_format)
+
+    def transcribe_audio_bytes(self, audio_bytes: bytes, audio_format: str = "wav") -> str:
+        """通过音频二进制调用 ASR 获取文本。"""
+        stream = BytesIO(audio_bytes)
         stream.name = f"answer.{audio_format}"
         transcript = self.client.audio.transcriptions.create(
             model=self.settings.asr_model,

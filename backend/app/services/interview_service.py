@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import Any, Optional
 
@@ -17,6 +18,8 @@ from app.services.question_workflow import QuestionWorkflow
 from app.services.rag_service import RAGService
 from app.services.report_worker import ReportWorker
 from app.services.voice_service import VoiceService
+
+logger = logging.getLogger(__name__)
 
 
 class InterviewService:
@@ -55,17 +58,22 @@ class InterviewService:
         answer_audio_filename = (payload.get("answer_audio_filename") or "answer.wav").strip() or "answer.wav"
 
         if asr_text:
+            logger.info("ASR转写结果(客户端传入): %s", asr_text)
+            print(f"[ASR] 客户端转写结果: {asr_text}")
             return asr_text, "ASR_CLIENT"
         if answer_text:
             return answer_text, "TEXT"
         if answer_audio_url or answer_audio_bytes:
+            recognized_text = self.voice_service.asr(
+                audio_url=answer_audio_url,
+                audio_format=answer_audio_format,
+                audio_bytes=answer_audio_bytes,
+                audio_filename=answer_audio_filename,
+            )
+            logger.info("ASR转写结果(服务端识别): %s", recognized_text)
+            print(f"[ASR] 服务端转写结果: {recognized_text}")
             return (
-                self.voice_service.asr(
-                    audio_url=answer_audio_url,
-                    audio_format=answer_audio_format,
-                    audio_bytes=answer_audio_bytes,
-                    audio_filename=answer_audio_filename,
-                ),
+                recognized_text,
                 "ASR_SERVER",
             )
         raise ApiError(code="VALIDATE_400", message="回答内容不能为空", status_code=400)

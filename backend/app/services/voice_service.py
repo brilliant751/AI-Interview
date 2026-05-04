@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 from typing import Any, Optional
 
 import httpx
@@ -13,6 +14,8 @@ from app.services.providers import (
     OpenAIProviderClient,
     PaddleSpeechProviderClient,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceService:
@@ -71,9 +74,20 @@ class VoiceService:
 
         if self.asr_provider == "openai":
             try:
+                if resolved_bytes:
+                    recognized_text = self._get_openai_client().transcribe_audio_bytes(
+                        audio_bytes=resolved_bytes,
+                        audio_format=audio_format,
+                    )
+                    logger.info("ASR转写结果(VoiceService/OpenAI): %s", recognized_text)
+                    print(f"[ASR] VoiceService/OpenAI 转写结果: {recognized_text}", flush=True)
+                    return recognized_text
                 if not audio_url.strip():
-                    raise ApiError(code="VALIDATE_400", message="openai 语音识别仅支持音频 URL 输入", status_code=400)
-                return self._get_openai_client().transcribe_audio(audio_url=audio_url, audio_format=audio_format)
+                    raise ApiError(code="VALIDATE_400", message="缺少音频内容，无法识别", status_code=400)
+                recognized_text = self._get_openai_client().transcribe_audio(audio_url=audio_url, audio_format=audio_format)
+                logger.info("ASR转写结果(VoiceService/OpenAI): %s", recognized_text)
+                print(f"[ASR] VoiceService/OpenAI 转写结果: {recognized_text}", flush=True)
+                return recognized_text
             except Exception as exc:
                 if isinstance(exc, httpx.TimeoutException):
                     raise ApiError(code="UPSTREAM_TIMEOUT", message="上游语音识别超时", status_code=504) from exc
@@ -87,10 +101,19 @@ class VoiceService:
                 audio_bytes=resolved_bytes,
                 filename=audio_filename,
             )
-            return str(result["text"])
+            recognized_text = str(result["text"])
+            logger.info("ASR转写结果(VoiceService/FunASR): %s", recognized_text)
+            print(f"[ASR] VoiceService/FunASR 转写结果: {recognized_text}", flush=True)
+            return recognized_text
         if self.asr_provider == "paddlespeech":
-            return f"paddlespeech-mock: {audio_url}"
-        return f"mock-asr: {audio_url or audio_filename}"
+            recognized_text = f"paddlespeech-mock: {audio_url}"
+            logger.info("ASR转写结果(VoiceService/PaddleSpeech): %s", recognized_text)
+            print(f"[ASR] VoiceService/PaddleSpeech 转写结果: {recognized_text}", flush=True)
+            return recognized_text
+        recognized_text = f"mock-asr: {audio_url or audio_filename}"
+        logger.info("ASR转写结果(VoiceService/Mock): %s", recognized_text)
+        print(f"[ASR] VoiceService/Mock 转写结果: {recognized_text}", flush=True)
+        return recognized_text
 
     def tts(self, text: str) -> str:
         """将文本转语音并返回音频 URL。"""

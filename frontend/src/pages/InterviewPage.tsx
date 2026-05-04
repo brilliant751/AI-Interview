@@ -1,8 +1,8 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Button, Card, Form, Input, Modal, Radio, Select, Space, Table, Tag, Typography, Upload, message } from 'antd'
+import { Button, Card, Form, Input, Modal, Progress, Radio, Select, Space, Table, Tag, Typography, Upload, message } from 'antd'
 import type { UploadFile } from 'antd/es/upload/interface'
 import { AxiosError } from 'axios'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { fetchProviderHealth } from '../api/admin'
@@ -20,16 +20,28 @@ import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试答题页面。 */
 export function InterviewPage() {
+  const AUTO_RECORD_COUNTDOWN_SECONDS = 10
+  const MAX_RECORDING_SECONDS = 180
   const navigate = useNavigate()
   const [answer, setAnswer] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [audioUploadFile, setAudioUploadFile] = useState<UploadFile | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0)
   const [resumePickerOpen, setResumePickerOpen] = useState(false)
   const [pendingResumeId, setPendingResumeId] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewTitle, setPreviewTitle] = useState('')
   const [previewType, setPreviewType] = useState('')
   const [previewUrl, setPreviewUrl] = useState('')
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const countdownTimerRef = useRef<number | null>(null)
+  const recordingProgressTimerRef = useRef<number | null>(null)
+  const recordingLimitTimerRef = useRef<number | null>(null)
+  const lastQuestionKeyRef = useRef('')
+  const autoPlayAudioRef = useRef<HTMLAudioElement | null>(null)
   const {
     resumeId,
     interviewId,
@@ -67,6 +79,34 @@ export function InterviewPage() {
   useEffect(() => {
     setPendingResumeId(resumeId)
   }, [resumeId])
+
+  /** 组件卸载时，清理录音与计时器资源。 */
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current !== null) {
+        window.clearInterval(countdownTimerRef.current)
+      }
+      if (recordingLimitTimerRef.current !== null) {
+        window.clearTimeout(recordingLimitTimerRef.current)
+      }
+      if (recordingProgressTimerRef.current !== null) {
+        window.clearInterval(recordingProgressTimerRef.current)
+      }
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop()
+      }
+    }
+  }, [])
+
+  /** 在语音输出且音频地址变化时尝试自动播放。 */
+  useEffect(() => {
+    if (outputMode !== 'voice' || !ttsAudioUrl || !autoPlayAudioRef.current) {
+      return
+    }
+    void autoPlayAudioRef.current.play().catch(() => {
+      message.info('浏览器拦截了自动播放，请手动点击播放按钮')
+    })
+  }, [outputMode, ttsAudioUrl])
 
   /** 查询可选简历。 */
   const resumeQuery = useQuery({
@@ -188,6 +228,145 @@ export function InterviewPage() {
     },
     onError: () => message.error('结束面试失败'),
   })
+
+  /** 将录音结果写入上传态，复用既有提交接口。 */
+  const setRecordedAudioFile = (blob: Blob) => {
+    const extension = blob.type.includes('webm') ? 'webm' : 'wav'
+    const filename = `voice-answer-${Date.now()}.${extension}`
+    const file = new File([blob], filename, { type: blob.type || 'audio/webm' })
+    setAudioFile(file)
+    setAudioUploadFile({
+      uid: `recorded-${Date.now()}`,
+      name: file.name,
+      status: 'done',
+    })
+  }
+
+  /** 停止录音并收集音频文件。 */
+  const stopRecording = () => {
+    if (countdownTimerRef.current !== null) {
+      window.clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+      setCountdown(0)
+    }
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
+      return
+    }
+    if (recordingLimitTimerRef.current !== null) {
+      window.clearTimeout(recordingLimitTimerRef.current)
+      recordingLimitTimerRef.current = null
+    }
+    if (recordingProgressTimerRef.current !== null) {
+      window.clearInterval(recordingProgressTimerRef.current)
+      recordingProgressTimerRef.current = null
+    }
+    mediaRecorderRef.current.stop()
+  }
+
+  /** 启动浏览器麦克风录音。 */
+  const startRecording = async () => {
+    if (countdownTimerRef.current !== null) {
+      window.clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+      setCountdown(0)
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+      mediaRecorder.onstop = () => {
+        if (recordingLimitTimerRef.current !== null) {
+          window.clearTimeout(recordingLimitTimerRef.current)
+          recordingLimitTimerRef.current = null
+        }
+        if (recordingProgressTimerRef.current !== null) {
+          window.clearInterval(recordingProgressTimerRef.current)
+          recordingProgressTimerRef.current = null
+        }
+        setRecordingElapsedSeconds(0)
+        const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' })
+        if (blob.size > 0) {
+          setRecordedAudioFile(blob)
+          message.success('录音完成，已装载到上传区')
+        } else {
+          message.warning('未采集到音频，请重试')
+        }
+        stream.getTracks().forEach((track) => track.stop())
+        setRecording(false)
+      }
+      mediaRecorder.start()
+      setRecordingElapsedSeconds(0)
+      setRecording(true)
+      message.success('开始录音')
+      recordingProgressTimerRef.current = window.setInterval(() => {
+        setRecordingElapsedSeconds((previous) => Math.min(previous + 1, MAX_RECORDING_SECONDS))
+      }, 1000)
+      recordingLimitTimerRef.current = window.setTimeout(() => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+          message.warning('录音已达到 3 分钟上限，已自动结束并上传')
+          stopRecording()
+        }
+      }, MAX_RECORDING_SECONDS * 1000)
+    } catch {
+      message.error('无法访问麦克风，请检查浏览器权限')
+      setRecording(false)
+    }
+  }
+
+  /** 执行 10 秒倒计时并在结束后自动开始录音。 */
+  const startCountdownRecording = () => {
+    if (recording || countdown > 0 || submitMutation.isPending || currentStage === 'END') {
+      return
+    }
+    if (countdownTimerRef.current !== null) {
+      window.clearInterval(countdownTimerRef.current)
+    }
+    setCountdown(AUTO_RECORD_COUNTDOWN_SECONDS)
+    countdownTimerRef.current = window.setInterval(() => {
+      setCountdown((previous) => {
+        if (previous <= 1) {
+          if (countdownTimerRef.current !== null) {
+            window.clearInterval(countdownTimerRef.current)
+          }
+          countdownTimerRef.current = null
+          void startRecording()
+          return 0
+        }
+        return previous - 1
+      })
+    }, 1000)
+  }
+
+  /** 新题目出现时，语音输入自动倒计时 10 秒开始录音。 */
+  useEffect(() => {
+    if (inputMode !== 'voice' || !interviewId || !currentQuestion || currentStage === 'END') {
+      return
+    }
+    const questionKey = `${currentStage}:${currentQuestion}`
+    if (lastQuestionKeyRef.current === questionKey) {
+      return
+    }
+    lastQuestionKeyRef.current = questionKey
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      stopRecording()
+    }
+    if (recordingProgressTimerRef.current !== null) {
+      window.clearInterval(recordingProgressTimerRef.current)
+      recordingProgressTimerRef.current = null
+    }
+    setRecordingElapsedSeconds(0)
+    setAudioFile(null)
+    setAudioUploadFile(null)
+    startCountdownRecording()
+  }, [inputMode, interviewId, currentQuestion, currentStage])
+
+  const recordingProgressPercent = Math.round((recordingElapsedSeconds / MAX_RECORDING_SECONDS) * 100)
 
   if (!interviewId) {
     return (
@@ -361,29 +540,65 @@ export function InterviewPage() {
       </Card>
       <ProviderHealthBanner health={providerHealth} />
       <Card title="当前问题">
-        <Typography.Paragraph style={{ marginBottom: 0 }}>{currentQuestion || '等待题目生成...'}</Typography.Paragraph>
+        {outputMode === 'voice' ? (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Typography.Paragraph style={{ marginBottom: 0 }}>
+              {currentQuestion ? '已生成语音题目，可直接播放。' : '等待题目生成...'}
+            </Typography.Paragraph>
+            {ttsAudioUrl ? (
+              <audio ref={autoPlayAudioRef} controls src={ttsAudioUrl} style={{ width: '100%' }}>
+                您的浏览器不支持音频播放。
+              </audio>
+            ) : (
+              <Typography.Text type="secondary">当前题目语音暂不可用，可先参考文本作答。</Typography.Text>
+            )}
+          </Space>
+        ) : (
+          <Typography.Paragraph style={{ marginBottom: 0 }}>{currentQuestion || '等待题目生成...'}</Typography.Paragraph>
+        )}
       </Card>
       <Card title="你的回答">
         {inputMode === 'voice' ? (
-          <Upload
-            beforeUpload={(file) => {
-              setAudioFile(file)
-              setAudioUploadFile({
-                uid: file.uid,
-                name: file.name,
-                status: 'done',
-              })
-              return false
-            }}
-            maxCount={1}
-            fileList={audioUploadFile ? [audioUploadFile] : []}
-            onRemove={() => {
-              setAudioFile(null)
-              setAudioUploadFile(null)
-            }}
-          >
-            <Button>选择音频文件</Button>
-          </Upload>
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space>
+              <Button type="primary" disabled={recording || countdown > 0} onClick={startCountdownRecording}>
+                {countdown > 0 ? `倒计时 ${countdown}s` : '重新倒计时录音'}
+              </Button>
+              <Button type="default" disabled={recording} onClick={() => void startRecording()}>
+                立即录音
+              </Button>
+              <Button type="default" danger={recording} disabled={!recording} onClick={stopRecording}>
+                结束录音并上传
+              </Button>
+              {recording ? <Tag color="red">录音中</Tag> : null}
+              {countdown > 0 ? <Tag color="gold">将在 {countdown} 秒后开始录音</Tag> : null}
+              <Tag color="blue">最长录音 3 分钟</Tag>
+            </Space>
+            <Progress
+              percent={recordingProgressPercent}
+              status={recording ? 'active' : 'normal'}
+              format={() => `${recordingElapsedSeconds}s / ${MAX_RECORDING_SECONDS}s`}
+            />
+            <Upload
+              beforeUpload={(file) => {
+                setAudioFile(file)
+                setAudioUploadFile({
+                  uid: file.uid,
+                  name: file.name,
+                  status: 'done',
+                })
+                return false
+              }}
+              maxCount={1}
+              fileList={audioUploadFile ? [audioUploadFile] : []}
+              onRemove={() => {
+                setAudioFile(null)
+                setAudioUploadFile(null)
+              }}
+            >
+              <Button>选择音频文件</Button>
+            </Upload>
+          </Space>
         ) : null}
         <Input.TextArea
           rows={6}
@@ -427,18 +642,6 @@ export function InterviewPage() {
               降级标记：{pipelineMeta.degrade_flags.length ? pipelineMeta.degrade_flags.join(', ') : '无'}
             </Tag>
           </Space>
-        </Card>
-      ) : null}
-      {ttsAudioUrl ? (
-        <Card title="语音输出">
-          <audio controls src={ttsAudioUrl} style={{ width: '100%' }}>
-            您的浏览器不支持音频播放。
-          </audio>
-          <div style={{ marginTop: 12 }}>
-            <Button type="link" href={ttsAudioUrl} target="_blank">
-              下载语音
-            </Button>
-          </div>
         </Card>
       ) : null}
     </Space>
