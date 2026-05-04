@@ -38,6 +38,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
         os.environ.pop("AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED", None)
         os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
+        get_settings.cache_clear()
 
     def _create_interview(self, output_mode: str = "text") -> str:
         """创建测试用会话并返回 interview_id。"""

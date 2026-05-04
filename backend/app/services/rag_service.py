@@ -167,7 +167,10 @@ class RAGService:
         try:
             return self._retrieve_from_chroma(job_role, query, top_k)
         except Exception:
-            # Chroma 异常时优先回退本地 JSONL；若无索引则返回空结果，避免阻断主面试流程。
+            # 仅在显式开启降级时允许 fallback，默认保持错误可见性。
+            if not self.settings.retrieval_fallback_enabled:
+                raise
+            # Chroma 异常时回退本地 JSONL；若无索引则返回空结果，避免阻断主面试流程。
             fallback = self._retrieve_from_jsonl(job_role, query, top_k)
             return fallback
 

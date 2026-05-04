@@ -174,10 +174,7 @@ class InterviewService:
                     follow_up_count=follow_up_count,
                 )
                 providers["llm"] = self.question_workflow.llm_provider
-                try:
-                    provider_status["llm"] = self.question_workflow.health().get("llm", "DOWN")
-                except Exception:
-                    provider_status["llm"] = "DOWN"
+                provider_status["llm"] = "DOWN"
                 degrade_flags.append("LLM_FALLBACK_TEMPLATE")
                 generation_mode = "fallback_template"
         else:

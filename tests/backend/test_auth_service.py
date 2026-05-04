@@ -184,7 +184,7 @@ class AuthServiceTestCase(unittest.TestCase):
 
     def setUp(self) -> None:
         """准备隔离环境与服务对象。"""
-        os.environ["AI_INTERVIEW_JWT_SECRET"] = "unit-test-secret"
+        os.environ["AI_INTERVIEW_JWT_SECRET"] = "unit-test-jwt-secret-with-32-chars!!"
         os.environ["AI_INTERVIEW_JWT_ALGORITHM"] = "HS256"
         os.environ["AI_INTERVIEW_ACCESS_TOKEN_TTL_MINUTES"] = "30"
         os.environ["AI_INTERVIEW_REFRESH_TOKEN_TTL_DAYS"] = "7"

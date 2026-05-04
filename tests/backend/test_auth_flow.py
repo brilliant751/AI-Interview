@@ -25,6 +25,7 @@ class AuthFlowTestCase(unittest.TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["AI_INTERVIEW_DB_PATH"] = os.path.join(self.tmpdir.name, "test.db")
         os.environ["AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN"] = "false"
+        os.environ["AI_INTERVIEW_JWT_SECRET"] = "test-jwt-secret-with-32-chars-minimum!!"
         get_settings.cache_clear()
         self.client = TestClient(create_app())
         self.client.__enter__()
@@ -35,6 +36,7 @@ class AuthFlowTestCase(unittest.TestCase):
         self.tmpdir.cleanup()
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
         os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
+        os.environ.pop("AI_INTERVIEW_JWT_SECRET", None)
         get_settings.cache_clear()
 
     def test_register_login_refresh_logout(self) -> None:
