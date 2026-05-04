@@ -39,6 +39,14 @@ AUTH_ERROR_STATUS: dict[str, int] = {
     "AUTH_429_LOGIN_RATE_LIMIT": 429,
 }
 
+DOMAIN_ERROR_STATUS: dict[str, int] = {
+    "RESUME_403_FORBIDDEN": 403,
+    "RESUME_404_NOT_FOUND": 404,
+    "RESUME_409_IN_USE": 409,
+    "INTERVIEW_403_FORBIDDEN": 403,
+    "INTERVIEW_404_NOT_FOUND": 404,
+}
+
 
 def kb_build_error(code: str, message: str) -> ApiError:
     """构建并返回知识库任务错误。"""

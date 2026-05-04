@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
-import { Card, Select, Table, Typography } from 'antd'
+import { Button, Card, Select, Space, Table, Typography } from 'antd'
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import { fetchHistory } from '../api/interview'
 
 /** 历史记录页面。 */
 export function HistoryPage() {
+  const navigate = useNavigate()
   const [jobRole, setJobRole] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
 
@@ -43,12 +45,25 @@ export function HistoryPage() {
         }}
         columns={[
           { title: '会话 ID', dataIndex: 'interview_id' },
+          { title: '简历 ID', dataIndex: 'resume_id' },
           { title: '岗位', dataIndex: 'job_role' },
-          { title: '时间', dataIndex: 'created_at' },
+          { title: '状态', dataIndex: 'status' },
+          { title: '轮次数', dataIndex: 'turn_count' },
+          { title: '开始时间', dataIndex: 'started_at' },
+          {
+            title: '操作',
+            key: 'actions',
+            render: (_, row: { interview_id: string }) => (
+              <Space>
+                <Button size="small" onClick={() => navigate(`/history/${row.interview_id}`)}>
+                  回放
+                </Button>
+              </Space>
+            ),
+          },
         ]}
       />
       {historyQuery.isError && <Typography.Text type="danger">历史记录加载失败</Typography.Text>}
     </Card>
   )
 }
-

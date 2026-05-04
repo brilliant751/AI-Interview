@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
-BACKEND_VENV="$BACKEND_DIR/.venv"
+BACKEND_VENV="${BACKEND_VENV:-$ROOT_DIR/.venv}"
 BACKEND_PYTHON="$BACKEND_VENV/bin/python"
 BACKEND_UVICORN="$BACKEND_VENV/bin/uvicorn"
 BACKEND_DB="$BACKEND_DIR/assets/data/sqlite/interview.db"
@@ -20,6 +20,7 @@ MODELSCOPE_DOMAIN_VALUE="${AI_INTERVIEW_MODELSCOPE_DOMAIN:-www.modelscope.cn}"
 MODELSCOPE_DOWNLOAD_PARALLELS_VALUE="${AI_INTERVIEW_MODELSCOPE_DOWNLOAD_PARALLELS:-4}"
 MODELSCOPE_PARALLEL_THRESHOLD_MB_VALUE="${AI_INTERVIEW_MODELSCOPE_PARALLEL_DOWNLOAD_THRESHOLD_MB:-50}"
 HF_ENDPOINT_VALUE="${AI_INTERVIEW_HF_ENDPOINT:-}"
+DISABLE_SYSTEM_PROXY_FOR_LOCAL_PROVIDER="${AI_INTERVIEW_DISABLE_SYSTEM_PROXY_FOR_LOCAL_PROVIDER:-1}"
 
 OLLAMA_BASE_URL="${AI_INTERVIEW_OLLAMA_BASE_URL:-http://localhost:11434}"
 
@@ -35,8 +36,44 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 ensure_backend_python() {
+  local python_bin="${PYTHON_BIN:-}"
+  if [[ -z "$python_bin" ]]; then
+    if command -v python3.11 >/dev/null 2>&1; then
+      python_bin="$(command -v python3.11)"
+    else
+      python_bin="$(command -v python3)"
+    fi
+  fi
+  if [[ -z "$python_bin" ]]; then
+    echo "未找到可用 Python，请先安装 Python 3.11+。"
+    exit 1
+  fi
   if [[ ! -x "$BACKEND_PYTHON" ]]; then
-    python3 -m venv "$BACKEND_VENV"
+    "$python_bin" -m venv "$BACKEND_VENV"
+  fi
+  if ! "$BACKEND_PYTHON" - <<'PY'
+import sys
+if sys.version_info < (3, 11):
+    raise SystemExit(1)
+PY
+  then
+    if command -v python3.11 >/dev/null 2>&1; then
+      echo "[提示] 检测到现有虚拟环境 Python < 3.11，正在使用 python3.11 重建虚拟环境..."
+      rm -rf "$BACKEND_VENV"
+      python3.11 -m venv "$BACKEND_VENV"
+      if ! "$BACKEND_PYTHON" - <<'PY'
+import sys
+if sys.version_info < (3, 11):
+    raise SystemExit(1)
+PY
+      then
+        echo "虚拟环境重建后 Python 版本仍低于 3.11，请检查本机 python3.11 安装。"
+        exit 1
+      fi
+    else
+      echo "当前虚拟环境 Python 版本低于 3.11，且未找到 python3.11。请先安装 Python 3.11+。"
+      exit 1
+    fi
   fi
 }
 
@@ -67,18 +104,15 @@ release_occupied_ports() {
 }
 
 ensure_backend_dependencies() {
+  if ! "$BACKEND_PYTHON" -m pip --version >/dev/null 2>&1; then
+    echo "[提示] 检测到虚拟环境缺少 pip，正在自动修复..."
+    "$BACKEND_PYTHON" -m ensurepip --upgrade
+  fi
   "$BACKEND_PYTHON" -m pip install --upgrade pip >/dev/null
+  "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirement.txt"
   "$BACKEND_PYTHON" -m pip install \
-    fastapi \
-    uvicorn[standard] \
-    pydantic \
-    pydantic-settings \
-    python-multipart \
     openai \
     httpx \
-    chromadb \
-    langchain \
-    langgraph \
     funasr \
     paddlespeech \
     soundfile \
@@ -110,11 +144,20 @@ ensure_frontend_dependencies() {
 
 ensure_initial_data() {
   if [[ ! -f "$BACKEND_DB" ]]; then
-    python3 "$BACKEND_DIR/assets/scripts/data/validate_materials.py" --strict
-    python3 "$BACKEND_DIR/assets/scripts/data/normalize_materials.py"
-    python3 "$BACKEND_DIR/assets/scripts/data/build_question_bank.py"
-    python3 "$BACKEND_DIR/assets/scripts/data/build_knowledge_vectorstore.py"
+    "$BACKEND_PYTHON" "$BACKEND_DIR/assets/scripts/data/validate_materials.py" --strict
+    "$BACKEND_PYTHON" "$BACKEND_DIR/assets/scripts/data/normalize_materials.py"
+    "$BACKEND_PYTHON" "$BACKEND_DIR/assets/scripts/data/build_question_bank.py"
+    "$BACKEND_PYTHON" "$BACKEND_DIR/assets/scripts/data/build_knowledge_vectorstore.py"
   fi
+}
+
+configure_proxy_for_local_providers() {
+  if [[ "$DISABLE_SYSTEM_PROXY_FOR_LOCAL_PROVIDER" != "1" ]]; then
+    return 0
+  fi
+  unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy ALL_PROXY all_proxy
+  export NO_PROXY="${NO_PROXY:-}127.0.0.1,localhost"
+  export no_proxy="${no_proxy:-}127.0.0.1,localhost"
 }
 
 check_local_ai_readiness() {
@@ -148,6 +191,7 @@ release_occupied_ports
 ensure_backend_python
 ensure_backend_dependencies
 prepare_model_cache_dirs
+configure_proxy_for_local_providers
 
 echo "[2/4] 准备前端环境..."
 ensure_frontend_dependencies
@@ -173,7 +217,7 @@ wait_for_backend_ready() {
       wait "$BACKEND_PID"
       return 1
     fi
-    if python3 - <<PY >/dev/null 2>&1
+    if "$BACKEND_PYTHON" - <<PY >/dev/null 2>&1
 import socket
 
 with socket.create_connection(("127.0.0.1", int("${BACKEND_PORT}")), timeout=1):

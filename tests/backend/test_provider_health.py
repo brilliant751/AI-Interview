@@ -21,6 +21,7 @@ class ProviderHealthTestCase(unittest.TestCase):
         """初始化测试环境与客户端。"""
         self.tmpdir = tempfile.TemporaryDirectory()
         os.environ["AI_INTERVIEW_DB_PATH"] = os.path.join(self.tmpdir.name, "test.db")
+        os.environ["AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN"] = "true"
         get_settings.cache_clear()
         self.client = TestClient(create_app())
         self.client.__enter__()
@@ -31,6 +32,7 @@ class ProviderHealthTestCase(unittest.TestCase):
         self.client.__exit__(None, None, None)
         self.tmpdir.cleanup()
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
+        os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
 
     def test_provider_health_up(self) -> None:
         """默认 mock provider 返回 UP。"""
@@ -40,6 +42,11 @@ class ProviderHealthTestCase(unittest.TestCase):
         self.assertIn(body["overall"], ["UP", "DEGRADED", "DOWN"])
         self.assertIn("llm", body["providers"])
         self.assertIn("status", body["providers"]["llm"])
+
+    def test_provider_health_without_auth(self) -> None:
+        """provider health 接口无需认证信息。"""
+        resp = self.client.get("/api/v1/admin/providers/health")
+        self.assertEqual(200, resp.status_code)
 
     def test_provider_health_degraded(self) -> None:
         """存在部分 provider 异常时返回 DEGRADED。"""

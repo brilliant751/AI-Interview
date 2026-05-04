@@ -6,7 +6,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.core.security import require_user
+from app.core.security import AuthContext, require_user
 from app.models.schemas import HistoryItem, HistoryResponse
 from app.repositories.interview_repository import InterviewRepository
 
@@ -23,16 +23,21 @@ async def list_history(
     job_role: Optional[str] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=10, ge=1, le=50),
-    _: str = Depends(require_user),
+    auth: AuthContext = Depends(require_user),
     repo: InterviewRepository = Depends(get_repo),
 ) -> HistoryResponse:
     """按分页查询历史会话列表。"""
     offset = (page - 1) * page_size
-    rows, total = repo.list_history(job_role=job_role, offset=offset, limit=page_size)
+    rows, total = repo.list_history(user_id=auth.user_id, job_role=job_role, offset=offset, limit=page_size)
     items = [
         HistoryItem(
             interview_id=row["interview_id"],
+            resume_id=row["resume_id"],
             job_role=row["job_role"],
+            status=row["status"],
+            started_at=row["started_at"] or row["created_at"],
+            finished_at=row.get("finished_at"),
+            turn_count=int(row.get("turn_count") or 0),
             overall_score=row.get("overall_score"),
             created_at=row["created_at"],
         )

@@ -6,7 +6,8 @@ import json
 
 from fastapi import APIRouter, Depends, Request
 
-from app.core.security import require_user
+from app.core.errors import ApiError
+from app.core.security import AuthContext, require_user
 from app.models.schemas import ReportResponse
 from app.repositories.interview_repository import InterviewRepository
 from app.services.report_worker import ReportWorker
@@ -27,10 +28,13 @@ def get_worker(request: Request) -> ReportWorker:
 @router.get("/{interview_id}", response_model=ReportResponse)
 async def get_report(
     interview_id: str,
-    _: str = Depends(require_user),
+    auth: AuthContext = Depends(require_user),
     repo: InterviewRepository = Depends(get_repo),
 ) -> ReportResponse:
     """查询面试报告状态与结果。"""
+    session = repo.get_session(interview_id)
+    if session and str(session.get("user_id") or "") != auth.user_id:
+        raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
     row = repo.get_report(interview_id)
     if not row:
         return ReportResponse(interview_id=interview_id, status="GENERATING")
@@ -49,11 +53,14 @@ async def get_report(
 @router.post("/{interview_id}/retry")
 async def retry_report(
     interview_id: str,
-    _: str = Depends(require_user),
+    auth: AuthContext = Depends(require_user),
     repo: InterviewRepository = Depends(get_repo),
     worker: ReportWorker = Depends(get_worker),
 ) -> dict:
     """重试报告生成任务。"""
+    session = repo.get_session(interview_id)
+    if session and str(session.get("user_id") or "") != auth.user_id:
+        raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
     row = repo.get_report(interview_id)
     if not row:
         repo.upsert_report(

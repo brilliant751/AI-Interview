@@ -53,9 +53,12 @@ async def get_import_task(task_id: str, request: Request, _: str = Depends(requi
     return service.get_task(task_id)
 
 
-@router.get("/providers/health", response_model=ProviderHealthResponse)
+@router.get(
+    "/providers/health",
+    response_model=ProviderHealthResponse,
+    openapi_extra={"security": []},
+)
 async def provider_health(
-    _: str = Depends(require_admin),
     service: InterviewService = Depends(_get_interview_service),
 ) -> ProviderHealthResponse:
     """查询语音与 LLM provider 健康状态。"""

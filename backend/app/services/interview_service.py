@@ -29,9 +29,14 @@ class InterviewService:
         self.report_worker = report_worker
         self.question_workflow = QuestionWorkflow()
 
-    def create_session(self, payload: dict) -> dict:
+    def create_session(self, payload: dict, user_id: str) -> dict:
         """创建会话并返回首题。"""
-        session = self.repo.create_session(payload)
+        resume = self.repo.get_resume(payload["resume_id"])
+        if not resume or int(resume.get("is_deleted") or 0) == 1:
+            raise ApiError(code="RESUME_404_NOT_FOUND", message="简历不存在", status_code=404)
+        if str(resume.get("user_id") or "") != user_id:
+            raise ApiError(code="RESUME_403_FORBIDDEN", message="无权使用该简历", status_code=403)
+        session = self.repo.create_session(user_id=user_id, payload=payload)
         first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
         return {
             "interview_id": session["interview_id"],
@@ -64,7 +69,7 @@ class InterviewService:
             )
         raise ApiError(code="VALIDATE_400", message="回答内容不能为空", status_code=400)
 
-    def submit_turn_with_audio(self, interview_id: str, stage: str, audio_bytes: bytes, filename: str) -> dict:
+    def submit_turn_with_audio(self, interview_id: str, stage: str, audio_bytes: bytes, filename: str, user_id: str) -> dict:
         """处理 multipart 音频上传的轮次提交。"""
         payload = {
             "stage": stage,
@@ -72,9 +77,9 @@ class InterviewService:
             "answer_audio_filename": filename,
             "answer_audio_format": filename.split(".")[-1] if "." in filename else "wav",
         }
-        return self.submit_turn(interview_id, payload)
+        return self.submit_turn(interview_id, payload, user_id=user_id)
 
-    def submit_turn(self, interview_id: str, payload: dict) -> dict:
+    def submit_turn(self, interview_id: str, payload: dict, user_id: str) -> dict:
         """处理单轮回答并产出下一题。"""
         started_at = now_ms()
         trace_id = build_trace_id()
@@ -93,6 +98,8 @@ class InterviewService:
         session = self.repo.get_session(interview_id)
         if not session:
             raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+        if str(session.get("user_id") or "") != user_id:
+            raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
         if session["status"] == "FINISHED":
             raise ApiError(code="STATE_409", message="面试已结束，禁止继续提交", status_code=409)
 
@@ -189,6 +196,7 @@ class InterviewService:
         latency_ms = now_ms() - started_at
         turn_id = self.repo.add_turn(
             interview_id=interview_id,
+            user_id=user_id,
             stage=stage,
             answer_text=answer,
             next_question=next_question,
@@ -244,11 +252,13 @@ class InterviewService:
             },
         }
 
-    def finish_interview(self, interview_id: str) -> dict:
+    def finish_interview(self, interview_id: str, user_id: str) -> dict:
         """结束会话并同步生成报告。"""
         session = self.repo.get_session(interview_id)
         if not session:
             raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+        if str(session.get("user_id") or "") != user_id:
+            raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
         self.repo.finish_session(interview_id)
         self.repo.upsert_report(
             interview_id,

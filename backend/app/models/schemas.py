@@ -14,6 +14,25 @@ class ResumeUploadResponse(BaseModel):
     parse_status: Literal["PENDING", "READY"]
 
 
+class ResumeListItem(BaseModel):
+    """简历列表条目。"""
+
+    resume_id: str
+    file_name: str
+    parse_status: str
+    created_at: str
+    last_used_at: Optional[str] = None
+
+
+class ResumeListResponse(BaseModel):
+    """简历列表响应。"""
+
+    items: list[ResumeListItem] = Field(default_factory=list)
+    page: int
+    page_size: int
+    total: int
+
+
 class InterviewCreateRequest(BaseModel):
     """创建面试会话请求。"""
 
@@ -143,7 +162,12 @@ class HistoryItem(BaseModel):
     """历史记录条目。"""
 
     interview_id: str
+    resume_id: str
     job_role: str
+    status: str
+    started_at: str
+    finished_at: Optional[str] = None
+    turn_count: int = 0
     overall_score: Optional[int] = None
     created_at: str
 
@@ -153,6 +177,43 @@ class HistoryResponse(BaseModel):
 
     items: list[HistoryItem]
     total: int
+
+
+class InterviewPlaybackResume(BaseModel):
+    """回放中的简历信息。"""
+
+    resume_id: str
+    file_name: str
+
+
+class InterviewPlaybackMeta(BaseModel):
+    """回放中的会话元数据。"""
+
+    job_role: str
+    difficulty: str
+    status: str
+    started_at: str
+    finished_at: Optional[str] = None
+
+
+class InterviewPlaybackTurn(BaseModel):
+    """回放中的单轮问答。"""
+
+    turn_id: str
+    sequence: int
+    question: str
+    answer: str
+    question_ts: str
+    answer_ts: Optional[str] = None
+
+
+class InterviewPlaybackResponse(BaseModel):
+    """面试回放详情响应。"""
+
+    interview_id: str
+    resume: InterviewPlaybackResume
+    meta: InterviewPlaybackMeta
+    turns: list[InterviewPlaybackTurn] = Field(default_factory=list)
 
 
 class MaterialImportRequest(BaseModel):

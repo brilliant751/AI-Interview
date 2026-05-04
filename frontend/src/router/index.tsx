@@ -6,12 +6,14 @@ import { AdminImportsPage } from '../pages/AdminImportsPage'
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { InterviewPage } from '../pages/InterviewPage'
+import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
 import { InterviewPreparePage } from '../pages/InterviewPreparePage'
 import { LoginPage } from '../pages/LoginPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ReportPage } from '../pages/ReportPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { ResumeUploadPage } from '../pages/ResumeUploadPage'
+import { ResumeManagePage } from '../pages/ResumeManagePage'
 
 /** 通用登录保护路由。 */
 function ProtectedRoute(props: { children: JSX.Element }) {
@@ -45,6 +47,14 @@ export function AppRouter() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route
+            path="/resumes"
+            element={
+              <ProtectedRoute>
+                <ResumeManagePage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/upload"
             element={
@@ -82,6 +92,14 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history/:interviewId"
+            element={
+              <ProtectedRoute>
+                <InterviewPlaybackPage />
               </ProtectedRoute>
             }
           />

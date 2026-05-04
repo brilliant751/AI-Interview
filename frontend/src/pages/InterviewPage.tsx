@@ -117,8 +117,8 @@ export function InterviewPage() {
       <Card>
         <Typography.Text>尚未创建会话，请先完成简历上传和准备步骤。</Typography.Text>
         <div style={{ marginTop: 12 }}>
-          <Button type="primary" onClick={() => navigate('/upload')}>
-            去上传
+          <Button type="primary" onClick={() => navigate('/resumes')}>
+            去简历管理
           </Button>
         </div>
       </Card>

@@ -111,6 +111,22 @@ paths:
               schema:
                 $ref: '#/components/schemas/AuthMeResponse'
   /api/v1/resumes:
+    get:
+      summary: 查询简历列表
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeListResponse'
     post:
       summary: 上传简历
       parameters:
@@ -130,8 +146,19 @@ paths:
               required:
                 - file
       responses:
-        "200":
+        "201":
           description: 成功
+  /api/v1/resumes/{resume_id}:
+    delete:
+      summary: 删除简历
+      parameters:
+        - in: path
+          name: resume_id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: 删除成功
   /api/v1/interviews:
     post:
       summary: 创建面试会话
@@ -159,6 +186,21 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/interviews/{interview_id}/playback:
+    get:
+      summary: 查询面试回放详情
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewPlaybackResponse'
   /api/v1/interviews/{interview_id}/turns:
     get:
       summary: 查询面试轮次列表
@@ -368,6 +410,7 @@ paths:
     get:
       summary: 查询 provider 健康状态
       description: 健康结果基于 SDK 初始化与最小调用，不代表外部 HTTP 服务可达性。
+      security: []
       responses:
         "200":
           description: 成功
@@ -460,6 +503,22 @@ components:
       properties:
         user:
           $ref: '#/components/schemas/AuthUserProfile'
+    ResumeListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              resume_id: { type: string }
+              file_name: { type: string }
+              parse_status: { type: string }
+              created_at: { type: string }
+              last_used_at: { type: string, nullable: true }
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
     InterviewCreateRequest:
       type: object
       required: [resume_id, job_role]
@@ -476,6 +535,34 @@ components:
         stage: { type: string }
         answer_text: { type: string }
         asr_text: { type: string }
+    InterviewPlaybackResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        resume:
+          type: object
+          properties:
+            resume_id: { type: string }
+            file_name: { type: string }
+        meta:
+          type: object
+          properties:
+            job_role: { type: string }
+            difficulty: { type: string }
+            status: { type: string }
+            started_at: { type: string }
+            finished_at: { type: string, nullable: true }
+        turns:
+          type: array
+          items:
+            type: object
+            properties:
+              turn_id: { type: string }
+              sequence: { type: integer }
+              question: { type: string }
+              answer: { type: string }
+              question_ts: { type: string }
+              answer_ts: { type: string, nullable: true }
     MaterialImportRequest:
       type: object
       properties:

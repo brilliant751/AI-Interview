@@ -75,7 +75,7 @@ export function InterviewPreparePage() {
         onFinish={(values) => {
           if (!resumeId) {
             message.warning('请先上传简历')
-            navigate('/upload')
+            navigate('/resumes')
             return
           }
           createMutation.mutate({

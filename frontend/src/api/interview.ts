@@ -81,9 +81,52 @@ export interface HistoryResponse {
   total: number
   items: Array<{
     interview_id: string
+    resume_id: string
     job_role: string
+    status: string
+    started_at: string
+    finished_at?: string
+    turn_count: number
     created_at: string
     overall_score?: number
+  }>
+}
+
+/** 简历列表响应。 */
+export interface ResumeListResponse {
+  items: Array<{
+    resume_id: string
+    file_name: string
+    parse_status: string
+    created_at: string
+    last_used_at?: string
+  }>
+  page: number
+  page_size: number
+  total: number
+}
+
+/** 回放详情响应。 */
+export interface InterviewPlaybackResponse {
+  interview_id: string
+  resume: {
+    resume_id: string
+    file_name: string
+  }
+  meta: {
+    job_role: string
+    difficulty: string
+    status: string
+    started_at: string
+    finished_at?: string
+  }
+  turns: Array<{
+    turn_id: string
+    sequence: number
+    question: string
+    answer: string
+    question_ts: string
+    answer_ts?: string
   }>
 }
 
@@ -104,6 +147,17 @@ export async function uploadResume(file: File): Promise<{ resume_id: string; par
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data
+}
+
+/** 查询简历列表。 */
+export async function fetchResumes(params: { page: number; page_size: number }): Promise<ResumeListResponse> {
+  const { data } = await apiClient.get<ResumeListResponse>('/resumes', { params })
+  return data
+}
+
+/** 删除简历。 */
+export async function deleteResume(resumeId: string): Promise<void> {
+  await apiClient.delete(`/resumes/${resumeId}`)
 }
 
 /** 创建面试会话。 */
@@ -162,5 +216,11 @@ export async function fetchHistory(params: { page: number; page_size: number; jo
 /** 查询会话当前状态。 */
 export async function fetchInterviewStatus(interviewId: string): Promise<InterviewStatusResponse> {
   const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`)
+  return data
+}
+
+/** 查询面试回放详情。 */
+export async function fetchInterviewPlayback(interviewId: string): Promise<InterviewPlaybackResponse> {
+  const { data } = await apiClient.get<InterviewPlaybackResponse>(`/interviews/${interviewId}/playback`)
   return data
 }

@@ -108,6 +108,22 @@
           }
         },
         {
+          "name": "List Resumes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/resumes?page=1&page_size=10"
+          }
+        },
+        {
+          "name": "Delete Resume",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/resumes/{{resume_id}}"
+          }
+        },
+        {
           "name": "Create Interview",
           "request": {
             "method": "POST",
@@ -199,6 +215,14 @@
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": "{{base_url}}/interviews/history?page=1&page_size=10"
           }
+        },
+        {
+          "name": "Playback",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/playback"
+          }
         }
       ]
     },
@@ -242,6 +266,8 @@
   "variable": [
     { "key": "base_url", "value": "http://localhost:8000/api/v1" },
     { "key": "access_token", "value": "" },
-    { "key": "refresh_token", "value": "" }
+    { "key": "refresh_token", "value": "" },
+    { "key": "resume_id", "value": "" },
+    { "key": "interview_id", "value": "" }
   ]
 }

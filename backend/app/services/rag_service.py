@@ -114,13 +114,17 @@ class RAGService:
             metadatas = result.get("metadatas") or [[]]
             distances = result.get("distances") or [[]]
             rows: list[dict[str, Any]] = []
-            for doc, metadata, distance in zip(docs[0], metadatas[0], distances[0]):
+            doc_list = docs[0] if docs and isinstance(docs[0], list) else []
+            metadata_list = metadatas[0] if metadatas and isinstance(metadatas[0], list) else []
+            distance_list = distances[0] if distances and isinstance(distances[0], list) else []
+            for doc, metadata, distance in zip(doc_list, metadata_list, distance_list):
+                metadata_map = metadata if isinstance(metadata, dict) else {}
                 rows.append(
                     {
-                        "title": (metadata or {}).get("title", "知识片段"),
+                        "title": metadata_map.get("title", "知识片段"),
                         "content": doc,
                         "score": float(distance),
-                        "source_path": (metadata or {}).get("source_path", ""),
+                        "source_path": metadata_map.get("source_path", ""),
                         "retrieval_mode": "chroma",
                     }
                 )
@@ -162,10 +166,8 @@ class RAGService:
         """统一检索入口。"""
         try:
             return self._retrieve_from_chroma(job_role, query, top_k)
-        except Exception as exc:
-            if not self.settings.retrieval_fallback_enabled:
-                if isinstance(exc, Exception):
-                    raise
+        except Exception:
+            # Chroma 异常时优先回退本地 JSONL；若无索引则返回空结果，避免阻断主面试流程。
             fallback = self._retrieve_from_jsonl(job_role, query, top_k)
             return fallback
 

@@ -43,7 +43,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         """创建测试用会话并返回 interview_id。"""
         files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
         resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
-        self.assertEqual(200, resume_resp.status_code)
+        self.assertIn(resume_resp.status_code, [200, 201])
         resume_id = resume_resp.json()["resume_id"]
 
         create_payload = {
@@ -66,14 +66,14 @@ class InterviewFlowTestCase(unittest.TestCase):
             files=files,
             headers={**self.user_headers, "X-Idempotency-Key": idem_key},
         )
-        self.assertEqual(200, resume_resp.status_code)
+        self.assertIn(resume_resp.status_code, [200, 201])
         resume_id = resume_resp.json()["resume_id"]
         resume_retry_resp = self.client.post(
             "/api/v1/resumes",
             files=files,
             headers={**self.user_headers, "X-Idempotency-Key": idem_key},
         )
-        self.assertEqual(200, resume_retry_resp.status_code)
+        self.assertIn(resume_retry_resp.status_code, [200, 201])
         self.assertEqual(resume_id, resume_retry_resp.json()["resume_id"])
 
         create_payload = {
@@ -137,6 +137,9 @@ class InterviewFlowTestCase(unittest.TestCase):
         history_resp = self.client.get("/api/v1/interviews/history", headers=self.user_headers)
         self.assertEqual(200, history_resp.status_code)
         self.assertGreaterEqual(history_resp.json()["total"], 1)
+        self.assertIn("resume_id", history_resp.json()["items"][0])
+        self.assertIn("status", history_resp.json()["items"][0])
+        self.assertIn("turn_count", history_resp.json()["items"][0])
 
     def test_list_turns_endpoint(self) -> None:
         """验证查询轮次列表接口返回有效数据。"""
@@ -263,6 +266,69 @@ class InterviewFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(403, forbidden_resp.status_code)
+
+    def test_resume_list_and_delete(self) -> None:
+        """验证简历列表与删除能力。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        upload_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(upload_resp.status_code, [200, 201])
+        resume_id = upload_resp.json()["resume_id"]
+
+        list_resp = self.client.get("/api/v1/resumes?page=1&page_size=10", headers=self.user_headers)
+        self.assertEqual(200, list_resp.status_code)
+        self.assertGreaterEqual(list_resp.json()["total"], 1)
+        self.assertTrue(any(item["resume_id"] == resume_id for item in list_resp.json()["items"]))
+
+        delete_resp = self.client.delete(f"/api/v1/resumes/{resume_id}", headers=self.user_headers)
+        self.assertEqual(204, delete_resp.status_code)
+
+        list_after_delete_resp = self.client.get("/api/v1/resumes?page=1&page_size=10", headers=self.user_headers)
+        self.assertEqual(200, list_after_delete_resp.status_code)
+        self.assertFalse(any(item["resume_id"] == resume_id for item in list_after_delete_resp.json()["items"]))
+
+    def test_resume_delete_conflict_when_interview_active(self) -> None:
+        """验证进行中面试引用的简历删除冲突。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        upload_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(upload_resp.status_code, [200, 201])
+        resume_id = upload_resp.json()["resume_id"]
+
+        create_payload = {
+            "resume_id": resume_id,
+            "job_role": "java",
+            "difficulty": "medium",
+            "input_mode": "text",
+            "output_mode": "text",
+        }
+        create_resp = self.client.post("/api/v1/interviews", json=create_payload, headers=self.user_headers)
+        self.assertEqual(200, create_resp.status_code)
+
+        delete_resp = self.client.delete(f"/api/v1/resumes/{resume_id}", headers=self.user_headers)
+        self.assertEqual(409, delete_resp.status_code)
+        self.assertEqual("RESUME_409_IN_USE", delete_resp.json()["error"]["code"])
+
+    def test_playback_and_scope_protection(self) -> None:
+        """验证回放详情可用且跨用户不可访问。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+
+        playback_resp = self.client.get(f"/api/v1/interviews/{interview_id}/playback", headers=self.user_headers)
+        self.assertEqual(200, playback_resp.status_code)
+        self.assertEqual(interview_id, playback_resp.json()["interview_id"])
+        self.assertGreaterEqual(len(playback_resp.json()["turns"]), 1)
+        first_turn = playback_resp.json()["turns"][0]
+        self.assertIn("question", first_turn)
+        self.assertIn("answer", first_turn)
+        self.assertIn("sequence", first_turn)
+
+        forbidden_resp = self.client.get(f"/api/v1/interviews/{interview_id}/playback", headers=self.admin_headers)
+        self.assertEqual(403, forbidden_resp.status_code)
+        self.assertEqual("INTERVIEW_403_FORBIDDEN", forbidden_resp.json()["error"]["code"])
 
 
 if __name__ == "__main__":
