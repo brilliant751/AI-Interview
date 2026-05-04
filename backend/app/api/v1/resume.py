@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import uuid
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response, UploadFile
+from fastapi.responses import FileResponse
 
 from app.core.errors import ApiError
 from app.core.security import AuthContext, require_user
@@ -13,6 +16,7 @@ from app.models.schemas import ResumeListItem, ResumeListResponse, ResumeUploadR
 from app.repositories.interview_repository import InterviewRepository
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
+RESUME_STORAGE_DIR = Path(__file__).resolve().parents[3] / "assets" / "data" / "resumes"
 
 
 def get_repo(request: Request) -> InterviewRepository:
@@ -33,11 +37,51 @@ async def upload_resume(
         cached = repo.get_idempotent_response(endpoint, idempotency_key)
         if cached:
             return ResumeUploadResponse(**json.loads(cached))
-    result = repo.create_resume(user_id=auth.user_id, filename=file.filename or "resume.pdf")
+    original_filename = file.filename or "resume.pdf"
+    ext = Path(original_filename).suffix.lower()
+    if ext not in {".pdf", ".doc", ".docx"}:
+        raise ApiError(code="RESUME_400_UNSUPPORTED_TYPE", message="仅支持 pdf/doc/docx 文件", status_code=400)
+    content = await file.read()
+    if not content:
+        raise ApiError(code="RESUME_400_EMPTY_FILE", message="简历文件为空", status_code=400)
+    if len(content) > 10 * 1024 * 1024:
+        raise ApiError(code="RESUME_400_TOO_LARGE", message="简历文件大小不能超过 10MB", status_code=400)
+    RESUME_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+    stored_name = f"{uuid.uuid4().hex}{ext}"
+    stored_path = RESUME_STORAGE_DIR / stored_name
+    stored_path.write_bytes(content)
+    result = repo.create_resume(
+        user_id=auth.user_id,
+        filename=original_filename,
+        storage_path=str(stored_path),
+    )
     response = ResumeUploadResponse(resume_id=result["resume_id"], parse_status="READY")
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, response.model_dump_json())
     return response
+
+
+@router.get("/{resume_id}/file")
+async def get_resume_file(
+    resume_id: str,
+    auth: AuthContext = Depends(require_user),
+    repo: InterviewRepository = Depends(get_repo),
+) -> FileResponse:
+    """获取当前用户简历文件内容。"""
+    resume = repo.get_resume(resume_id)
+    if not resume or int(resume.get("is_deleted") or 0) == 1:
+        raise ApiError(code="RESUME_404_NOT_FOUND", message="简历不存在", status_code=404)
+    if str(resume.get("user_id") or "") != auth.user_id:
+        raise ApiError(code="RESUME_403_FORBIDDEN", message="无权限查看该简历", status_code=403)
+    storage_path = str(resume.get("storage_path") or "").strip()
+    if not storage_path:
+        raise ApiError(code="RESUME_404_FILE_MISSING", message="简历文件不存在", status_code=404)
+    file_path = Path(storage_path)
+    if not file_path.exists() or not file_path.is_file():
+        raise ApiError(code="RESUME_404_FILE_MISSING", message="简历文件不存在", status_code=404)
+    suffix = file_path.suffix.lower()
+    media_type = "application/pdf" if suffix == ".pdf" else "application/octet-stream"
+    return FileResponse(path=file_path, filename=str(resume.get("filename") or file_path.name), media_type=media_type)
 
 
 @router.get("", response_model=ResumeListResponse)

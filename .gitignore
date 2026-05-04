@@ -51,6 +51,8 @@ backend/assets/data/reports/*_report.json
 backend/assets/data/reports/*_latest.json
 backend/assets/data/reports/vectorstore_checkpoint.json
 backend/assets/data/normalized/chunk_preview*.jsonl
+backend/assets/data/resumes/*
+!backend/assets/data/resumes/.gitkeep
 
 # Chroma generated indexes (keep alias mapping)
 backend/assets/data/chroma/*

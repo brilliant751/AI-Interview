@@ -7,7 +7,6 @@ import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
-import { InterviewPreparePage } from '../pages/InterviewPreparePage'
 import { LoginPage } from '../pages/LoginPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ReportPage } from '../pages/ReportPage'
@@ -67,7 +66,7 @@ export function AppRouter() {
             path="/prepare"
             element={
               <ProtectedRoute>
-                <InterviewPreparePage />
+                <Navigate to="/interview" replace />
               </ProtectedRoute>
             }
           />

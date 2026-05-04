@@ -46,6 +46,7 @@ class InterviewRepository:
                   resume_id TEXT PRIMARY KEY,
                   user_id TEXT,
                   filename TEXT NOT NULL,
+                  storage_path TEXT,
                   status TEXT NOT NULL DEFAULT 'PENDING',
                   is_deleted INTEGER NOT NULL DEFAULT 0,
                   deleted_at TEXT,
@@ -159,6 +160,7 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_turns", "latency_ms", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "interview_turns", "generation_mode", "TEXT NOT NULL DEFAULT 'mock'")
             self._ensure_column(conn, "resumes", "user_id", "TEXT")
+            self._ensure_column(conn, "resumes", "storage_path", "TEXT")
             self._ensure_column(conn, "resumes", "is_deleted", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "resumes", "deleted_at", "TEXT")
             self._ensure_column(conn, "resumes", "updated_at", "TEXT")
@@ -216,16 +218,16 @@ class InterviewRepository:
         if not exists:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
-    def create_resume(self, user_id: str, filename: str) -> dict:
+    def create_resume(self, user_id: str, filename: str, storage_path: str) -> dict:
         """创建简历记录。"""
         resume_id = f"res_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(
                 """
-                INSERT INTO resumes(resume_id, user_id, filename, status, updated_at)
-                VALUES (?, ?, ?, 'READY', datetime('now'))
+                INSERT INTO resumes(resume_id, user_id, filename, storage_path, status, updated_at)
+                VALUES (?, ?, ?, ?, 'READY', datetime('now'))
                 """,
-                (resume_id, user_id, filename),
+                (resume_id, user_id, filename, storage_path),
             )
         return {"resume_id": resume_id, "status": "READY"}
 

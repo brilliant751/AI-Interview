@@ -1,11 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Card, Popconfirm, Space, Table, Typography, Upload, message } from 'antd'
-import type { UploadFile } from 'antd'
+import { Button, Card, Modal, Popconfirm, Space, Table, Typography, Upload, message } from 'antd'
 import { AxiosError } from 'axios'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { deleteResume, fetchResumes, uploadResume } from '../api/interview'
+import { deleteResume, fetchResumeFile, fetchResumes, uploadResume } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
 /** 简历管理页面。 */
@@ -13,8 +12,19 @@ export function ResumeManagePage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
-  const [fileList, setFileList] = useState<UploadFile[]>([])
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewTitle, setPreviewTitle] = useState('')
+  const [previewType, setPreviewType] = useState('')
+  const [previewUrl, setPreviewUrl] = useState('')
   const setResumeId = useInterviewStore((state) => state.setResumeId)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   /** 查询简历列表。 */
   const resumeQuery = useQuery({
@@ -24,16 +34,9 @@ export function ResumeManagePage() {
 
   /** 上传简历。 */
   const uploadMutation = useMutation({
-    mutationFn: async () => {
-      const currentFile = fileList[0]?.originFileObj
-      if (!currentFile) {
-        throw new Error('请先选择简历文件')
-      }
-      return uploadResume(currentFile)
-    },
+    mutationFn: uploadResume,
     onSuccess: async (data) => {
       setResumeId(data.resume_id)
-      setFileList([])
       await queryClient.invalidateQueries({ queryKey: ['resumes'] })
       message.success('简历上传成功')
     },
@@ -60,22 +63,49 @@ export function ResumeManagePage() {
     },
   })
 
+  /** 查看简历。 */
+  const previewMutation = useMutation({
+    mutationFn: async (payload: { resumeId: string; fileName: string }) => {
+      const blob = await fetchResumeFile(payload.resumeId)
+      return { blob, fileName: payload.fileName }
+    },
+    onSuccess: ({ blob, fileName }) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const ext = fileName.split('.').pop()?.toLowerCase() || ''
+      setPreviewType(ext)
+      setPreviewTitle(fileName)
+      setPreviewUrl(objectUrl)
+      setPreviewOpen(true)
+    },
+    onError: (error) => {
+      const axiosError = error as AxiosError<{ error?: { message?: string } }>
+      message.error(axiosError.response?.data?.error?.message || '加载简历失败')
+    },
+  })
+
   return (
     <Card title="简历管理" bordered={false}>
       <Typography.Paragraph>在此上传、选择并删除你的简历。开始面试前请先选择一份简历。</Typography.Paragraph>
       <Space style={{ marginBottom: 16 }}>
         <Upload
-          beforeUpload={() => false}
-          fileList={fileList}
-          onChange={(event) => setFileList(event.fileList.slice(-1))}
+          showUploadList={false}
           accept=".pdf,.doc,.docx"
+          beforeUpload={(file) => {
+            if (uploadMutation.isPending) {
+              return false
+            }
+            uploadMutation.mutate(file)
+            return false
+          }}
         >
-          <Button>选择简历</Button>
+          <Button type="primary" loading={uploadMutation.isPending}>
+            上传简历
+          </Button>
         </Upload>
-        <Button type="primary" loading={uploadMutation.isPending} onClick={() => uploadMutation.mutate()}>
-          上传简历
-        </Button>
-        <Button onClick={() => navigate('/prepare')}>去面试准备</Button>
+        <Button onClick={() => navigate('/interview')}>去面试</Button>
       </Space>
 
       <Table
@@ -97,16 +127,14 @@ export function ResumeManagePage() {
           {
             title: '操作',
             key: 'actions',
-            render: (_, row: { resume_id: string }) => (
+            render: (_, row: { resume_id: string; file_name: string }) => (
               <Space>
                 <Button
                   size="small"
-                  onClick={() => {
-                    setResumeId(row.resume_id)
-                    message.success('已选择该简历，可前往面试准备')
-                  }}
+                  loading={previewMutation.isPending}
+                  onClick={() => previewMutation.mutate({ resumeId: row.resume_id, fileName: row.file_name })}
                 >
-                  选择
+                  查看
                 </Button>
                 <Popconfirm
                   title="确认删除该简历？"
@@ -126,6 +154,25 @@ export function ResumeManagePage() {
       />
 
       {resumeQuery.isError ? <Typography.Text type="danger">简历列表加载失败</Typography.Text> : null}
+      <Modal
+        title={`简历预览 - ${previewTitle}`}
+        open={previewOpen}
+        onCancel={() => setPreviewOpen(false)}
+        footer={null}
+        width={900}
+        destroyOnClose
+      >
+        {previewType === 'pdf' ? (
+          <iframe title="resume-preview" src={previewUrl} style={{ width: '100%', height: 600, border: 0 }} />
+        ) : (
+          <Space direction="vertical">
+            <Typography.Text>当前文件类型暂不支持在线渲染，可下载后查看。</Typography.Text>
+            <a href={previewUrl} download={previewTitle}>
+              下载简历文件
+            </a>
+          </Space>
+        )}
+      </Modal>
     </Card>
   )
 }

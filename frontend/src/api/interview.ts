@@ -160,6 +160,12 @@ export async function deleteResume(resumeId: string): Promise<void> {
   await apiClient.delete(`/resumes/${resumeId}`)
 }
 
+/** 获取简历原始文件（二进制）。 */
+export async function fetchResumeFile(resumeId: string): Promise<Blob> {
+  const { data } = await apiClient.get(`/resumes/${resumeId}/file`, { responseType: 'blob' })
+  return data as Blob
+}
+
 /** 创建面试会话。 */
 export async function createInterview(payload: CreateInterviewPayload): Promise<CreateInterviewResponse> {
   const { data } = await apiClient.post('/interviews', payload)

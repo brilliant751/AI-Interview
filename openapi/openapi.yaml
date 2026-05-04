@@ -159,6 +159,26 @@ paths:
       responses:
         "204":
           description: 删除成功
+  /api/v1/resumes/{resume_id}/file:
+    get:
+      summary: 获取简历文件
+      parameters:
+        - in: path
+          name: resume_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
   /api/v1/interviews:
     post:
       summary: 创建面试会话
