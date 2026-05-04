@@ -165,7 +165,7 @@ export function InterviewPage() {
           })
           if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
             message.warning('当前会话已结束，正在跳转报告页')
-            navigate('/report')
+            navigate(`/report/${interviewId}`)
             return
           }
           message.warning(`${errorMessage}，已同步到最新阶段：${sessionStatus.current_stage}`)
@@ -184,7 +184,7 @@ export function InterviewPage() {
     mutationFn: () => finishInterview(interviewId),
     onSuccess: () => {
       message.success('面试已结束，正在生成报告')
-      navigate('/report')
+      navigate(`/report/${interviewId}`)
     },
     onError: () => message.error('结束面试失败'),
   })

@@ -11,7 +11,7 @@ class ResumeUploadResponse(BaseModel):
     """简历上传响应。"""
 
     resume_id: str
-    parse_status: Literal["PENDING", "READY"]
+    parse_status: Literal["PENDING", "READY", "FAILED"]
 
 
 class ResumeListItem(BaseModel):

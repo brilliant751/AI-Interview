@@ -20,7 +20,6 @@ export function AppLayout(props: { children: ReactNode }) {
     ? [
         { to: '/resumes', label: '简历管理' },
         { to: '/interview', label: '模拟面试' },
-        { to: '/report', label: '面试报告' },
         { to: '/history', label: '历史记录' },
       ]
     : [

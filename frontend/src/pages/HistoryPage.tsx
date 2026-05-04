@@ -58,6 +58,9 @@ export function HistoryPage() {
                 <Button size="small" onClick={() => navigate(`/history/${row.interview_id}`)}>
                   回放
                 </Button>
+                <Button size="small" onClick={() => navigate(`/report/${row.interview_id}`)}>
+                  查看报告
+                </Button>
               </Space>
             ),
           },

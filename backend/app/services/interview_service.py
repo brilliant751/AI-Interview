@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from app.core.errors import ApiError
@@ -69,6 +70,35 @@ class InterviewService:
             )
         raise ApiError(code="VALIDATE_400", message="回答内容不能为空", status_code=400)
 
+    def _build_resume_references(self, resume_text: str, answer: str, top_k: int = 2) -> list[dict[str, Any]]:
+        """从简历文本中提取与当前回答相关的要点。"""
+        source = (resume_text or "").strip()
+        if not source:
+            return []
+        answer_tokens = {token for token in re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_]+", answer.lower()) if token}
+        lines = [line.strip() for line in source.splitlines() if len(line.strip()) >= 6]
+        scored: list[tuple[int, str]] = []
+        for line in lines:
+            line_lower = line.lower()
+            score = sum(1 for token in answer_tokens if token in line_lower)
+            if score > 0:
+                scored.append((score, line))
+        if not scored:
+            picked = lines[:top_k]
+        else:
+            scored.sort(key=lambda item: item[0], reverse=True)
+            picked = [line for _, line in scored[:top_k]]
+        return [
+            {
+                "title": "简历要点",
+                "content": text,
+                "score": 0.0,
+                "source_path": "resume",
+                "retrieval_mode": "resume",
+            }
+            for text in picked
+        ]
+
     def submit_turn_with_audio(self, interview_id: str, stage: str, audio_bytes: bytes, filename: str, user_id: str) -> dict:
         """处理 multipart 音频上传的轮次提交。"""
         payload = {
@@ -108,6 +138,8 @@ class InterviewService:
             raise ApiError(code="STATE_409", message="提交阶段与会话阶段不一致", status_code=409)
 
         answer, input_source = self._resolve_answer(payload)
+        resume = self.repo.get_resume(session["resume_id"]) or {}
+        resume_references = self._build_resume_references(str(resume.get("parsed_text") or ""), answer)
         if input_source == "ASR_SERVER":
             providers["asr"] = self.voice_service.asr_provider
             provider_status["asr"] = self.voice_service.health().get("asr", "UNKNOWN")
@@ -119,6 +151,7 @@ class InterviewService:
             ensure_behavior_followup_limit(stage, follow_up_count)
 
         references = self.rag_service.retrieve(session["job_role"], answer, top_k=2)
+        references = [*resume_references, *references][:4]
         generation_mode = "mock"
         if self.question_workflow.llm_provider in {"openai", "ollama"}:
             try:

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Button, Card, List, Spin, Tag, Typography } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { fetchReport, retryReport } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
@@ -8,8 +8,10 @@ import { useInterviewStore } from '../stores/interviewStore'
 /** 报告页面。 */
 export function ReportPage() {
   const navigate = useNavigate()
+  const params = useParams<{ interviewId?: string }>()
   const queryClient = useQueryClient()
-  const interviewId = useInterviewStore((state) => state.interviewId)
+  const storeInterviewId = useInterviewStore((state) => state.interviewId)
+  const interviewId = params.interviewId || storeInterviewId
 
   /** 轮询查询报告状态。 */
   const reportQuery = useQuery({

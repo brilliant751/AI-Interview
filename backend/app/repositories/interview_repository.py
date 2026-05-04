@@ -48,6 +48,8 @@ class InterviewRepository:
                   filename TEXT NOT NULL,
                   storage_path TEXT,
                   status TEXT NOT NULL DEFAULT 'PENDING',
+                  parsed_text TEXT NOT NULL DEFAULT '',
+                  parse_error TEXT NOT NULL DEFAULT '',
                   is_deleted INTEGER NOT NULL DEFAULT 0,
                   deleted_at TEXT,
                   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -164,6 +166,8 @@ class InterviewRepository:
             self._ensure_column(conn, "resumes", "is_deleted", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "resumes", "deleted_at", "TEXT")
             self._ensure_column(conn, "resumes", "updated_at", "TEXT")
+            self._ensure_column(conn, "resumes", "parsed_text", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "resumes", "parse_error", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "user_id", "TEXT")
             self._ensure_column(conn, "interview_sessions", "started_at", "TEXT")
             self._ensure_column(conn, "interview_sessions", "finished_at", "TEXT")
@@ -218,18 +222,18 @@ class InterviewRepository:
         if not exists:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
-    def create_resume(self, user_id: str, filename: str, storage_path: str) -> dict:
+    def create_resume(self, user_id: str, filename: str, storage_path: str, status: str, parsed_text: str, parse_error: str) -> dict:
         """创建简历记录。"""
         resume_id = f"res_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(
                 """
-                INSERT INTO resumes(resume_id, user_id, filename, storage_path, status, updated_at)
-                VALUES (?, ?, ?, ?, 'READY', datetime('now'))
+                INSERT INTO resumes(resume_id, user_id, filename, storage_path, status, parsed_text, parse_error, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
                 """,
-                (resume_id, user_id, filename, storage_path),
+                (resume_id, user_id, filename, storage_path, status, parsed_text, parse_error),
             )
-        return {"resume_id": resume_id, "status": "READY"}
+        return {"resume_id": resume_id, "status": status}
 
     def list_resumes(self, user_id: str, offset: int, limit: int) -> tuple[list[dict], int]:
         """分页查询用户简历列表。"""

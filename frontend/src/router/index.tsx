@@ -87,6 +87,14 @@ export function AppRouter() {
             }
           />
           <Route
+            path="/report/:interviewId"
+            element={
+              <ProtectedRoute>
+                <ReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/history"
             element={
               <ProtectedRoute>

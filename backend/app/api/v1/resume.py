@@ -14,9 +14,11 @@ from app.core.errors import ApiError
 from app.core.security import AuthContext, require_user
 from app.models.schemas import ResumeListItem, ResumeListResponse, ResumeUploadResponse
 from app.repositories.interview_repository import InterviewRepository
+from app.services.resume_parse_service import ResumeParseService
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 RESUME_STORAGE_DIR = Path(__file__).resolve().parents[3] / "assets" / "data" / "resumes"
+resume_parse_service = ResumeParseService()
 
 
 def get_repo(request: Request) -> InterviewRepository:
@@ -50,12 +52,26 @@ async def upload_resume(
     stored_name = f"{uuid.uuid4().hex}{ext}"
     stored_path = RESUME_STORAGE_DIR / stored_name
     stored_path.write_bytes(content)
+    parse_status = "READY"
+    parse_error = ""
+    parsed_text = ""
+    try:
+        parsed_text = resume_parse_service.parse(original_filename, content)
+        if not parsed_text:
+            parse_status = "FAILED"
+            parse_error = "简历解析结果为空，请检查文件内容或格式"
+    except Exception as exc:
+        parse_status = "FAILED"
+        parse_error = f"简历解析失败：{exc}"
     result = repo.create_resume(
         user_id=auth.user_id,
         filename=original_filename,
         storage_path=str(stored_path),
+        status=parse_status,
+        parsed_text=parsed_text,
+        parse_error=parse_error,
     )
-    response = ResumeUploadResponse(resume_id=result["resume_id"], parse_status="READY")
+    response = ResumeUploadResponse(resume_id=result["resume_id"], parse_status=result["status"])
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, response.model_dump_json())
     return response
