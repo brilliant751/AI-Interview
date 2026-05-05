@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
+from app.core.errors import ApiError  # noqa: E402
 from app.main import create_app  # noqa: E402
 
 
@@ -37,6 +38,25 @@ class InterviewFlowTestCase(unittest.TestCase):
         os.environ.pop("AI_INTERVIEW_DB_PATH", None)
         os.environ.pop("AI_INTERVIEW_RETRIEVAL_FALLBACK_ENABLED", None)
         os.environ.pop("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN", None)
+        get_settings.cache_clear()
+
+    def _create_interview(self, output_mode: str = "text") -> str:
+        """创建测试用会话并返回 interview_id。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+
+        create_payload = {
+            "resume_id": resume_id,
+            "job_role": "java",
+            "difficulty": "medium",
+            "input_mode": "voice" if output_mode == "voice" else "text",
+            "output_mode": output_mode,
+        }
+        create_resp = self.client.post("/api/v1/interviews", json=create_payload, headers=self.user_headers)
+        self.assertEqual(200, create_resp.status_code)
+        return create_resp.json()["interview_id"]
 
     def test_interview_flow(self) -> None:
         """验证主流程接口连通与状态可用。"""
@@ -47,14 +67,14 @@ class InterviewFlowTestCase(unittest.TestCase):
             files=files,
             headers={**self.user_headers, "X-Idempotency-Key": idem_key},
         )
-        self.assertEqual(200, resume_resp.status_code)
+        self.assertIn(resume_resp.status_code, [200, 201])
         resume_id = resume_resp.json()["resume_id"]
         resume_retry_resp = self.client.post(
             "/api/v1/resumes",
             files=files,
             headers={**self.user_headers, "X-Idempotency-Key": idem_key},
         )
-        self.assertEqual(200, resume_retry_resp.status_code)
+        self.assertIn(resume_retry_resp.status_code, [200, 201])
         self.assertEqual(resume_id, resume_retry_resp.json()["resume_id"])
 
         create_payload = {
@@ -81,7 +101,17 @@ class InterviewFlowTestCase(unittest.TestCase):
         )
         self.assertEqual(200, turn_resp.status_code)
         self.assertIn("next_question", turn_resp.json())
-        self.assertEqual("TECHNICAL", turn_resp.json()["stage"])
+        self.assertEqual("PROJECT_DEEP_DIVE", turn_resp.json()["stage"])
+        self.assertIn("pipeline_meta", turn_resp.json())
+        self.assertIn("generation_mode", turn_resp.json()["pipeline_meta"])
+
+        deep_dive_turn = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "PROJECT_DEEP_DIVE", "answer_text": "我在项目中负责了架构改造与核心模块落地。"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, deep_dive_turn.status_code)
+        self.assertEqual("TECHNICAL", deep_dive_turn.json()["stage"])
 
         for _ in range(2):
             tech_turn = self.client.post(
@@ -108,6 +138,163 @@ class InterviewFlowTestCase(unittest.TestCase):
         history_resp = self.client.get("/api/v1/interviews/history", headers=self.user_headers)
         self.assertEqual(200, history_resp.status_code)
         self.assertGreaterEqual(history_resp.json()["total"], 1)
+        self.assertIn("resume_id", history_resp.json()["items"][0])
+        self.assertIn("status", history_resp.json()["items"][0])
+        self.assertIn("turn_count", history_resp.json()["items"][0])
+
+    def test_list_turns_endpoint(self) -> None:
+        """验证查询轮次列表接口返回有效数据。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        list_resp = self.client.get(f"/api/v1/interviews/{interview_id}/turns", headers=self.user_headers)
+        self.assertEqual(200, list_resp.status_code)
+        self.assertEqual(interview_id, list_resp.json()["interview_id"])
+        self.assertGreaterEqual(len(list_resp.json()["items"]), 1)
+        self.assertEqual("SELF_INTRO", list_resp.json()["items"][0]["stage"])
+
+    def test_history_status_filter(self) -> None:
+        """验证历史列表支持按状态过滤。"""
+        interview_id = self._create_interview()
+        finish_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/finish",
+            headers=self.user_headers,
+        )
+        self.assertEqual(202, finish_resp.status_code)
+
+        paused_history = self.client.get(
+            "/api/v1/interviews/history",
+            params={"status": "FINISHED"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, paused_history.status_code)
+        self.assertGreaterEqual(paused_history.json()["total"], 1)
+        self.assertTrue(all(item["status"] == "FINISHED" for item in paused_history.json()["items"]))
+
+    def test_update_interview_status_by_query(self) -> None:
+        """验证可通过查询参数更新会话状态。"""
+        interview_id = self._create_interview()
+        pause_resp = self.client.get(
+            f"/api/v1/interviews/{interview_id}/status",
+            params={"status": "PAUSED"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, pause_resp.status_code)
+        self.assertEqual("PAUSED", pause_resp.json()["status"])
+
+        resume_resp = self.client.get(
+            f"/api/v1/interviews/{interview_id}/status",
+            params={"status": "ACTIVE"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, resume_resp.status_code)
+        self.assertEqual("ACTIVE", resume_resp.json()["status"])
+
+    def test_input_priority_prefers_asr_text(self) -> None:
+        """验证输入优先级为 asr_text > answer_text。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "asr_text": "这是客户端 ASR 结果",
+                "answer_text": "这是普通文本",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        self.assertEqual("ASR_CLIENT", pipeline_meta["input_source"])
+
+    def test_llm_and_tts_fallback(self) -> None:
+        """验证 LLM 与 TTS 失败时返回降级标记。"""
+        interview_id = self._create_interview(output_mode="voice")
+        service = self.client.app.state.interview_service
+        service.question_workflow.llm_provider = "openai"
+
+        def _raise_llm(*args, **kwargs):
+            raise RuntimeError("llm fail")
+
+        def _raise_tts(*args, **kwargs):
+            raise ApiError(code="TTS_UPSTREAM_FAILED", message="tts fail", status_code=502)
+
+        service.question_workflow.generate_by_llm = _raise_llm
+        service.voice_service.tts = _raise_tts
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "我负责过高并发服务优化"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        flags = pipeline_meta["degrade_flags"]
+        self.assertIn("LLM_FALLBACK_TEMPLATE", flags)
+        self.assertIn("TTS_FALLBACK_TEXT", flags)
+        self.assertEqual("openai", pipeline_meta["providers"]["llm"])
+        self.assertIn(pipeline_meta["provider_status"]["llm"], ["UP", "DOWN"])
+        self.assertIsNone(turn_resp.json()["tts_audio_url"])
+
+    def test_asr_failure_without_text_fallback(self) -> None:
+        """验证仅音频输入且 ASR 失败时返回上游错误。"""
+        interview_id = self._create_interview()
+        service = self.client.app.state.interview_service
+
+        def _raise_asr(*args, **kwargs):
+            raise ApiError(code="ASR_UPSTREAM_FAILED", message="asr fail", status_code=502)
+
+        service.voice_service.asr = _raise_asr
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "answer_audio_url": "https://example.com/a.mp3",
+                "answer_audio_format": "mp3",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(502, turn_resp.status_code)
+        self.assertEqual("ASR_UPSTREAM_FAILED", turn_resp.json()["error"]["code"])
+
+    def test_audio_input_uses_server_asr_when_success(self) -> None:
+        """验证音频输入成功时走服务端 ASR 路径并记录来源。"""
+        interview_id = self._create_interview()
+        service = self.client.app.state.interview_service
+        service.voice_service.asr = lambda *_args, **_kwargs: "这是服务端语音识别文本"
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={
+                "stage": "SELF_INTRO",
+                "answer_audio_url": "https://example.com/ok.mp3",
+                "answer_audio_format": "mp3",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        pipeline_meta = turn_resp.json()["pipeline_meta"]
+        self.assertEqual("ASR_SERVER", pipeline_meta["input_source"])
+        self.assertEqual(service.voice_service.asr_provider, pipeline_meta["providers"]["asr"])
+
+    def test_audio_upload_endpoint(self) -> None:
+        """验证 multipart 音频上传接口可用。"""
+        interview_id = self._create_interview(output_mode="text")
+        service = self.client.app.state.interview_service
+        service.voice_service.asr = lambda **_kwargs: "上传音频识别文本"
+
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns/audio",
+            data={"stage": "SELF_INTRO"},
+            files={"file": ("sample.wav", b"fake-audio", "audio/wav")},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        self.assertEqual("PROJECT_DEEP_DIVE", turn_resp.json()["stage"])
 
     def test_admin_import_requires_admin_role(self) -> None:
         """验证管理接口权限控制生效。"""
@@ -117,6 +304,69 @@ class InterviewFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(403, forbidden_resp.status_code)
+
+    def test_resume_list_and_delete(self) -> None:
+        """验证简历列表与删除能力。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        upload_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(upload_resp.status_code, [200, 201])
+        resume_id = upload_resp.json()["resume_id"]
+
+        list_resp = self.client.get("/api/v1/resumes?page=1&page_size=10", headers=self.user_headers)
+        self.assertEqual(200, list_resp.status_code)
+        self.assertGreaterEqual(list_resp.json()["total"], 1)
+        self.assertTrue(any(item["resume_id"] == resume_id for item in list_resp.json()["items"]))
+
+        delete_resp = self.client.delete(f"/api/v1/resumes/{resume_id}", headers=self.user_headers)
+        self.assertEqual(204, delete_resp.status_code)
+
+        list_after_delete_resp = self.client.get("/api/v1/resumes?page=1&page_size=10", headers=self.user_headers)
+        self.assertEqual(200, list_after_delete_resp.status_code)
+        self.assertFalse(any(item["resume_id"] == resume_id for item in list_after_delete_resp.json()["items"]))
+
+    def test_resume_delete_conflict_when_interview_active(self) -> None:
+        """验证进行中面试引用的简历删除冲突。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        upload_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(upload_resp.status_code, [200, 201])
+        resume_id = upload_resp.json()["resume_id"]
+
+        create_payload = {
+            "resume_id": resume_id,
+            "job_role": "java",
+            "difficulty": "medium",
+            "input_mode": "text",
+            "output_mode": "text",
+        }
+        create_resp = self.client.post("/api/v1/interviews", json=create_payload, headers=self.user_headers)
+        self.assertEqual(200, create_resp.status_code)
+
+        delete_resp = self.client.delete(f"/api/v1/resumes/{resume_id}", headers=self.user_headers)
+        self.assertEqual(409, delete_resp.status_code)
+        self.assertEqual("RESUME_409_IN_USE", delete_resp.json()["error"]["code"])
+
+    def test_playback_and_scope_protection(self) -> None:
+        """验证回放详情可用且跨用户不可访问。"""
+        interview_id = self._create_interview()
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+
+        playback_resp = self.client.get(f"/api/v1/interviews/{interview_id}/playback", headers=self.user_headers)
+        self.assertEqual(200, playback_resp.status_code)
+        self.assertEqual(interview_id, playback_resp.json()["interview_id"])
+        self.assertGreaterEqual(len(playback_resp.json()["turns"]), 1)
+        first_turn = playback_resp.json()["turns"][0]
+        self.assertIn("question", first_turn)
+        self.assertIn("answer", first_turn)
+        self.assertIn("sequence", first_turn)
+
+        forbidden_resp = self.client.get(f"/api/v1/interviews/{interview_id}/playback", headers=self.admin_headers)
+        self.assertEqual(403, forbidden_resp.status_code)
+        self.assertEqual("INTERVIEW_403_FORBIDDEN", forbidden_resp.json()["error"]["code"])
 
 
 if __name__ == "__main__":

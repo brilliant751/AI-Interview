@@ -7,6 +7,8 @@ export interface CreateInterviewPayload {
   difficulty: 'easy' | 'medium' | 'hard'
   input_mode: 'text' | 'voice'
   output_mode: 'text' | 'voice'
+  session_name?: string
+  question_types?: Array<'project' | 'technical' | 'scenario'>
 }
 
 /** 会话创建响应。 */
@@ -14,6 +16,7 @@ export interface CreateInterviewResponse {
   interview_id: string
   current_stage: string
   first_question: string
+  tts_audio_url?: string
 }
 
 /** 轮次提交请求体。 */
@@ -21,6 +24,36 @@ export interface SubmitTurnPayload {
   stage: string
   answer_text: string
   asr_text?: string
+  answer_audio_url?: string
+  answer_audio_format?: string
+}
+
+/** 音频轮次提交请求体。 */
+export interface SubmitAudioTurnPayload {
+  stage: string
+  file: File
+}
+
+/** 链路 provider 信息。 */
+export interface PipelineProviders {
+  asr?: string
+  llm?: string
+  tts?: string
+}
+
+/** 链路元数据。 */
+export interface PipelineMeta {
+  input_source: string
+  providers: PipelineProviders
+  provider_status: {
+    asr: string
+    llm: string
+    tts: string
+  }
+  degrade_flags: string[]
+  trace_id: string
+  latency_ms: number
+  generation_mode: 'local_ai' | 'fallback_template' | 'mock'
 }
 
 /** 轮次提交响应。 */
@@ -32,6 +65,7 @@ export interface SubmitTurnResponse {
   live_score: number
   output_mode: 'text' | 'voice'
   tts_audio_url?: string
+  pipeline_meta?: PipelineMeta
 }
 
 /** 报告响应。 */
@@ -50,10 +84,72 @@ export interface HistoryResponse {
   total: number
   items: Array<{
     interview_id: string
+    resume_id: string
     job_role: string
+    status: string
+    started_at: string
+    finished_at?: string
+    turn_count: number
     created_at: string
     overall_score?: number
   }>
+}
+
+/** 简历列表响应。 */
+export interface ResumeListResponse {
+  items: Array<{
+    resume_id: string
+    file_name: string
+    parse_status: string
+    created_at: string
+    last_used_at?: string
+  }>
+  page: number
+  page_size: number
+  total: number
+}
+
+/** 回放详情响应。 */
+export interface InterviewPlaybackResponse {
+  interview_id: string
+  resume: {
+    resume_id: string
+    file_name: string
+  }
+  meta: {
+    job_role: string
+    difficulty: string
+    status: string
+    started_at: string
+    finished_at?: string
+    duration_seconds: number
+    duration_updated_at?: string
+  }
+  turns: Array<{
+    turn_id: string
+    sequence: number
+    question: string
+    answer: string
+    question_ts: string
+    answer_ts?: string
+  }>
+}
+
+/** 会话状态响应。 */
+export interface InterviewStatusResponse {
+  interview_id: string
+  status: string
+  current_stage: string
+  follow_up_count: number
+  technical_count: number
+  job_role: 'java' | 'web'
+  difficulty: 'easy' | 'medium' | 'hard'
+  input_mode: 'text' | 'voice'
+  output_mode: 'text' | 'voice'
+  current_question: string
+  tts_audio_url?: string
+  duration_seconds: number
+  duration_updated_at?: string
 }
 
 /** 上传简历并返回简历 ID。 */
@@ -64,6 +160,23 @@ export async function uploadResume(file: File): Promise<{ resume_id: string; par
     headers: { 'Content-Type': 'multipart/form-data' },
   })
   return data
+}
+
+/** 查询简历列表。 */
+export async function fetchResumes(params: { page: number; page_size: number }): Promise<ResumeListResponse> {
+  const { data } = await apiClient.get<ResumeListResponse>('/resumes', { params })
+  return data
+}
+
+/** 删除简历。 */
+export async function deleteResume(resumeId: string): Promise<void> {
+  await apiClient.delete(`/resumes/${resumeId}`)
+}
+
+/** 获取简历原始文件（二进制）。 */
+export async function fetchResumeFile(resumeId: string): Promise<Blob> {
+  const { data } = await apiClient.get(`/resumes/${resumeId}/file`, { responseType: 'blob' })
+  return data as Blob
 }
 
 /** 创建面试会话。 */
@@ -78,6 +191,20 @@ export async function submitTurn(
   payload: SubmitTurnPayload,
 ): Promise<SubmitTurnResponse> {
   const { data } = await apiClient.post(`/interviews/${interviewId}/turns`, payload)
+  return data
+}
+
+/** 提交音频轮次。 */
+export async function submitAudioTurn(
+  interviewId: string,
+  payload: SubmitAudioTurnPayload,
+): Promise<SubmitTurnResponse> {
+  const formData = new FormData()
+  formData.append('stage', payload.stage)
+  formData.append('file', payload.file)
+  const { data } = await apiClient.post(`/interviews/${interviewId}/turns/audio`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
   return data
 }
 
@@ -100,7 +227,28 @@ export async function retryReport(interviewId: string): Promise<{ status: string
 }
 
 /** 查询历史记录。 */
-export async function fetchHistory(params: { page: number; page_size: number; job_role?: string }) {
+export async function fetchHistory(params: { page: number; page_size: number; job_role?: string; status?: string }) {
   const { data } = await apiClient.get<HistoryResponse>('/interviews/history', { params })
+  return data
+}
+
+/** 删除历史面试记录。 */
+export async function deleteInterviewHistory(interviewId: string): Promise<{ interview_id: string; deleted: boolean }> {
+  const { data } = await apiClient.delete(`/interviews/history/${interviewId}`)
+  return data
+}
+
+/** 查询会话当前状态。 */
+export async function fetchInterviewStatus(
+  interviewId: string,
+  params?: { status?: 'ACTIVE' | 'PAUSED' },
+): Promise<InterviewStatusResponse> {
+  const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`, { params })
+  return data
+}
+
+/** 查询面试回放详情。 */
+export async function fetchInterviewPlayback(interviewId: string): Promise<InterviewPlaybackResponse> {
+  const { data } = await apiClient.get<InterviewPlaybackResponse>(`/interviews/${interviewId}/playback`)
   return data
 }

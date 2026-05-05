@@ -24,9 +24,31 @@ test('main flow should work with mocked backend', async ({ page }) => {
 
     if (method === 'POST' && url.includes('/api/v1/resumes')) {
       await route.fulfill({
-        status: 200,
+        status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ resume_id: 'resume-001', parse_status: 'READY' }),
+      })
+      return
+    }
+
+    if (method === 'GET' && url.includes('/api/v1/resumes')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          items: [
+            {
+              resume_id: 'resume-001',
+              file_name: 'resume.pdf',
+              parse_status: 'READY',
+              created_at: '2026-05-04T00:00:00Z',
+              last_used_at: null,
+            },
+          ],
+          page: 1,
+          page_size: 10,
+          total: 1,
+        }),
       })
       return
     }
@@ -94,10 +116,32 @@ test('main flow should work with mocked backend', async ({ page }) => {
           items: [
             {
               interview_id: 'interview-001',
+              resume_id: 'resume-001',
               job_role: 'java',
+              status: 'FINISHED',
+              started_at: '2026-04-03T00:00:00Z',
+              finished_at: '2026-04-03T00:30:00Z',
+              turn_count: 3,
               created_at: '2026-04-03T00:00:00Z',
             },
           ],
+        }),
+      })
+      return
+    }
+
+    if (method === 'GET' && url.includes('/api/v1/admin/providers/health')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          overall: 'UP',
+          providers: {
+            asr: { status: 'UP', provider: 'mock', model: 'mock', latency_ms: 1, error_message: '' },
+            llm: { status: 'UP', provider: 'mock', model: 'mock', latency_ms: 1, error_message: '' },
+            tts: { status: 'UP', provider: 'mock', model: 'mock', latency_ms: 1, error_message: '' },
+            embed: { status: 'UP', provider: 'mock', model: 'mock', latency_ms: 1, error_message: '' },
+          },
         }),
       })
       return
@@ -107,16 +151,18 @@ test('main flow should work with mocked backend', async ({ page }) => {
   })
 
   await page.goto('/upload')
-  await expect(page.getByRole('button', { name: '开始解析并继续' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '上传简历' })).toBeVisible()
 
   await page.locator('input[type="file"]').setInputFiles({
     name: 'resume.pdf',
     mimeType: 'application/pdf',
     buffer: Buffer.from('mock resume file'),
   })
-  await page.getByRole('button', { name: '开始解析并继续' }).click()
+  await page.getByRole('button', { name: '上传简历' }).click()
+  await page.getByRole('button', { name: '去面试准备' }).click()
   await expect(page).toHaveURL(/\/prepare$/)
 
+  await expect(page.getByRole('button', { name: '创建会话' })).toBeVisible()
   await page.getByRole('button', { name: '创建会话' }).click()
   await expect(page).toHaveURL(/\/interview$/)
   await expect(page.getByText('请做一个简短自我介绍。')).toBeVisible()

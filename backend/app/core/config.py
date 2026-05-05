@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
@@ -19,12 +20,14 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     app_env: str = "dev"
     app_name: str = "AI Interview API"
     db_path: str = str(ASSETS_ROOT / "data" / "sqlite" / "interview.db")
     chroma_dir: str = str(ASSETS_ROOT / "data" / "chroma")
+    cors_allow_origin_regex: str = r"http://localhost:5173"
     llm_provider: str = "mock"
     asr_provider: str = "mock"
     tts_provider: str = "mock"
@@ -51,6 +54,36 @@ class Settings(BaseSettings):
         "http://localhost:4173",
         "http://127.0.0.1:4173",
     ]
+
+    openai_api_key: str = ""
+    asr_model: str = "paraformer-zh"
+    asr_device: str = "cpu"
+    tts_model: str = "fastspeech2_csmsc"
+    tts_device: str = "cpu"
+    tts_sample_rate: int = 24000
+    tts_voice: str = "alloy"
+    llm_model: str = "deepseek-r1:8b"
+    embed_model: str = "nomic-embed-text"
+    split_model: str = "qwen3.5-2b"
+    provider_timeout_seconds: float = 20.0
+    provider_max_retries: int = 2
+    provider_base_url: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    # 兼容期配置：SDK 模式默认不依赖 URL，可用于灰度或历史配置兼容。
+    funasr_base_url: str = "http://localhost:10095"
+    # 兼容期配置：SDK 模式默认不依赖 URL，可用于灰度或历史配置兼容。
+    paddlespeech_base_url: str = "http://localhost:8888"
+
+    @model_validator(mode="after")
+    def validate_openai_key_for_dev(self) -> Settings:
+        """在 dev 环境使用 openai provider 时校验密钥是否存在。"""
+        need_key = any(
+            provider == "openai"
+            for provider in [self.llm_provider, self.asr_provider, self.tts_provider]
+        )
+        if self.app_env == "dev" and need_key and not self.openai_api_key.strip():
+            raise ValueError("dev 环境使用 openai provider 时必须配置 AI_INTERVIEW_OPENAI_API_KEY")
+        return self
 
 
 @lru_cache(maxsize=1)

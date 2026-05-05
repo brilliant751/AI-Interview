@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import logging
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
@@ -21,6 +22,21 @@ from app.services.report_worker import ReportWorker
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _find_allowed_methods(app: FastAPI, path: str) -> list[str]:
+    """根据请求路径匹配可用方法列表。"""
+    methods: set[str] = set()
+    for route in app.router.routes:
+        route_methods = getattr(route, "methods", None)
+        route_regex = getattr(route, "path_regex", None)
+        if not route_methods or not route_regex:
+            continue
+        if route_regex.match(path):
+            methods.update(route_methods)
+    methods.discard("HEAD")
+    methods.discard("OPTIONS")
+    return sorted(methods)
 
 
 @asynccontextmanager
@@ -56,12 +72,42 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_allow_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type", "X-Idempotency-Key"],
+    allow_origins=settings.cors_allow_origins,
+    allow_origin_regex=settings.cors_allow_origin_regex,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Idempotency-Key"],
     )
     app.add_exception_handler(ApiError, api_error_handler)
+
+    @app.middleware("http")
+    async def log_api_requests(request: Request, call_next):
+        """记录 API 请求日志，并在 405 时输出路由方法提示。"""
+        started_at = time.perf_counter()
+        response = await call_next(request)
+        latency_ms = int((time.perf_counter() - started_at) * 1000)
+        path = request.url.path
+        if path.startswith("/api/"):
+            client = request.client.host if request.client else "-"
+            logger.info(
+                "接口访问日志: method=%s path=%s status=%s latency_ms=%s client=%s",
+                request.method,
+                path,
+                response.status_code,
+                latency_ms,
+                client,
+            )
+            if response.status_code == 405:
+                allowed_methods = _find_allowed_methods(app, path)
+                logger.warning(
+                    "接口方法不支持: method=%s path=%s status=%s 支持方法=%s",
+                    request.method,
+                    path,
+                    response.status_code,
+                    ",".join(allowed_methods) if allowed_methods else "未知",
+                )
+        return response
+
     app.include_router(api_router)
     return app
 

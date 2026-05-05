@@ -109,8 +109,33 @@ paths:
           content:
             application/json:
               schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  current_stage: { type: string }
+                  first_question: { type: string }
+                  tts_audio_url: { type: string, nullable: true }
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/AuthMeResponse'
   /api/v1/resumes:
+    get:
+      summary: 查询简历列表
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResumeListResponse'
     post:
       summary: 上传简历
       parameters:
@@ -130,8 +155,39 @@ paths:
               required:
                 - file
       responses:
+        "201":
+          description: 成功
+  /api/v1/resumes/{resume_id}:
+    delete:
+      summary: 删除简历
+      parameters:
+        - in: path
+          name: resume_id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: 删除成功
+  /api/v1/resumes/{resume_id}/file:
+    get:
+      summary: 获取简历文件
+      parameters:
+        - in: path
+          name: resume_id
+          required: true
+          schema: { type: string }
+      responses:
         "200":
           description: 成功
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
   /api/v1/interviews:
     post:
       summary: 创建面试会话
@@ -159,7 +215,62 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/interviews/{interview_id}/playback:
+    get:
+      summary: 查询面试回放详情
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewPlaybackResponse'
   /api/v1/interviews/{interview_id}/turns:
+    get:
+      summary: 查询面试轮次列表
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        turn_id: { type: string }
+                        interview_id: { type: string }
+                        stage: { type: string }
+                        answer_text: { type: string }
+                        next_question: { type: string }
+                        live_score: { type: integer }
+                        generation_mode: { type: string }
+                        input_source: { type: string, nullable: true }
+                        asr_provider: { type: string, nullable: true }
+                        llm_provider: { type: string, nullable: true }
+                        tts_provider: { type: string, nullable: true }
+                        degrade_flags:
+                          type: array
+                          items: { type: string }
+                        trace_id: { type: string, nullable: true }
+                        latency_ms: { type: integer }
+                        created_at: { type: string }
+        "404":
+          description: 会话不存在
     post:
       summary: 提交面试轮次
       parameters:
@@ -172,7 +283,77 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/InterviewTurnRequest'
+              type: object
+              required: [stage]
+              properties:
+                stage: { type: string }
+                answer_text: { type: string }
+                asr_text: { type: string }
+                answer_audio_url: { type: string }
+                answer_audio_format: { type: string, default: mp3 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  stage: { type: string }
+                  next_question: { type: string }
+                  follow_up_count: { type: integer }
+                  live_score: { type: integer }
+                  output_mode: { type: string }
+                  tts_audio_url: { type: string, nullable: true }
+                  pipeline_meta:
+                    type: object
+                    properties:
+                      input_source: { type: string }
+                      providers:
+                        type: object
+                        properties:
+                          asr: { type: string, nullable: true }
+                          llm: { type: string, nullable: true }
+                          tts: { type: string, nullable: true }
+                      provider_status:
+                        type: object
+                        properties:
+                          asr: { type: string }
+                          llm: { type: string }
+                          tts: { type: string }
+                      degrade_flags:
+                        type: array
+                        items: { type: string }
+                      trace_id: { type: string }
+                      latency_ms: { type: integer }
+                      generation_mode: { type: string, enum: [local_ai, fallback_template, mock] }
+        "409":
+          description: 状态冲突
+        "502":
+          description: 上游服务失败
+        "504":
+          description: 上游超时
+  /api/v1/interviews/{interview_id}/turns/audio:
+    post:
+      summary: 上传音频并提交面试轮次
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [stage, file]
+              properties:
+                stage: { type: string }
+                file:
+                  type: string
+                  format: binary
       responses:
         "200":
           description: 成功
@@ -187,6 +368,34 @@ paths:
       responses:
         "202":
           description: 已接收
+  /api/v1/interviews/{interview_id}/pause:
+    post:
+      summary: 暂停面试并保存进度
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/{interview_id}/resume:
+    post:
+      summary: 恢复暂停中的面试
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/paused:
+    get:
+      summary: 查询暂停中的面试列表
+      responses:
+        "200":
+          description: 成功
   /api/v1/report/{interview_id}:
     get:
       summary: 查询面试报告
@@ -225,6 +434,26 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/interviews/history/{interview_id}:
+    delete:
+      summary: 删除历史面试记录
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  deleted: { type: boolean }
+        "404":
+          description: 面试会话不存在
   /api/v1/admin/imports/materials:
     post:
       summary: 触发材料导入异步任务
@@ -252,6 +481,32 @@ paths:
       responses:
         "200":
           description: 成功
+        "403":
+          description: 权限不足
+  /api/v1/admin/providers/health:
+    get:
+      summary: 查询 provider 健康状态
+      description: 健康结果基于 SDK 初始化与最小调用，不代表外部 HTTP 服务可达性。
+      security: []
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall: { type: string, enum: [UP, DOWN, DEGRADED] }
+                  providers:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        status: { type: string, enum: [UP, DOWN, DEGRADED] }
+                        provider: { type: string }
+                        model: { type: string }
+                        latency_ms: { type: integer }
+                        error_message: { type: string }
 components:
   securitySchemes:
     bearerAuth:
@@ -325,11 +580,31 @@ components:
       properties:
         user:
           $ref: '#/components/schemas/AuthUserProfile'
+    ResumeListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              resume_id: { type: string }
+              file_name: { type: string }
+              parse_status: { type: string }
+              created_at: { type: string }
+              last_used_at: { type: string, nullable: true }
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
     InterviewCreateRequest:
       type: object
       required: [resume_id, job_role]
       properties:
         resume_id: { type: string }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string, enum: [project, technical, scenario] }
         job_role: { type: string, enum: [java, web] }
         difficulty: { type: string, enum: [easy, medium, hard] }
         input_mode: { type: string, enum: [text, voice] }
@@ -341,6 +616,34 @@ components:
         stage: { type: string }
         answer_text: { type: string }
         asr_text: { type: string }
+    InterviewPlaybackResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        resume:
+          type: object
+          properties:
+            resume_id: { type: string }
+            file_name: { type: string }
+        meta:
+          type: object
+          properties:
+            job_role: { type: string }
+            difficulty: { type: string }
+            status: { type: string }
+            started_at: { type: string }
+            finished_at: { type: string, nullable: true }
+        turns:
+          type: array
+          items:
+            type: object
+            properties:
+              turn_id: { type: string }
+              sequence: { type: integer }
+              question: { type: string }
+              answer: { type: string }
+              question_ts: { type: string }
+              answer_ts: { type: string, nullable: true }
     MaterialImportRequest:
       type: object
       properties:

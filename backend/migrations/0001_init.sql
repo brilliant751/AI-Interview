@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS interview_turns (
   answer_text TEXT NOT NULL,
   next_question TEXT NOT NULL,
   live_score INTEGER NOT NULL,
+  generation_mode TEXT NOT NULL DEFAULT 'mock',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

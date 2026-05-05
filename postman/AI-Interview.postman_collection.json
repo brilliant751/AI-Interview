@@ -108,6 +108,30 @@
           }
         },
         {
+          "name": "List Resumes",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/resumes?page=1&page_size=10"
+          }
+        },
+        {
+          "name": "Delete Resume",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/resumes/{{resume_id}}"
+          }
+        },
+        {
+          "name": "Get Resume File",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/resumes/{{resume_id}}/file"
+          }
+        },
+        {
           "name": "Create Interview",
           "request": {
             "method": "POST",
@@ -117,9 +141,103 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"res_xxx\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"text\",\n  \"output_mode\": \"text\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
             },
             "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "Submit Turn",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stage\": \"SELF_INTRO\",\n  \"answer_text\": \"我有三年前后端开发经验。\",\n  \"answer_audio_url\": \"https://example.com/answer.mp3\",\n  \"answer_audio_format\": \"mp3\"\n}"
+            },
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns"
+          }
+        },
+        {
+          "name": "Submit Audio Turn",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "stage", "value": "SELF_INTRO", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns/audio"
+          }
+        },
+        {
+          "name": "Get Turns",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/turns"
+          }
+        },
+        {
+          "name": "Get Status",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/status"
+          }
+        },
+        {
+          "name": "Finish Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/finish"
+          }
+        },
+        {
+          "name": "Pause Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/pause"
+          }
+        },
+        {
+          "name": "List Paused Interviews",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/paused"
+          }
+        },
+        {
+          "name": "Resume Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/resume"
+          }
+        },
+        {
+          "name": "Get Report",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report/{{interview_id}}"
+          }
+        },
+        {
+          "name": "Retry Report",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report/{{interview_id}}/retry"
           }
         },
         {
@@ -127,7 +245,23 @@
           "request": {
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
-            "url": "{{base_url}}/interviews/history"
+            "url": "{{base_url}}/interviews/history?page=1&page_size=10"
+          }
+        },
+        {
+          "name": "Delete History Interview",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/history/{{interview_id}}"
+          }
+        },
+        {
+          "name": "Playback",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/playback"
           }
         }
       ]
@@ -149,6 +283,22 @@
             },
             "url": "{{base_url}}/admin/imports/materials"
           }
+        },
+        {
+          "name": "Get Material Import Task",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/admin/imports/materials/{{task_id}}"
+          }
+        },
+        {
+          "name": "Provider Health",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/admin/providers/health"
+          }
         }
       ]
     }
@@ -156,6 +306,8 @@
   "variable": [
     { "key": "base_url", "value": "http://localhost:8000/api/v1" },
     { "key": "access_token", "value": "" },
-    { "key": "refresh_token", "value": "" }
+    { "key": "refresh_token", "value": "" },
+    { "key": "resume_id", "value": "" },
+    { "key": "interview_id", "value": "" }
   ]
 }

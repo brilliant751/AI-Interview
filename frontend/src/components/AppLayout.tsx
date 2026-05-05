@@ -18,9 +18,8 @@ export function AppLayout(props: { children: ReactNode }) {
 
   const links = isAuthenticated
     ? [
-        { to: '/upload', label: '上传简历' },
         { to: '/interview', label: '模拟面试' },
-        { to: '/report', label: '面试报告' },
+        { to: '/resumes', label: '简历管理' },
         { to: '/history', label: '历史记录' },
       ]
     : [

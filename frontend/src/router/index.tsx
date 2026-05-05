@@ -6,12 +6,13 @@ import { AdminImportsPage } from '../pages/AdminImportsPage'
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { InterviewPage } from '../pages/InterviewPage'
-import { InterviewPreparePage } from '../pages/InterviewPreparePage'
+import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
 import { LoginPage } from '../pages/LoginPage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ReportPage } from '../pages/ReportPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { ResumeUploadPage } from '../pages/ResumeUploadPage'
+import { ResumeManagePage } from '../pages/ResumeManagePage'
 
 /** 通用登录保护路由。 */
 function ProtectedRoute(props: { children: JSX.Element }) {
@@ -46,6 +47,14 @@ export function AppRouter() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route
+            path="/resumes"
+            element={
+              <ProtectedRoute>
+                <ResumeManagePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/upload"
             element={
               <ProtectedRoute>
@@ -57,12 +66,20 @@ export function AppRouter() {
             path="/prepare"
             element={
               <ProtectedRoute>
-                <InterviewPreparePage />
+                <Navigate to="/interview" replace />
               </ProtectedRoute>
             }
           />
           <Route
             path="/interview"
+            element={
+              <ProtectedRoute>
+                <InterviewPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/interview/:interviewId"
             element={
               <ProtectedRoute>
                 <InterviewPage />
@@ -78,10 +95,26 @@ export function AppRouter() {
             }
           />
           <Route
+            path="/report/:interviewId"
+            element={
+              <ProtectedRoute>
+                <ReportPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/history"
             element={
               <ProtectedRoute>
                 <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/history/:interviewId"
+            element={
+              <ProtectedRoute>
+                <InterviewPlaybackPage />
               </ProtectedRoute>
             }
           />
