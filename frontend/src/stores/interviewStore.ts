@@ -33,6 +33,7 @@ interface InterviewActions {
     outputMode: 'text' | 'voice'
     stage: string
     firstQuestion: string
+    ttsAudioUrl?: string
   }) => void
   updateTurnResult: (payload: {
     stage: string
@@ -81,7 +82,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()((se
       currentQuestion: payload.firstQuestion,
       liveScore: 0,
       followUpCount: 0,
-      ttsAudioUrl: '',
+      ttsAudioUrl: payload.ttsAudioUrl || '',
       pipelineMeta: null,
       lastInputSource: '',
       generationMode: 'mock',

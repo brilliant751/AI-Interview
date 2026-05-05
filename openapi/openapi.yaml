@@ -109,6 +109,15 @@ paths:
           content:
             application/json:
               schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  current_stage: { type: string }
+                  first_question: { type: string }
+                  tts_audio_url: { type: string, nullable: true }
+          content:
+            application/json:
+              schema:
                 $ref: '#/components/schemas/AuthMeResponse'
   /api/v1/resumes:
     get:
@@ -359,6 +368,34 @@ paths:
       responses:
         "202":
           description: 已接收
+  /api/v1/interviews/{interview_id}/pause:
+    post:
+      summary: 暂停面试并保存进度
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/{interview_id}/resume:
+    post:
+      summary: 恢复暂停中的面试
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/paused:
+    get:
+      summary: 查询暂停中的面试列表
+      responses:
+        "200":
+          description: 成功
   /api/v1/report/{interview_id}:
     get:
       summary: 查询面试报告
@@ -397,6 +434,26 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/interviews/history/{interview_id}:
+    delete:
+      summary: 删除历史面试记录
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interview_id: { type: string }
+                  deleted: { type: boolean }
+        "404":
+          description: 面试会话不存在
   /api/v1/admin/imports/materials:
     post:
       summary: 触发材料导入异步任务
@@ -544,6 +601,10 @@ components:
       required: [resume_id, job_role]
       properties:
         resume_id: { type: string }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string, enum: [project, technical, scenario] }
         job_role: { type: string, enum: [java, web] }
         difficulty: { type: string, enum: [easy, medium, hard] }
         input_mode: { type: string, enum: [text, voice] }

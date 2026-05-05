@@ -42,10 +42,71 @@ class InterviewService:
             raise ApiError(code="RESUME_403_FORBIDDEN", message="无权使用该简历", status_code=403)
         session = self.repo.create_session(user_id=user_id, payload=payload)
         first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
+        output_mode = str(payload.get("output_mode") or "text")
+        tts_audio_url: Optional[str] = None
+        if output_mode == "voice":
+            try:
+                tts_audio_url = self.voice_service.tts(first_question)
+            except ApiError as exc:
+                logger.warning("首题语音合成失败，降级为文本输出：%s", exc.message)
         return {
             "interview_id": session["interview_id"],
             "current_stage": session["current_stage"],
             "first_question": first_question,
+            "tts_audio_url": tts_audio_url,
+        }
+
+    def list_paused_interviews(self, user_id: str) -> list[dict]:
+        """查询用户暂停中的面试会话。"""
+        return self.repo.list_paused_sessions(user_id=user_id)
+
+    def pause_interview(self, interview_id: str, user_id: str) -> dict:
+        """暂停进行中的面试会话。"""
+        session = self.repo.get_session(interview_id)
+        if not session:
+            raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+        if str(session.get("user_id") or "") != user_id:
+            raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
+        if str(session.get("status") or "") == "FINISHED":
+            raise ApiError(code="STATE_409", message="面试已结束，无法暂停", status_code=409)
+        if str(session.get("status") or "") == "PAUSED":
+            return {"interview_id": interview_id, "status": "PAUSED"}
+        paused = self.repo.pause_session(user_id=user_id, interview_id=interview_id)
+        if not paused:
+            raise ApiError(code="STATE_409", message="面试状态不允许暂停", status_code=409)
+        return {"interview_id": interview_id, "status": "PAUSED"}
+
+    def resume_interview(self, interview_id: str, user_id: str) -> dict:
+        """恢复暂停的面试会话并返回当前题目。"""
+        session = self.repo.get_session(interview_id)
+        if not session:
+            raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+        if str(session.get("user_id") or "") != user_id:
+            raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
+        if str(session.get("status") or "") == "FINISHED":
+            raise ApiError(code="STATE_409", message="面试已结束，无法恢复", status_code=409)
+        if str(session.get("status") or "") == "PAUSED":
+            resumed = self.repo.resume_session(user_id=user_id, interview_id=interview_id)
+            if not resumed:
+                raise ApiError(code="STATE_409", message="面试状态不允许恢复", status_code=409)
+        first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
+        question = self.repo.get_last_next_question(user_id=user_id, interview_id=interview_id) or first_question
+        output_mode = str(session.get("output_mode") or "text")
+        tts_audio_url: Optional[str] = None
+        if output_mode == "voice":
+            try:
+                tts_audio_url = self.voice_service.tts(question)
+            except ApiError:
+                tts_audio_url = None
+        return {
+            "interview_id": interview_id,
+            "stage": str(session.get("current_stage") or "SELF_INTRO"),
+            "question": question,
+            "job_role": str(session.get("job_role") or "java"),
+            "difficulty": str(session.get("difficulty") or "medium"),
+            "input_mode": str(session.get("input_mode") or "text"),
+            "output_mode": output_mode,
+            "tts_audio_url": tts_audio_url,
         }
 
     def _resolve_answer(self, payload: dict) -> tuple[str, str]:
@@ -140,6 +201,8 @@ class InterviewService:
             raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
         if session["status"] == "FINISHED":
             raise ApiError(code="STATE_409", message="面试已结束，禁止继续提交", status_code=409)
+        if session["status"] == "PAUSED":
+            raise ApiError(code="STATE_409", message="面试已暂停，请先恢复后再提交", status_code=409)
 
         stage = payload["stage"]
         if stage != session["current_stage"]:

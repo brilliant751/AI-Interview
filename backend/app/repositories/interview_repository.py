@@ -60,6 +60,8 @@ class InterviewRepository:
                   interview_id TEXT PRIMARY KEY,
                   user_id TEXT,
                   resume_id TEXT NOT NULL,
+                  session_name TEXT NOT NULL DEFAULT '',
+                  question_types TEXT NOT NULL DEFAULT '[]',
                   job_role TEXT NOT NULL,
                   difficulty TEXT NOT NULL,
                   input_mode TEXT NOT NULL,
@@ -68,6 +70,8 @@ class InterviewRepository:
                   current_stage TEXT NOT NULL DEFAULT 'SELF_INTRO',
                   follow_up_count INTEGER NOT NULL DEFAULT 0,
                   technical_count INTEGER NOT NULL DEFAULT 0,
+                  duration_seconds INTEGER NOT NULL DEFAULT 0,
+                  duration_updated_at TEXT NOT NULL DEFAULT (datetime('now')),
                   started_at TEXT NOT NULL DEFAULT (datetime('now')),
                   finished_at TEXT,
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -169,8 +173,12 @@ class InterviewRepository:
             self._ensure_column(conn, "resumes", "parsed_text", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "resumes", "parse_error", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "user_id", "TEXT")
+            self._ensure_column(conn, "interview_sessions", "session_name", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "question_types", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_sessions", "started_at", "TEXT")
             self._ensure_column(conn, "interview_sessions", "finished_at", "TEXT")
+            self._ensure_column(conn, "interview_sessions", "duration_seconds", "INTEGER NOT NULL DEFAULT 0")
+            self._ensure_column(conn, "interview_sessions", "duration_updated_at", "TEXT")
             self._ensure_column(conn, "interview_turns", "user_id", "TEXT")
             conn.execute(
                 """
@@ -207,6 +215,20 @@ class InterviewRepository:
                 UPDATE interview_sessions
                 SET started_at = COALESCE(NULLIF(started_at, ''), created_at)
                 WHERE started_at IS NULL OR started_at = ''
+                """
+            )
+            conn.execute(
+                """
+                UPDATE interview_sessions
+                SET duration_seconds = COALESCE(duration_seconds, 0)
+                WHERE duration_seconds IS NULL
+                """
+            )
+            conn.execute(
+                """
+                UPDATE interview_sessions
+                SET duration_updated_at = COALESCE(NULLIF(duration_updated_at, ''), started_at, created_at, datetime('now'))
+                WHERE duration_updated_at IS NULL OR duration_updated_at = ''
                 """
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
@@ -296,13 +318,15 @@ class InterviewRepository:
             conn.execute(
                 """
                 INSERT INTO interview_sessions(
-                  interview_id, user_id, resume_id, job_role, difficulty, input_mode, output_mode, status, current_stage, follow_up_count, technical_count, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'SELF_INTRO', 0, 0, datetime('now'))
+                  interview_id, user_id, resume_id, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'SELF_INTRO', 0, 0, 0, datetime('now'), datetime('now'))
                 """,
                 (
                     interview_id,
                     user_id,
                     payload["resume_id"],
+                    str(payload.get("session_name") or ""),
+                    json.dumps(payload.get("question_types") or ["project", "technical", "scenario"], ensure_ascii=False),
                     payload["job_role"],
                     payload["difficulty"],
                     payload["input_mode"],
@@ -319,6 +343,124 @@ class InterviewRepository:
                 (interview_id,),
             ).fetchone()
         return dict(row) if row else None
+
+    def pause_session(self, user_id: str, interview_id: str) -> bool:
+        """将进行中的会话置为暂停。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE interview_sessions
+                SET status = 'PAUSED',
+                    duration_seconds = duration_seconds + CAST((julianday('now') - julianday(duration_updated_at)) * 86400 AS INTEGER),
+                    duration_updated_at = datetime('now')
+                WHERE interview_id = ? AND user_id = ? AND status = 'ACTIVE'
+                """,
+                (interview_id, user_id),
+            )
+        return row.rowcount > 0
+
+    def resume_session(self, user_id: str, interview_id: str) -> bool:
+        """将暂停会话恢复为进行中。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE interview_sessions
+                SET status = 'ACTIVE',
+                    duration_updated_at = datetime('now')
+                WHERE interview_id = ? AND user_id = ? AND status = 'PAUSED'
+                """,
+                (interview_id, user_id),
+            )
+        return row.rowcount > 0
+
+    def set_session_status(self, user_id: str, interview_id: str, status: str) -> bool:
+        """更新会话状态，仅允许 ACTIVE 与 PAUSED 之间切换。"""
+        with self._session() as conn:
+            if status == "PAUSED":
+                row = conn.execute(
+                    """
+                    UPDATE interview_sessions
+                    SET status = 'PAUSED',
+                        duration_seconds = duration_seconds + CAST((julianday('now') - julianday(duration_updated_at)) * 86400 AS INTEGER),
+                        duration_updated_at = datetime('now')
+                    WHERE interview_id = ? AND user_id = ? AND status = 'ACTIVE'
+                    """,
+                    (interview_id, user_id),
+                )
+            elif status == "ACTIVE":
+                row = conn.execute(
+                    """
+                    UPDATE interview_sessions
+                    SET status = 'ACTIVE',
+                        duration_updated_at = datetime('now')
+                    WHERE interview_id = ? AND user_id = ? AND status = 'PAUSED'
+                    """,
+                    (interview_id, user_id),
+                )
+            else:
+                return False
+        return row.rowcount > 0
+
+    def list_paused_sessions(self, user_id: str, limit: int = 20) -> list[dict]:
+        """列出用户暂停中的面试会话。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                  s.interview_id,
+                  s.session_name,
+                  s.job_role,
+                  s.difficulty,
+                  s.current_stage,
+                  s.follow_up_count,
+                  s.technical_count,
+                  s.input_mode,
+                  s.output_mode,
+                  s.started_at,
+                  s.created_at,
+                  r.filename AS resume_file_name
+                FROM interview_sessions s
+                LEFT JOIN resumes r ON r.resume_id = s.resume_id
+                WHERE s.user_id = ? AND s.status = 'PAUSED'
+                ORDER BY s.created_at DESC
+                LIMIT ?
+                """,
+                (user_id, limit),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_last_next_question(self, user_id: str, interview_id: str) -> str | None:
+        """获取会话最近一轮生成的问题。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT next_question FROM interview_turns
+                WHERE interview_id = ? AND user_id = ?
+                ORDER BY created_at DESC, turn_id DESC
+                LIMIT 1
+                """,
+                (interview_id, user_id),
+            ).fetchone()
+        if not row:
+            return None
+        return str(row["next_question"] or "")
+
+    def delete_interview(self, user_id: str, interview_id: str) -> bool:
+        """删除指定面试会话及其关联轮次与报告。"""
+        with self._session() as conn:
+            session = conn.execute(
+                """
+                SELECT interview_id FROM interview_sessions
+                WHERE interview_id = ? AND user_id = ?
+                """,
+                (interview_id, user_id),
+            ).fetchone()
+            if not session:
+                return False
+            conn.execute("DELETE FROM interview_turns WHERE interview_id = ? AND user_id = ?", (interview_id, user_id))
+            conn.execute("DELETE FROM interview_reports WHERE interview_id = ?", (interview_id,))
+            conn.execute("DELETE FROM interview_sessions WHERE interview_id = ? AND user_id = ?", (interview_id, user_id))
+        return True
 
     def update_session_stage(
         self,
@@ -344,7 +486,14 @@ class InterviewRepository:
             conn.execute(
                 """
                 UPDATE interview_sessions
-                SET status='FINISHED', current_stage='END', finished_at=datetime('now')
+                SET status='FINISHED',
+                    current_stage='END',
+                    finished_at=datetime('now'),
+                    duration_seconds = duration_seconds + CASE
+                      WHEN status = 'ACTIVE' THEN CAST((julianday('now') - julianday(duration_updated_at)) * 86400 AS INTEGER)
+                      ELSE 0
+                    END,
+                    duration_updated_at = datetime('now')
                 WHERE interview_id = ?
                 """,
                 (interview_id,),
@@ -467,13 +616,23 @@ class InterviewRepository:
             ).fetchone()
         return dict(row) if row else None
 
-    def list_history(self, user_id: str, job_role: str | None, offset: int, limit: int) -> tuple[list[dict], int]:
+    def list_history(
+        self,
+        user_id: str,
+        job_role: str | None,
+        status: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[dict], int]:
         """分页查询历史会话。"""
         where = "WHERE s.user_id = ?"
         params: list[object] = [user_id]
         if job_role:
             where += " AND s.job_role = ?"
             params.append(job_role)
+        if status:
+            where += " AND s.status = ?"
+            params.append(status)
         with self._session() as conn:
             total = conn.execute(
                 f"SELECT COUNT(1) AS cnt FROM interview_sessions s {where}",
@@ -488,6 +647,8 @@ class InterviewRepository:
                   s.status,
                   s.started_at,
                   s.finished_at,
+                  s.duration_seconds,
+                  s.duration_updated_at,
                   s.created_at,
                   r.overall_score,
                   (
@@ -505,10 +666,12 @@ class InterviewRepository:
 
     def get_playback(self, user_id: str, interview_id: str) -> dict | None:
         """聚合面试回放数据。"""
+        first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
         with self._session() as conn:
             session = conn.execute(
                 """
                 SELECT interview_id, resume_id, job_role, difficulty, status, started_at, finished_at, user_id
+                     , duration_seconds, duration_updated_at
                 FROM interview_sessions
                 WHERE interview_id = ?
                 """,
@@ -526,13 +689,13 @@ class InterviewRepository:
                 """,
                 (session["resume_id"], user_id),
             ).fetchone()
-            turns = conn.execute(
+            raw_turns = conn.execute(
                 """
                 SELECT
                   turn_id,
                   ROW_NUMBER() OVER (ORDER BY created_at ASC, turn_id ASC) AS sequence,
-                  next_question AS question,
                   answer_text AS answer,
+                  next_question AS next_question,
                   created_at AS question_ts,
                   created_at AS answer_ts
                 FROM interview_turns
@@ -542,10 +705,19 @@ class InterviewRepository:
                 (interview_id, user_id),
             ).fetchall()
 
+        turns: list[dict] = []
+        previous_next_question = first_question
+        for raw in raw_turns:
+            turn = dict(raw)
+            turn["question"] = previous_next_question
+            previous_next_question = str(turn.get("next_question") or "")
+            turn.pop("next_question", None)
+            turns.append(turn)
+
         return {
             "session": dict(session),
             "resume": dict(resume) if resume else None,
-            "turns": [dict(r) for r in turns],
+            "turns": turns,
         }
 
     def create_user(self, user_id: str, email: str, password_hash: str, display_name: str, role: str) -> dict:

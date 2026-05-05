@@ -6,6 +6,7 @@ import { fetchInterviewPlayback } from '../api/interview'
 
 /** 面试回放详情页。 */
 export function InterviewPlaybackPage() {
+  const firstQuestion = '请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。'
   const { interviewId = '' } = useParams()
 
   /** 查询回放详情。 */
@@ -36,6 +37,10 @@ export function InterviewPlaybackPage() {
   }
 
   const data = playbackQuery.data
+  const turns = data.turns.map((turn, index) => ({
+    ...turn,
+    question: index === 0 ? firstQuestion : turn.question,
+  }))
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -55,7 +60,7 @@ export function InterviewPlaybackPage() {
 
       <Card title="问答回放">
         <Timeline
-          items={data.turns.map((turn) => ({
+          items={turns.map((turn) => ({
             children: (
               <Space direction="vertical" size={4} style={{ width: '100%' }}>
                 <Typography.Text strong>第 {turn.sequence} 轮</Typography.Text>

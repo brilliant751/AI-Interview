@@ -1,13 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Select, Space, Table, Typography } from 'antd'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Button, Card, Popconfirm, Select, Space, Table, Typography, message } from 'antd'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { fetchHistory } from '../api/interview'
+import { deleteInterviewHistory, fetchHistory } from '../api/interview'
 
 /** 历史记录页面。 */
 export function HistoryPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [jobRole, setJobRole] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
 
@@ -15,6 +16,18 @@ export function HistoryPage() {
   const historyQuery = useQuery({
     queryKey: ['history', page, jobRole],
     queryFn: () => fetchHistory({ page, page_size: 10, job_role: jobRole }),
+  })
+
+  /** 删除历史面试记录。 */
+  const deleteMutation = useMutation({
+    mutationFn: (interviewId: string) => deleteInterviewHistory(interviewId),
+    onSuccess: () => {
+      message.success('面试记录已删除')
+      void queryClient.invalidateQueries({ queryKey: ['history'] })
+    },
+    onError: () => {
+      message.error('删除失败，请重试')
+    },
   })
 
   return (
@@ -61,6 +74,16 @@ export function HistoryPage() {
                 <Button size="small" onClick={() => navigate(`/report/${row.interview_id}`)}>
                   查看报告
                 </Button>
+                <Popconfirm
+                  title="确认删除该面试记录？"
+                  okText="删除"
+                  cancelText="取消"
+                  onConfirm={() => deleteMutation.mutate(row.interview_id)}
+                >
+                  <Button size="small" danger loading={deleteMutation.isPending}>
+                    删除
+                  </Button>
+                </Popconfirm>
               </Space>
             ),
           },

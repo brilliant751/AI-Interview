@@ -7,6 +7,8 @@ export interface CreateInterviewPayload {
   difficulty: 'easy' | 'medium' | 'hard'
   input_mode: 'text' | 'voice'
   output_mode: 'text' | 'voice'
+  session_name?: string
+  question_types?: Array<'project' | 'technical' | 'scenario'>
 }
 
 /** 会话创建响应。 */
@@ -14,6 +16,7 @@ export interface CreateInterviewResponse {
   interview_id: string
   current_stage: string
   first_question: string
+  tts_audio_url?: string
 }
 
 /** 轮次提交请求体。 */
@@ -119,6 +122,8 @@ export interface InterviewPlaybackResponse {
     status: string
     started_at: string
     finished_at?: string
+    duration_seconds: number
+    duration_updated_at?: string
   }
   turns: Array<{
     turn_id: string
@@ -137,6 +142,14 @@ export interface InterviewStatusResponse {
   current_stage: string
   follow_up_count: number
   technical_count: number
+  job_role: 'java' | 'web'
+  difficulty: 'easy' | 'medium' | 'hard'
+  input_mode: 'text' | 'voice'
+  output_mode: 'text' | 'voice'
+  current_question: string
+  tts_audio_url?: string
+  duration_seconds: number
+  duration_updated_at?: string
 }
 
 /** 上传简历并返回简历 ID。 */
@@ -214,14 +227,23 @@ export async function retryReport(interviewId: string): Promise<{ status: string
 }
 
 /** 查询历史记录。 */
-export async function fetchHistory(params: { page: number; page_size: number; job_role?: string }) {
+export async function fetchHistory(params: { page: number; page_size: number; job_role?: string; status?: string }) {
   const { data } = await apiClient.get<HistoryResponse>('/interviews/history', { params })
   return data
 }
 
+/** 删除历史面试记录。 */
+export async function deleteInterviewHistory(interviewId: string): Promise<{ interview_id: string; deleted: boolean }> {
+  const { data } = await apiClient.delete(`/interviews/history/${interviewId}`)
+  return data
+}
+
 /** 查询会话当前状态。 */
-export async function fetchInterviewStatus(interviewId: string): Promise<InterviewStatusResponse> {
-  const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`)
+export async function fetchInterviewStatus(
+  interviewId: string,
+  params?: { status?: 'ACTIVE' | 'PAUSED' },
+): Promise<InterviewStatusResponse> {
+  const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`, { params })
   return data
 }
 

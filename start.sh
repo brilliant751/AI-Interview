@@ -114,6 +114,7 @@ ensure_backend_dependencies() {
     openai \
     httpx \
     funasr \
+    paddlepaddle \
     paddlespeech \
     soundfile \
     pytest \

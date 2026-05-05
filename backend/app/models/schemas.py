@@ -41,6 +41,10 @@ class InterviewCreateRequest(BaseModel):
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     input_mode: Literal["text", "voice"] = "text"
     output_mode: Literal["text", "voice"] = "text"
+    session_name: str = Field(default="", max_length=128)
+    question_types: list[Literal["project", "technical", "scenario"]] = Field(
+        default_factory=lambda: ["project", "technical", "scenario"]
+    )
 
 
 class InterviewCreateResponse(BaseModel):
@@ -49,6 +53,7 @@ class InterviewCreateResponse(BaseModel):
     interview_id: str
     current_stage: str
     first_question: str
+    tts_audio_url: Optional[str] = None
 
 
 class InterviewTurnRequest(BaseModel):
@@ -144,6 +149,50 @@ class InterviewStatusResponse(BaseModel):
     current_stage: str
     follow_up_count: int
     technical_count: int
+    job_role: str = "java"
+    difficulty: str = "medium"
+    input_mode: str = "text"
+    output_mode: str = "text"
+    current_question: str = ""
+    tts_audio_url: Optional[str] = None
+    duration_seconds: int = 0
+    duration_updated_at: Optional[str] = None
+
+
+class PausedInterviewItemResponse(BaseModel):
+    """暂停中的面试条目。"""
+
+    interview_id: str
+    session_name: str = ""
+    job_role: str
+    difficulty: str
+    current_stage: str
+    follow_up_count: int = 0
+    technical_count: int = 0
+    input_mode: str
+    output_mode: str
+    started_at: str
+    updated_at: Optional[str] = None
+    resume_file_name: str = ""
+
+
+class PausedInterviewListResponse(BaseModel):
+    """暂停面试列表响应。"""
+
+    items: list[PausedInterviewItemResponse] = Field(default_factory=list)
+
+
+class ResumeInterviewResponse(BaseModel):
+    """恢复暂停面试响应。"""
+
+    interview_id: str
+    stage: str
+    question: str
+    job_role: str
+    difficulty: str
+    input_mode: str
+    output_mode: str
+    tts_audio_url: Optional[str] = None
 
 
 class ReportResponse(BaseModel):
@@ -170,6 +219,8 @@ class HistoryItem(BaseModel):
     turn_count: int = 0
     overall_score: Optional[int] = None
     created_at: str
+    duration_seconds: int = 0
+    duration_updated_at: Optional[str] = None
 
 
 class HistoryResponse(BaseModel):
@@ -194,6 +245,8 @@ class InterviewPlaybackMeta(BaseModel):
     status: str
     started_at: str
     finished_at: Optional[str] = None
+    duration_seconds: int = 0
+    duration_updated_at: Optional[str] = None
 
 
 class InterviewPlaybackTurn(BaseModel):

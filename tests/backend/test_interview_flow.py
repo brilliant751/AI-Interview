@@ -157,6 +157,43 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertGreaterEqual(len(list_resp.json()["items"]), 1)
         self.assertEqual("SELF_INTRO", list_resp.json()["items"][0]["stage"])
 
+    def test_history_status_filter(self) -> None:
+        """验证历史列表支持按状态过滤。"""
+        interview_id = self._create_interview()
+        finish_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/finish",
+            headers=self.user_headers,
+        )
+        self.assertEqual(202, finish_resp.status_code)
+
+        paused_history = self.client.get(
+            "/api/v1/interviews/history",
+            params={"status": "FINISHED"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, paused_history.status_code)
+        self.assertGreaterEqual(paused_history.json()["total"], 1)
+        self.assertTrue(all(item["status"] == "FINISHED" for item in paused_history.json()["items"]))
+
+    def test_update_interview_status_by_query(self) -> None:
+        """验证可通过查询参数更新会话状态。"""
+        interview_id = self._create_interview()
+        pause_resp = self.client.get(
+            f"/api/v1/interviews/{interview_id}/status",
+            params={"status": "PAUSED"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, pause_resp.status_code)
+        self.assertEqual("PAUSED", pause_resp.json()["status"])
+
+        resume_resp = self.client.get(
+            f"/api/v1/interviews/{interview_id}/status",
+            params={"status": "ACTIVE"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, resume_resp.status_code)
+        self.assertEqual("ACTIVE", resume_resp.json()["status"])
+
     def test_input_priority_prefers_asr_text(self) -> None:
         """验证输入优先级为 asr_text > answer_text。"""
         interview_id = self._create_interview()

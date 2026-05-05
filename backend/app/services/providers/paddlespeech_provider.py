@@ -22,6 +22,7 @@ class PaddleSpeechProviderClient:
 
     def _load_engine(self) -> Any:
         """加载 PaddleSpeech SDK 引擎。"""
+        self._patch_aistudio_sdk_download()
         try:
             from paddlespeech.cli.tts.infer import TTSExecutor  # type: ignore
         except Exception as exc:
@@ -31,6 +32,25 @@ class PaddleSpeechProviderClient:
                 status_code=502,
             ) from exc
         return TTSExecutor()
+
+    def _patch_aistudio_sdk_download(self) -> None:
+        """兼容 aistudio_sdk 新版本缺失 download 符号的问题。"""
+        try:
+            import aistudio_sdk.hub as aistudio_hub  # type: ignore
+        except Exception:
+            return
+        if hasattr(aistudio_hub, "download"):
+            return
+        try:
+            from aistudio_sdk import file_download as aistudio_file_download  # type: ignore
+        except Exception:
+            return
+
+        def _download(*args: Any, **kwargs: Any) -> Any:
+            """兼容导出 download 接口，转发到 file_download。"""
+            return aistudio_file_download(*args, **kwargs)
+
+        setattr(aistudio_hub, "download", _download)
 
     def _get_engine(self) -> Any:
         """惰性初始化 TTS 引擎。"""

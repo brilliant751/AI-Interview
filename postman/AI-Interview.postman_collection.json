@@ -141,7 +141,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
             },
             "url": "{{base_url}}/interviews"
           }
@@ -201,6 +201,30 @@
           }
         },
         {
+          "name": "Pause Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/pause"
+          }
+        },
+        {
+          "name": "List Paused Interviews",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/paused"
+          }
+        },
+        {
+          "name": "Resume Interview",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/resume"
+          }
+        },
+        {
           "name": "Get Report",
           "request": {
             "method": "GET",
@@ -222,6 +246,14 @@
             "method": "GET",
             "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": "{{base_url}}/interviews/history?page=1&page_size=10"
+          }
+        },
+        {
+          "name": "Delete History Interview",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/history/{{interview_id}}"
           }
         },
         {
