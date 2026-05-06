@@ -642,6 +642,7 @@ class InterviewRepository:
                 f"""
                 SELECT
                   s.interview_id,
+                  s.session_name,
                   s.resume_id,
                   s.job_role,
                   s.status,

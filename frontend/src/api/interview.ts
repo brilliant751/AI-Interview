@@ -84,6 +84,7 @@ export interface HistoryResponse {
   total: number
   items: Array<{
     interview_id: string
+    session_name?: string
     resume_id: string
     job_role: string
     status: string

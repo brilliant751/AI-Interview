@@ -45,6 +45,7 @@ async def list_history(
     items = [
         HistoryItem(
             interview_id=row["interview_id"],
+            session_name=str(row.get("session_name") or ""),
             resume_id=row["resume_id"],
             job_role=row["job_role"],
             status=row["status"],
