@@ -3,7 +3,7 @@ import axios from 'axios'
 import { useAuthStore } from '../stores/authStore'
 
 /** API 基础地址。 */
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8000/api/v1'
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:18500/api/v1'
 
 /** 统一 HTTP 客户端。 */
 export const apiClient = axios.create({
