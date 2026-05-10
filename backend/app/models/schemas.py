@@ -278,6 +278,7 @@ class MaterialImportRequest(BaseModel):
     dry_run: bool = False
     chunk_model: str = "qwen2.5:7b"
     embedding_model: str = "nomic-embed-text"
+    task_type: Literal["full_pipeline", "question_bank"] = "full_pipeline"
 
 
 class MaterialImportTriggerResponse(BaseModel):
@@ -287,6 +288,7 @@ class MaterialImportTriggerResponse(BaseModel):
     status: Literal["PENDING", "RUNNING", "SUCCESS", "FAILED", "PARTIAL_SUCCESS"]
     stage: str
     progress: int
+    task_type: Literal["full_pipeline", "question_bank"] = "full_pipeline"
     idempotency_hit: bool = False
 
 
@@ -300,8 +302,149 @@ class MaterialImportTaskResponse(BaseModel):
     rebuild_mode: Literal["full", "incremental"]
     roles: list[Literal["java", "web"]]
     dry_run: bool
+    task_type: Literal["full_pipeline", "question_bank"] = "full_pipeline"
     last_error: str = ""
     report_path: str = ""
+
+
+class AdminQuestionBankItemResponse(BaseModel):
+    """管理端题库条目响应。"""
+
+    record_id: str
+    job_role: str
+    question_no: int
+    title: str
+    category: Optional[str] = None
+    question: str
+    analysis: Optional[str] = None
+    source_path: str
+    updated_at: str
+
+
+class AdminQuestionBankListResponse(BaseModel):
+    """管理端题库分页列表响应。"""
+
+    items: list[AdminQuestionBankItemResponse] = Field(default_factory=list)
+    page: int
+    page_size: int
+    total: int
+
+
+class AdminQuestionBankUploadRequest(BaseModel):
+    """管理端题库 Markdown 上传请求。"""
+
+    job_role: Literal["java", "web"]
+    file_name: str = Field(min_length=3, max_length=255)
+    markdown: str = Field(min_length=1, max_length=200000)
+
+
+class AdminQuestionBankCreateRequest(BaseModel):
+    """管理端单题录入请求。"""
+
+    job_role: Literal["java", "web"]
+    category: Literal["technical", "project", "scenario", "behavior"]
+    title: str = Field(min_length=1, max_length=200)
+    question: str = Field(min_length=1, max_length=10000)
+    analysis: str = Field(min_length=1, max_length=20000)
+    source_note: str = Field(default="", max_length=200)
+
+
+class PracticeQuestionResponse(BaseModel):
+    """练习题目快照响应。"""
+
+    session_question_id: str
+    question_order: int
+    source_question_id: Optional[str] = None
+    category: Optional[str] = None
+    stem: str
+    analysis: Optional[str] = None
+
+
+class PracticeCreateRequest(BaseModel):
+    """创建题库练习会话请求。"""
+
+    job_role: Literal["java", "web"]
+    mode: Literal["sequence", "followup"] = "sequence"
+    question_count: int = Field(ge=1, le=50)
+    category_filters: list[Literal["technical", "project", "scenario", "behavior"]] = Field(default_factory=list)
+
+
+class PracticeSessionResponse(BaseModel):
+    """题库练习会话状态响应。"""
+
+    practice_id: str
+    job_role: str
+    mode: str
+    status: Literal["ACTIVE", "FINISHED"]
+    total_questions: int
+    completed_count: int
+    finished: bool
+    question_strategy: Literal["sequence", "followup_placeholder"]
+    current_question: Optional[PracticeQuestionResponse] = None
+    created_at: Optional[str] = None
+
+
+class PracticeAnswerRequest(BaseModel):
+    """提交题库练习答案请求。"""
+
+    session_question_id: str = Field(min_length=6)
+    answer_text: str = Field(min_length=1, max_length=20000)
+
+
+class PracticeAnswerResponse(BaseModel):
+    """提交题库练习答案响应。"""
+
+    practice_id: str
+    status: Literal["ACTIVE", "FINISHED"]
+    completed_count: int
+    finished: bool
+    question_strategy: Literal["sequence", "followup_placeholder"]
+    next_question: Optional[PracticeQuestionResponse] = None
+
+
+class PracticeRecordItemResponse(BaseModel):
+    """题库练习记录条目响应。"""
+
+    practice_id: str
+    job_role: str
+    mode: str
+    status: str
+    total_questions: int
+    answered_count: int
+    created_at: str
+
+
+class PracticeRecordsResponse(BaseModel):
+    """题库练习记录列表响应。"""
+
+    items: list[PracticeRecordItemResponse] = Field(default_factory=list)
+    total: int
+
+
+class PracticeSessionRecordQuestionResponse(BaseModel):
+    """题库练习记录中的单题详情。"""
+
+    session_question_id: str
+    question_order: int
+    category: Optional[str] = None
+    stem: str
+    analysis: Optional[str] = None
+    answer_text: Optional[str] = None
+    answered_at: Optional[str] = None
+
+
+class PracticeSessionRecordsResponse(BaseModel):
+    """单场题库练习记录明细响应。"""
+
+    practice_id: str
+    job_role: str
+    mode: str
+    status: str
+    total_questions: int
+    completed_count: int
+    items: list[PracticeSessionRecordQuestionResponse] = Field(default_factory=list)
+    created_at: Optional[str] = None
+    finished_at: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):

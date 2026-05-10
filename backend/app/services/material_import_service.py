@@ -31,6 +31,7 @@ class _ImportTask:
     progress: int
     last_error: str
     report_path: str
+    task_type: str
     runner: asyncio.Task[None] | None = None
 
 
@@ -63,6 +64,7 @@ class MaterialImportService:
                         status=task.status,
                         stage=task.stage,
                         progress=task.progress,
+                        task_type=task.task_type,  # type: ignore[arg-type]
                         idempotency_hit=True,
                     )
 
@@ -76,7 +78,8 @@ class MaterialImportService:
                 stage="init",
                 progress=0,
                 last_error="",
-                report_path="backend/assets/data/reports/knowledge_vectorstore_build_report.json",
+                report_path=self._build_report_path(payload.task_type),
+                task_type=payload.task_type,
             )
             self._tasks[task_id] = task
             if idempotency_key:
@@ -89,6 +92,7 @@ class MaterialImportService:
                 status=task.status,
                 stage=task.stage,
                 progress=task.progress,
+                task_type=task.task_type,  # type: ignore[arg-type]
                 idempotency_hit=False,
             )
 
@@ -105,6 +109,7 @@ class MaterialImportService:
             rebuild_mode=task.payload.rebuild_mode,
             roles=task.payload.roles,
             dry_run=task.payload.dry_run,
+            task_type=task.task_type,  # type: ignore[arg-type]
             last_error=task.last_error,
             report_path=task.report_path,
         )
@@ -169,6 +174,14 @@ class MaterialImportService:
                 "cmd": [python_cmd, "backend/assets/scripts/data/normalize_materials.py", *dry_run_args],
             },
         ]
+        if payload.task_type == "question_bank":
+            commands.append(
+                {
+                    "stage": "question_bank",
+                    "cmd": [python_cmd, "backend/assets/scripts/data/build_question_bank.py", *dry_run_args],
+                }
+            )
+            return commands
         for role in payload.roles:
             commands.append(
                 {
@@ -215,6 +228,12 @@ class MaterialImportService:
         )
         return commands
 
+    def _build_report_path(self, task_type: str) -> str:
+        """根据任务类型返回对应报告路径。"""
+        if task_type == "question_bank":
+            return "backend/assets/data/reports/question_bank_build_report.json"
+        return "backend/assets/data/reports/knowledge_vectorstore_build_report.json"
+
     def _validate_payload(self, payload: MaterialImportRequest) -> None:
         """校验导入请求参数。"""
         if not payload.roles:
@@ -223,6 +242,8 @@ class MaterialImportService:
             raise kb_build_error("KB_BUILD_400", f"仅支持分块模型 {self.settings.chunk_model}")
         if payload.embedding_model != self.settings.embedding_model:
             raise kb_build_error("KB_BUILD_400", f"仅支持嵌入模型 {self.settings.embedding_model}")
+        if payload.task_type == "question_bank" and payload.rebuild_mode != "incremental":
+            raise kb_build_error("KB_BUILD_400", "题库任务仅支持 incremental 模式")
 
     async def _run_command(self, cmd: list[str]) -> None:
         """异步执行脚本命令并在失败时抛出统一错误。"""

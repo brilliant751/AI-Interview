@@ -507,6 +507,175 @@ paths:
                         model: { type: string }
                         latency_ms: { type: integer }
                         error_message: { type: string }
+  /api/v1/practice/sessions:
+    post:
+      summary: 创建题库练习会话
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PracticeCreateRequest'
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+  /api/v1/practice/sessions/{practice_id}:
+    get:
+      summary: 查询题库练习会话
+      parameters:
+        - in: path
+          name: practice_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+  /api/v1/practice/sessions/{practice_id}/answers:
+    post:
+      summary: 提交题库练习答案
+      parameters:
+        - in: path
+          name: practice_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PracticeAnswerRequest'
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeAnswerResponse'
+  /api/v1/practice/sessions/{practice_id}/finish:
+    post:
+      summary: 结束题库练习会话
+      parameters:
+        - in: path
+          name: practice_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionResponse'
+  /api/v1/practice/sessions/{practice_id}/records:
+    get:
+      summary: 查询单场题库练习记录
+      parameters:
+        - in: path
+          name: practice_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeSessionRecordsResponse'
+  /api/v1/practice/records:
+    get:
+      summary: 查询当前用户题库练习摘要
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeRecordsResponse'
+  /api/v1/practice/questions:
+    get:
+      summary: 管理端分页查询题库
+      parameters:
+        - in: query
+          name: job_role
+          required: true
+          schema: { type: string, enum: [java, web] }
+        - in: query
+          name: category
+          schema: { type: string, enum: [technical, project, scenario, behavior] }
+        - in: query
+          name: keyword
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminQuestionBankListResponse'
+    post:
+      summary: 管理端单题录入
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminQuestionBankCreateRequest'
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialImportTriggerResponse'
+  /api/v1/practice/questions/upload:
+    post:
+      summary: 管理端上传题库 Markdown
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [job_role, file]
+              properties:
+                job_role: { type: string, enum: [java, web] }
+                file: { type: string, format: binary }
+      responses:
+        "202":
+          description: 已受理
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialImportTriggerResponse'
+  /api/v1/practice/questions/import-tasks/{task_id}:
+    get:
+      summary: 查询题库导入任务状态
+      parameters:
+        - in: path
+          name: task_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialImportTaskResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -654,3 +823,155 @@ components:
         dry_run: { type: boolean, default: false }
         chunk_model: { type: string, default: qwen2.5:7b }
         embedding_model: { type: string, default: nomic-embed-text }
+        task_type: { type: string, enum: [full_pipeline, question_bank], default: full_pipeline }
+    MaterialImportTriggerResponse:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+        stage: { type: string }
+        progress: { type: integer }
+        task_type: { type: string, enum: [full_pipeline, question_bank] }
+        idempotency_hit: { type: boolean }
+    MaterialImportTaskResponse:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+        stage: { type: string }
+        progress: { type: integer }
+        rebuild_mode: { type: string, enum: [full, incremental] }
+        roles:
+          type: array
+          items: { type: string, enum: [java, web] }
+        dry_run: { type: boolean }
+        task_type: { type: string, enum: [full_pipeline, question_bank] }
+        last_error: { type: string }
+        report_path: { type: string }
+    PracticeQuestionResponse:
+      type: object
+      properties:
+        session_question_id: { type: string }
+        question_order: { type: integer }
+        source_question_id: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        stem: { type: string }
+        analysis: { type: string, nullable: true }
+    PracticeCreateRequest:
+      type: object
+      required: [job_role, question_count]
+      properties:
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup], default: sequence }
+        question_count: { type: integer, minimum: 1, maximum: 50 }
+        category_filters:
+          type: array
+          items: { type: string, enum: [technical, project, scenario, behavior] }
+    PracticeSessionResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        completed_count: { type: integer }
+        finished: { type: boolean }
+        question_strategy: { type: string, enum: [sequence, followup_placeholder] }
+        current_question:
+          allOf:
+            - $ref: '#/components/schemas/PracticeQuestionResponse'
+          nullable: true
+    PracticeAnswerRequest:
+      type: object
+      required: [session_question_id, answer_text]
+      properties:
+        session_question_id: { type: string }
+        answer_text: { type: string }
+    PracticeAnswerResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        completed_count: { type: integer }
+        finished: { type: boolean }
+        question_strategy: { type: string, enum: [sequence, followup_placeholder] }
+        next_question:
+          allOf:
+            - $ref: '#/components/schemas/PracticeQuestionResponse'
+          nullable: true
+    PracticeRecordItemResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        answered_count: { type: integer }
+        created_at: { type: string }
+    PracticeRecordsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeRecordItemResponse'
+        total: { type: integer }
+    PracticeSessionRecordQuestionResponse:
+      type: object
+      properties:
+        session_question_id: { type: string }
+        question_order: { type: integer }
+        category: { type: string, nullable: true }
+        stem: { type: string }
+        analysis: { type: string, nullable: true }
+        answer_text: { type: string, nullable: true }
+        answered_at: { type: string, nullable: true }
+    PracticeSessionRecordsResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        completed_count: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeSessionRecordQuestionResponse'
+        created_at: { type: string, nullable: true }
+        finished_at: { type: string, nullable: true }
+    AdminQuestionBankCreateRequest:
+      type: object
+      required: [job_role, category, title, question, analysis]
+      properties:
+        job_role: { type: string, enum: [java, web] }
+        category: { type: string, enum: [technical, project, scenario, behavior] }
+        title: { type: string }
+        question: { type: string }
+        analysis: { type: string }
+        source_note: { type: string }
+    AdminQuestionBankItemResponse:
+      type: object
+      properties:
+        record_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        question_no: { type: integer }
+        title: { type: string }
+        category: { type: string, nullable: true }
+        question: { type: string }
+        analysis: { type: string, nullable: true }
+        source_path: { type: string }
+        updated_at: { type: string }
+    AdminQuestionBankListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminQuestionBankItemResponse'
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }

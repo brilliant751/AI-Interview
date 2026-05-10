@@ -8,6 +8,7 @@ from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.history import router as history_router
 from app.api.v1.interview import router as interview_router
+from app.api.v1.practice import router as practice_router
 from app.api.v1.report import router as report_router
 from app.api.v1.resume import router as resume_router
 
@@ -15,6 +16,7 @@ api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(resume_router)
 api_router.include_router(interview_router)
+api_router.include_router(practice_router)
 api_router.include_router(report_router)
 api_router.include_router(history_router)
 api_router.include_router(admin_router)

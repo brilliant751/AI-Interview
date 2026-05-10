@@ -91,6 +91,51 @@ test('main flow should work with mocked backend', async ({ page }) => {
       return
     }
 
+    if (method === 'GET' && url.includes('/api/v1/interviews/interview-001/status')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          interview_id: 'interview-001',
+          status: 'ACTIVE',
+          current_stage: 'SELF_INTRO',
+          follow_up_count: 0,
+          technical_count: 0,
+          job_role: 'java',
+          difficulty: 'medium',
+          input_mode: 'text',
+          output_mode: 'text',
+          current_question: '请做一个简短自我介绍。',
+          duration_seconds: 0,
+        }),
+      })
+      return
+    }
+
+    if (method === 'GET' && url.includes('/api/v1/interviews/interview-001/playback')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          interview_id: 'interview-001',
+          resume: {
+            resume_id: 'resume-001',
+            file_name: 'resume.pdf',
+          },
+          meta: {
+            job_role: 'java',
+            difficulty: 'medium',
+            status: 'ACTIVE',
+            started_at: '2026-04-03T00:00:00Z',
+            finished_at: null,
+            duration_seconds: 0,
+          },
+          turns: [],
+        }),
+      })
+      return
+    }
+
     if (method === 'GET' && url.includes('/api/v1/report/interview-001')) {
       await route.fulfill({
         status: 200,
@@ -159,12 +204,18 @@ test('main flow should work with mocked backend', async ({ page }) => {
     buffer: Buffer.from('mock resume file'),
   })
   await page.getByRole('button', { name: '上传简历' }).click()
-  await page.getByRole('button', { name: '去面试准备' }).click()
-  await expect(page).toHaveURL(/\/prepare$/)
+  await page.getByRole('button', { name: '去面试' }).click()
+  await expect(page).toHaveURL(/\/interview$/)
+  await expect(page.getByText('面试大厅')).toBeVisible()
 
+  await expect(page.getByRole('button', { name: '创建面试' })).toBeVisible()
+  await page.getByRole('button', { name: '创建面试' }).click()
+  const createModal = page.getByRole('dialog', { name: '创建面试' })
+  await createModal.locator('label').filter({ hasText: '文本' }).nth(0).click()
+  await createModal.locator('label').filter({ hasText: '文本' }).nth(1).click()
   await expect(page.getByRole('button', { name: '创建会话' })).toBeVisible()
   await page.getByRole('button', { name: '创建会话' }).click()
-  await expect(page).toHaveURL(/\/interview$/)
+  await expect(page).toHaveURL(/\/interview\/interview-001$/)
   await expect(page.getByText('请做一个简短自我介绍。')).toBeVisible()
 
   await page.getByPlaceholder('输入你的回答').fill('我负责后端开发与性能优化。')
@@ -172,8 +223,9 @@ test('main flow should work with mocked backend', async ({ page }) => {
   await expect(page.getByText('阶段：TECHNICAL')).toBeVisible()
   await expect(page.getByText('实时分：88')).toBeVisible()
 
-  await page.getByRole('button', { name: '结束面试' }).click()
-  await expect(page).toHaveURL(/\/report$/)
+  await page.getByRole('button', { name: '⋮' }).click()
+  await page.getByText('结束面试').click()
+  await expect(page).toHaveURL(/\/report\/interview-001$/)
   await expect(page.getByText('状态：READY')).toBeVisible()
   await expect(page.getByText('总分：85')).toBeVisible()
 

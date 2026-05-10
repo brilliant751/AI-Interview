@@ -12,6 +12,12 @@ from common import DATA_ROOT, REPO_ROOT, discover_material_files, stable_id, wri
 QUESTION_PATTERN = re.compile(r"^#{2,3}\s*第\s*(\d+)\s*题[：:]\s*(.+?)\s*$", re.MULTILINE)
 WEB_KNOWLEDGE_PATTERN = re.compile(r"^\s*(\d+)\.\s+(.+?)\s*$", re.MULTILINE)
 HEADING_PATTERN = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+QUESTION_CATEGORY_MAPPING = {
+    "技术": "technical",
+    "项目": "project",
+    "场景": "scenario",
+    "行为": "behavior",
+}
 
 
 @dataclass
@@ -75,7 +81,7 @@ def pick_section_text(body: str, section_name: str) -> str:
     """从题目块中提取指定字段内容。"""
     escaped = re.escape(section_name)
     pattern = re.compile(
-        rf"^#{3,6}\s*{escaped}\s*$([\s\S]*?)(?=^#{3,6}\s+\S+|\Z)",
+        rf"^#{{3,6}}\s*{escaped}\s*$\s*([\s\S]*?)(?=^#{{3,6}}\s+\S+|\Z)",
         re.MULTILINE,
     )
     match = pattern.search(body)
@@ -84,13 +90,25 @@ def pick_section_text(body: str, section_name: str) -> str:
     return match.group(1).strip()
 
 
+def normalize_question_category(category: str) -> str:
+    """将题目类别标准化为题库枚举值。"""
+    normalized = re.sub(r"\s+", "", category).strip()
+    if not normalized:
+        return ""
+    if normalized in QUESTION_CATEGORY_MAPPING:
+        return QUESTION_CATEGORY_MAPPING[normalized]
+    if normalized in QUESTION_CATEGORY_MAPPING.values():
+        return normalized
+    return normalized.lower()
+
+
 def normalize_question_file(role: str, source_path: Path, content: str) -> list[dict]:
     """标准化单个题库文件为记录列表。"""
     rows: list[dict] = []
     segments = split_question_segments(content)
     for seg in segments:
         prompt = pick_section_text(seg.body, "题干") or seg.title
-        category = pick_section_text(seg.body, "类别")
+        category = normalize_question_category(pick_section_text(seg.body, "类别"))
         analysis = pick_section_text(seg.body, "解析")
         source_rel_path = str(source_path.relative_to(REPO_ROOT))
         record_id = stable_id(role, source_rel_path, str(seg.order), seg.title)
