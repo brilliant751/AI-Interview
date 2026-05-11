@@ -408,6 +408,108 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual(403, forbidden_resp.status_code)
         self.assertEqual("INTERVIEW_403_FORBIDDEN", forbidden_resp.json()["error"]["code"])
 
+    def test_jd_upload_list_and_bind_interview(self) -> None:
+        """验证 JD 上传、列表与绑定创建面试。"""
+        jd_upload = self.client.post(
+            "/api/v1/jds",
+            data={"job_role": "java", "title": "后端开发工程师JD"},
+            files={"file": ("jd.txt", "负责Java后端开发，熟悉Spring和MySQL。".encode("utf-8"), "text/plain")},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, jd_upload.status_code)
+        jd_id = jd_upload.json()["jd_id"]
+
+        jd_list = self.client.get("/api/v1/jds?job_role=java", headers=self.user_headers)
+        self.assertEqual(200, jd_list.status_code)
+        self.assertTrue(any(item["jd_id"] == jd_id for item in jd_list.json()["items"]))
+
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": jd_id,
+                "job_role": "java",
+                "difficulty": "medium",
+                "input_mode": "text",
+                "output_mode": "text",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, create_resp.status_code)
+        interview_id = create_resp.json()["interview_id"]
+
+        status_resp = self.client.get(f"/api/v1/interviews/{interview_id}/status", headers=self.user_headers)
+        self.assertEqual(200, status_resp.status_code)
+        self.assertEqual(jd_id, status_resp.json()["jd_id"])
+        self.assertEqual("后端开发工程师JD", status_resp.json()["jd_title"])
+
+    def test_jd_bind_role_mismatch(self) -> None:
+        """验证 JD 岗位方向不匹配时创建面试失败。"""
+        jd_upload = self.client.post(
+            "/api/v1/jds",
+            data={"job_role": "web", "title": "前端开发JD"},
+            files={"file": ("jd.txt", "负责Web前端开发，熟悉React。".encode("utf-8"), "text/plain")},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, jd_upload.status_code)
+        jd_id = jd_upload.json()["jd_id"]
+
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": jd_id,
+                "job_role": "java",
+                "difficulty": "medium",
+                "input_mode": "text",
+                "output_mode": "text",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(409, create_resp.status_code)
+        self.assertEqual("JD_409_ROLE_MISMATCH", create_resp.json()["error"]["code"])
+
+    def test_jd_forbidden_for_other_user(self) -> None:
+        """验证无法绑定其他用户上传的 JD。"""
+        jd_upload = self.client.post(
+            "/api/v1/jds",
+            data={"job_role": "java", "title": "管理员JD"},
+            files={"file": ("jd.txt", "负责Java平台建设。".encode("utf-8"), "text/plain")},
+            headers=self.admin_headers,
+        )
+        self.assertEqual(200, jd_upload.status_code)
+        jd_id = jd_upload.json()["jd_id"]
+
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": jd_id,
+                "job_role": "java",
+                "difficulty": "medium",
+                "input_mode": "text",
+                "output_mode": "text",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(403, create_resp.status_code)
+        self.assertEqual("JD_403_FORBIDDEN", create_resp.json()["error"]["code"])
+
 
 if __name__ == "__main__":
     unittest.main()

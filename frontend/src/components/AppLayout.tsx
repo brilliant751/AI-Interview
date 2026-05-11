@@ -21,6 +21,7 @@ export function AppLayout(props: { children: ReactNode }) {
         { to: '/interview', label: '模拟面试' },
         { to: '/practice', label: '题库练习' },
         { to: '/resumes', label: '简历管理' },
+        { to: '/jobs', label: '岗位管理' },
         { to: '/history', label: '历史记录' },
       ]
     : [
