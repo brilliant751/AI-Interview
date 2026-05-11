@@ -188,6 +188,58 @@ paths:
               schema:
                 type: string
                 format: binary
+  /api/v1/jds:
+    get:
+      summary: 查询 JD 列表
+      parameters:
+        - in: query
+          name: job_role
+          schema: { type: string, enum: [java, web] }
+        - in: query
+          name: source_type
+          schema: { type: string, enum: [USER_UPLOAD, SYSTEM_PRESET] }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDescriptionListResponse'
+    post:
+      summary: 上传 JD
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+                job_role: { type: string, enum: [java, web] }
+                title: { type: string }
+              required: [file]
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDescriptionUploadResponse'
+  /api/v1/jds/{jd_id}:
+    delete:
+      summary: 删除 JD
+      parameters:
+        - in: path
+          name: jd_id
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: 删除成功
   /api/v1/interviews:
     post:
       summary: 创建面试会话
@@ -601,6 +653,7 @@ components:
       required: [resume_id, job_role]
       properties:
         resume_id: { type: string }
+        jd_id: { type: string }
         session_name: { type: string }
         question_types:
           type: array
@@ -631,6 +684,9 @@ components:
             job_role: { type: string }
             difficulty: { type: string }
             status: { type: string }
+            jd_id: { type: string }
+            jd_title: { type: string }
+            jd_source_type: { type: string }
             started_at: { type: string }
             finished_at: { type: string, nullable: true }
         turns:
@@ -644,6 +700,32 @@ components:
               answer: { type: string }
               question_ts: { type: string }
               answer_ts: { type: string, nullable: true }
+    JobDescriptionUploadResponse:
+      type: object
+      properties:
+        jd_id: { type: string }
+        source_type: { type: string, enum: [USER_UPLOAD, SYSTEM_PRESET] }
+        title: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        status: { type: string }
+        created_at: { type: string }
+    JobDescriptionListItem:
+      type: object
+      properties:
+        jd_id: { type: string }
+        source_type: { type: string, enum: [USER_UPLOAD, SYSTEM_PRESET] }
+        title: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        status: { type: string }
+        created_at: { type: string }
+        updated_at: { type: string }
+    JobDescriptionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobDescriptionListItem'
     MaterialImportRequest:
       type: object
       properties:

@@ -213,6 +213,8 @@ export function InterviewPage() {
     syncSessionStatus({
       stage: status.current_stage,
       followUpCount: status.follow_up_count,
+      currentQuestion: status.current_question,
+      ttsAudioUrl: status.tts_audio_url,
     })
   }, [interviewId, interviewStatusQuery.data, setSessionConfig, syncSessionStatus])
 
@@ -553,6 +555,22 @@ export function InterviewPage() {
     },
     onError: async (error) => {
       const axiosError = error as AxiosError<{ error?: { code?: string; message?: string } }>
+      if (axiosError.code === 'ERR_CANCELED') {
+        try {
+          const sessionStatus = await fetchInterviewStatus(interviewId)
+          syncSessionStatus({
+            stage: sessionStatus.current_stage,
+            followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
+          })
+          message.warning('请求已取消，已同步到最新面试状态')
+          return
+        } catch {
+          message.warning('请求已取消，请刷新页面确认当前轮次')
+          return
+        }
+      }
       const apiError = axiosError.response?.data?.error
       const errorCode = apiError?.code || ''
       const errorMessage = apiError?.message || '提交失败，请重试'
@@ -563,6 +581,8 @@ export function InterviewPage() {
           syncSessionStatus({
             stage: sessionStatus.current_stage,
             followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
           })
           if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
             message.warning('当前会话已结束，正在跳转报告页')

@@ -41,7 +41,23 @@ class InterviewService:
             raise ApiError(code="RESUME_404_NOT_FOUND", message="简历不存在", status_code=404)
         if str(resume.get("user_id") or "") != user_id:
             raise ApiError(code="RESUME_403_FORBIDDEN", message="无权使用该简历", status_code=403)
-        session = self.repo.create_session(user_id=user_id, payload=payload)
+        jd_id = str(payload.get("jd_id") or "").strip()
+        jd_snapshot: dict[str, str] = {}
+        if jd_id:
+            jd = self.repo.get_jd(jd_id)
+            if not jd or int(jd.get("is_deleted") or 0) == 1:
+                raise ApiError(code="JD_404_NOT_FOUND", message="JD 不存在", status_code=404)
+            is_system = str(jd.get("source_type") or "") == "SYSTEM_PRESET"
+            if (not is_system) and str(jd.get("user_id") or "") != user_id:
+                raise ApiError(code="JD_403_FORBIDDEN", message="无权访问该 JD", status_code=403)
+            if str(jd.get("job_role") or "") != str(payload.get("job_role") or ""):
+                raise ApiError(code="JD_409_ROLE_MISMATCH", message="JD 岗位方向与面试方向不匹配", status_code=409)
+            jd_snapshot = {
+                "jd_id": jd_id,
+                "jd_snapshot_title": str(jd.get("title") or ""),
+                "jd_snapshot_content": str(jd.get("content_text") or "")[:2000],
+            }
+        session = self.repo.create_session(user_id=user_id, payload=payload, jd_snapshot=jd_snapshot)
         first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
         output_mode = str(payload.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
@@ -247,7 +263,20 @@ class InterviewService:
             follow_up_count = 0
 
         references = self.rag_service.retrieve(session["job_role"], answer, top_k=2)
-        references = [*resume_references, *references][:4]
+        jd_snapshot_content = str(session.get("jd_snapshot_content") or "").strip()
+        jd_snapshot_title = str(session.get("jd_snapshot_title") or "").strip()
+        jd_references: list[dict[str, Any]] = []
+        if jd_snapshot_content:
+            jd_references.append(
+                {
+                    "title": f"JD要求：{jd_snapshot_title or '岗位描述'}",
+                    "content": jd_snapshot_content[:400],
+                    "score": 0.0,
+                    "source_path": "jd",
+                    "retrieval_mode": "jd",
+                }
+            )
+        references = [*jd_references, *resume_references, *references][:4]
         generation_mode = "mock"
         if next_stage == InterviewStage.END.value:
             next_question = INTERVIEW_END_MESSAGE

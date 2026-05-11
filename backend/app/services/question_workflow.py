@@ -78,6 +78,30 @@ class QuestionWorkflow:
                 return title
         return "岗位基础能力"
 
+    def _build_reference_context(self, references: list[dict[str, Any]], limit: int = 3) -> str:
+        """构建统一的参考上下文（JD/简历/知识库）。"""
+        if not references:
+            return "无"
+
+        def _priority(reference: dict[str, Any]) -> int:
+            source = str(reference.get("source_path") or "").lower()
+            retrieval_mode = str(reference.get("retrieval_mode") or "").lower()
+            if source == "jd" or retrieval_mode == "jd":
+                return 0
+            if source == "resume" or retrieval_mode == "resume":
+                return 1
+            return 2
+
+        contexts: list[str] = []
+        for ref in sorted(references, key=_priority)[:limit]:
+            title = str(ref.get("title") or "参考片段").strip() or "参考片段"
+            content = str(ref.get("content") or "").strip().replace("\n", " ")
+            if content:
+                contexts.append(f"- {title}：{content[:180]}")
+            else:
+                contexts.append(f"- {title}")
+        return "\n".join(contexts) if contexts else "无"
+
     def generate_template(
         self,
         answer: str,
@@ -136,11 +160,13 @@ class QuestionWorkflow:
         if self.llm_provider == "ollama":
             ref_titles = "；".join(ref.get("title", "") for ref in references[:3] if ref.get("title"))
             ref_hint = ref_titles or "岗位基础能力"
+            ref_context = self._build_reference_context(references=references)
             prompt = (
-                "你是面试官，请基于候选人回答生成一个追问问题。"
+                "你是资深中文技术面试官，请基于候选人回答生成一个追问问题。"
                 f"候选人回答：{answer}\n"
                 f"参考主题：{ref_hint}\n"
-                "要求：只输出一句中文问题。"
+                f"参考资料（含JD与简历）：\n{ref_context}\n"
+                "要求：只输出一句中文问题，并优先验证候选人经历与JD要求的匹配度。"
             )
             return self._get_ollama_client().generate_question(prompt)
         raise RuntimeError("当前 LLM provider 未实现真实调用")
@@ -189,7 +215,7 @@ class QuestionWorkflow:
                 "provider": "openai",
                 "model": self.settings.llm_model,
                 "latency_ms": 0,
-                "error_message": "" if status == "UP" else "缺少 OpenAI 密钥",
+                "error_message": "" if status == "UP" else "缺少 OpenAI 兼容密钥",
             }
         return {
             "status": "UP",

@@ -213,6 +213,11 @@ async def get_interview_status(
             tts_audio_url = service.voice_service.tts(current_question)
         except ApiError:
             tts_audio_url = None
+    jd_source_type = ""
+    jd_id = str(session.get("jd_id") or "")
+    if jd_id:
+        jd = repo.get_jd(jd_id)
+        jd_source_type = str(jd.get("source_type") or "") if jd else ""
     return InterviewStatusResponse(
         interview_id=interview_id,
         status=session["status"],
@@ -223,6 +228,9 @@ async def get_interview_status(
         difficulty=str(session.get("difficulty") or "medium"),
         input_mode=str(session.get("input_mode") or "text"),
         output_mode=str(session.get("output_mode") or "text"),
+        jd_id=jd_id,
+        jd_title=str(session.get("jd_snapshot_title") or ""),
+        jd_source_type=jd_source_type,
         current_question=current_question,
         tts_audio_url=tts_audio_url,
         duration_seconds=int(session.get("duration_seconds") or 0),
@@ -252,6 +260,9 @@ async def get_interview_playback(
             job_role=session["job_role"],
             difficulty=session["difficulty"],
             status=session["status"],
+            jd_id=str(session.get("jd_id") or ""),
+            jd_title=str(session.get("jd_snapshot_title") or ""),
+            jd_source_type=str(session.get("jd_source_type") or ""),
             started_at=session["started_at"] or "",
             finished_at=session.get("finished_at"),
             duration_seconds=int(session.get("duration_seconds") or 0),
