@@ -57,6 +57,11 @@ export function HistoryPage() {
           onChange: (nextPage) => setPage(nextPage),
         }}
         columns={[
+          {
+            title: '面试名称',
+            dataIndex: 'session_name',
+            render: (value?: string) => value || '-',
+          },
           { title: '会话 ID', dataIndex: 'interview_id' },
           { title: '简历 ID', dataIndex: 'resume_id' },
           { title: '岗位', dataIndex: 'job_role' },

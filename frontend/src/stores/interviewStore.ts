@@ -44,7 +44,7 @@ interface InterviewActions {
     pipelineMeta?: PipelineMeta
   }) => void
   setProviderHealth: (health: ProviderHealthResponse | null) => void
-  syncSessionStatus: (payload: { stage: string; followUpCount: number }) => void
+  syncSessionStatus: (payload: { stage: string; followUpCount: number; currentQuestion?: string; ttsAudioUrl?: string }) => void
   reset: () => void
 }
 
@@ -101,9 +101,11 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()((se
     }),
   setProviderHealth: (health) => set({ providerHealth: health }),
   syncSessionStatus: (payload) =>
-    set({
+    set((state) => ({
       currentStage: payload.stage,
       followUpCount: payload.followUpCount,
-    }),
+      currentQuestion: payload.currentQuestion ?? state.currentQuestion,
+      ttsAudioUrl: payload.ttsAudioUrl ?? state.ttsAudioUrl,
+    })),
   reset: () => set(initialState),
 }))

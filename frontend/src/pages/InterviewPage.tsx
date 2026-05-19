@@ -1,4 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Table, Tag, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -26,6 +27,7 @@ export function InterviewPage() {
   const MAX_TEXT_ANSWER_SECONDS = 180
   const questionTypeOrder: Array<'project' | 'technical' | 'scenario'> = ['project', 'technical', 'scenario']
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { interviewId: routeInterviewId = '' } = useParams<{ interviewId?: string }>()
   const [answer, setAnswer] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
@@ -46,6 +48,7 @@ export function InterviewPage() {
   const recordingProgressTimerRef = useRef<number | null>(null)
   const recordingLimitTimerRef = useRef<number | null>(null)
   const textAnswerTimerRef = useRef<number | null>(null)
+  const suppressRecorderStopRef = useRef(false)
   const submitAfterStopRef = useRef(false)
   const lastQuestionKeyRef = useRef('')
   const pendingCountdownQuestionKeyRef = useRef('')
@@ -55,6 +58,13 @@ export function InterviewPage() {
   const [questionRound, setQuestionRound] = useState(1)
   const [textAnswerRemainingSeconds, setTextAnswerRemainingSeconds] = useState(MAX_TEXT_ANSWER_SECONDS)
   const [interviewElapsedSeconds, setInterviewElapsedSeconds] = useState(0)
+  const [audioInputDevices, setAudioInputDevices] = useState<Array<{ label: string; value: string }>>([])
+  const [selectedAudioInputId, setSelectedAudioInputId] = useState('')
+  const [audioDevicesLoading, setAudioDevicesLoading] = useState(false)
+  const [resumeReplayTick, setResumeReplayTick] = useState(0)
+  const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
+  const endRedirectedRef = useRef(false)
+  const [historyCollapsed, setHistoryCollapsed] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
   const parseBackendDate = (value?: string) => {
     if (!value) {
@@ -67,6 +77,72 @@ export function InterviewPage() {
       return null
     }
     return parsed
+  }
+  /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
+  const buildQuestionKey = () => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
+  /** 计算麦克风优先级：优先本机内建麦克风，弱化 iPhone 连续互通设备。 */
+  const scoreAudioInputLabel = (label: string) => {
+    const lowerLabel = label.toLowerCase()
+    let score = 0
+    if (lowerLabel.includes('iphone')) {
+      score -= 100
+    }
+    if (
+      lowerLabel.includes('macbook') ||
+      lowerLabel.includes('built-in') ||
+      lowerLabel.includes('internal') ||
+      lowerLabel.includes('内建') ||
+      lowerLabel.includes('内置')
+    ) {
+      score += 50
+    }
+    if (lowerLabel.includes('microphone') || lowerLabel.includes('mic') || lowerLabel.includes('麦克风')) {
+      score += 10
+    }
+    return score
+  }
+  /** 从设备列表中挑选默认麦克风。 */
+  const pickPreferredAudioInputId = (devices: MediaDeviceInfo[]) => {
+    if (devices.length === 0) {
+      return ''
+    }
+    const sorted = [...devices].sort((left, right) => scoreAudioInputLabel(right.label) - scoreAudioInputLabel(left.label))
+    return sorted[0].deviceId
+  }
+  /** 刷新可用麦克风设备列表并更新默认选择。 */
+  const refreshAudioInputDevices = async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      return
+    }
+    const devices = await navigator.mediaDevices.enumerateDevices()
+    const audioInputs = devices.filter((device) => device.kind === 'audioinput')
+    const options = audioInputs.map((device, index) => ({
+      label: device.label || `麦克风 ${index + 1}`,
+      value: device.deviceId,
+    }))
+    setAudioInputDevices(options)
+    setSelectedAudioInputId((previous) => {
+      if (previous && audioInputs.some((item) => item.deviceId === previous)) {
+        return previous
+      }
+      return pickPreferredAudioInputId(audioInputs)
+    })
+  }
+  /** 请求麦克风权限后刷新设备，用于拿到完整设备名称。 */
+  const prepareAudioInputDevices = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      return
+    }
+    setAudioDevicesLoading(true)
+    try {
+      const permissionStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      permissionStream.getTracks().forEach((track) => track.stop())
+      await refreshAudioInputDevices()
+    } catch {
+      await refreshAudioInputDevices()
+    } finally {
+      setAudioDevicesLoading(false)
+    }
   }
   const {
     resumeId,
@@ -137,8 +213,31 @@ export function InterviewPage() {
     syncSessionStatus({
       stage: status.current_stage,
       followUpCount: status.follow_up_count,
+      currentQuestion: status.current_question,
+      ttsAudioUrl: status.tts_audio_url,
     })
   }, [interviewId, interviewStatusQuery.data, setSessionConfig, syncSessionStatus])
+
+  /** 会话进入结束态时自动跳转报告页，避免停留在不可作答页面。 */
+  useEffect(() => {
+    if (!interviewId || endRedirectedRef.current) {
+      return
+    }
+    const endedByStage = currentStage === 'END'
+    const endedByStatus = interviewStatusQuery.data?.status === 'FINISHED'
+    if (!endedByStage && !endedByStatus) {
+      return
+    }
+    endRedirectedRef.current = true
+    Modal.info({
+      title: '面试已结束',
+      content: '点击查看面试报告',
+      okText: '查看面试报告',
+      onOk: () => {
+        navigate(`/report/${interviewId}`)
+      },
+    })
+  }, [interviewId, currentStage, interviewStatusQuery.data?.status, navigate])
 
   useEffect(() => {
     if (!interviewId) {
@@ -188,6 +287,39 @@ export function InterviewPage() {
       }
     }
   }, [])
+
+  /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
+  const resetRoundRuntimeState = () => {
+    if (countdownTimerRef.current !== null) {
+      window.clearInterval(countdownTimerRef.current)
+      countdownTimerRef.current = null
+    }
+    if (recordingLimitTimerRef.current !== null) {
+      window.clearTimeout(recordingLimitTimerRef.current)
+      recordingLimitTimerRef.current = null
+    }
+    if (recordingProgressTimerRef.current !== null) {
+      window.clearInterval(recordingProgressTimerRef.current)
+      recordingProgressTimerRef.current = null
+    }
+    if (textAnswerTimerRef.current !== null) {
+      window.clearInterval(textAnswerTimerRef.current)
+      textAnswerTimerRef.current = null
+    }
+    setCountdown(0)
+    setRecording(false)
+    setRecordingElapsedSeconds(0)
+    setAudioFile(null)
+    setAnswer('')
+    submitAfterStopRef.current = false
+    lastQuestionKeyRef.current = ''
+    pendingCountdownQuestionKeyRef.current = ''
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      suppressRecorderStopRef.current = true
+      mediaRecorderRef.current.stop()
+      mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
+    }
+  }
 
   useEffect(() => {
     if (inputMode !== 'text' || !interviewId || !currentQuestion || currentStage === 'END') {
@@ -258,14 +390,43 @@ export function InterviewPage() {
     void autoPlayAudioRef.current.play().catch(() => {
       message.info('浏览器拦截了自动播放，请手动点击播放按钮')
     })
-  }, [outputMode, ttsAudioUrl])
+  }, [outputMode, ttsAudioUrl, resumeReplayTick])
+
+  /** 切换会话时重置录音与倒计时状态，避免继承上一次轮次。 */
+  useEffect(() => {
+    if (!interviewId) {
+      return
+    }
+    resetRoundRuntimeState()
+    setResumeReplayTick((previous) => previous + 1)
+  }, [interviewId])
+
+  /** 进入语音模式时主动准备设备列表，并监听设备变化。 */
+  useEffect(() => {
+    if (inputMode !== 'voice') {
+      return
+    }
+    void prepareAudioInputDevices()
+    const mediaDevices = navigator.mediaDevices
+    if (!mediaDevices?.addEventListener) {
+      return
+    }
+    const handleDeviceChange = () => {
+      void refreshAudioInputDevices()
+    }
+    mediaDevices.addEventListener('devicechange', handleDeviceChange)
+    return () => {
+      mediaDevices.removeEventListener('devicechange', handleDeviceChange)
+    }
+  }, [inputMode])
 
   /** 题目语音播放结束后触发倒计时。 */
   const handleQuestionAudioEnded = () => {
+    setQuestionAudioPlaying(false)
     if (inputMode !== 'voice' || !interviewId || !currentQuestion || currentStage === 'END') {
       return
     }
-    const questionKey = pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}:${followUpCount}:${liveScore}`
+    const questionKey = buildQuestionKey()
     if (pendingCountdownQuestionKeyRef.current !== questionKey) {
       return
     }
@@ -321,6 +482,7 @@ export function InterviewPage() {
       setResumingInterviewId(targetInterviewId)
     },
     onSuccess: (data) => {
+      resetRoundRuntimeState()
       setSessionConfig({
         interviewId: data.interview_id,
         jobRole: data.job_role,
@@ -332,6 +494,7 @@ export function InterviewPage() {
         ttsAudioUrl: data.tts_audio_url,
       })
       message.success('已恢复暂停面试')
+      setResumeReplayTick((previous) => previous + 1)
       navigate(`/interview/${data.interview_id}`)
       setResumingInterviewId('')
     },
@@ -385,12 +548,29 @@ export function InterviewPage() {
         ttsAudioUrl: data.tts_audio_url,
         pipelineMeta: data.pipeline_meta,
       })
+      void queryClient.invalidateQueries({ queryKey: ['interview-playback', interviewId] })
       setAnswer('')
       setAudioFile(null)
       message.success('已生成下一题')
     },
     onError: async (error) => {
       const axiosError = error as AxiosError<{ error?: { code?: string; message?: string } }>
+      if (axiosError.code === 'ERR_CANCELED') {
+        try {
+          const sessionStatus = await fetchInterviewStatus(interviewId)
+          syncSessionStatus({
+            stage: sessionStatus.current_stage,
+            followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
+          })
+          message.warning('请求已取消，已同步到最新面试状态')
+          return
+        } catch {
+          message.warning('请求已取消，请刷新页面确认当前轮次')
+          return
+        }
+      }
       const apiError = axiosError.response?.data?.error
       const errorCode = apiError?.code || ''
       const errorMessage = apiError?.message || '提交失败，请重试'
@@ -401,6 +581,8 @@ export function InterviewPage() {
           syncSessionStatus({
             stage: sessionStatus.current_stage,
             followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
           })
           if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
             message.warning('当前会话已结束，正在跳转报告页')
@@ -479,7 +661,9 @@ export function InterviewPage() {
       setCountdown(0)
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: selectedAudioInputId ? { deviceId: { exact: selectedAudioInputId } } : true,
+      })
       const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
@@ -489,6 +673,13 @@ export function InterviewPage() {
         }
       }
       mediaRecorder.onstop = () => {
+        if (suppressRecorderStopRef.current) {
+          suppressRecorderStopRef.current = false
+          audioChunksRef.current = []
+          stream.getTracks().forEach((track) => track.stop())
+          setRecording(false)
+          return
+        }
         if (recordingLimitTimerRef.current !== null) {
           window.clearTimeout(recordingLimitTimerRef.current)
           recordingLimitTimerRef.current = null
@@ -530,7 +721,71 @@ export function InterviewPage() {
         }
       }, MAX_RECORDING_SECONDS * 1000)
     } catch {
-      message.error('无法访问麦克风，请检查浏览器权限')
+      if (selectedAudioInputId) {
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+          const mediaRecorder = new MediaRecorder(fallbackStream)
+          mediaRecorderRef.current = mediaRecorder
+          audioChunksRef.current = []
+          mediaRecorder.ondataavailable = (event: BlobEvent) => {
+            if (event.data.size > 0) {
+              audioChunksRef.current.push(event.data)
+            }
+          }
+          mediaRecorder.onstop = () => {
+            if (suppressRecorderStopRef.current) {
+              suppressRecorderStopRef.current = false
+              audioChunksRef.current = []
+              fallbackStream.getTracks().forEach((track) => track.stop())
+              setRecording(false)
+              return
+            }
+            if (recordingLimitTimerRef.current !== null) {
+              window.clearTimeout(recordingLimitTimerRef.current)
+              recordingLimitTimerRef.current = null
+            }
+            if (recordingProgressTimerRef.current !== null) {
+              window.clearInterval(recordingProgressTimerRef.current)
+              recordingProgressTimerRef.current = null
+            }
+            setRecordingElapsedSeconds(0)
+            const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' })
+            if (blob.size > 0) {
+              const file = buildRecordedAudioFile(blob)
+              setAudioFile(file)
+              if (submitAfterStopRef.current) {
+                submitAfterStopRef.current = false
+                submitMutation.mutate({ voiceFile: file })
+              } else {
+                message.success('录音完成')
+              }
+            } else {
+              submitAfterStopRef.current = false
+              message.warning('未采集到音频，请重试')
+            }
+            fallbackStream.getTracks().forEach((track) => track.stop())
+            setRecording(false)
+          }
+          mediaRecorder.start()
+          setRecordingElapsedSeconds(0)
+          setRecording(true)
+          message.warning('所选麦克风不可用，已切换到系统默认麦克风')
+          recordingProgressTimerRef.current = window.setInterval(() => {
+            setRecordingElapsedSeconds((previous) => Math.min(previous + 1, MAX_RECORDING_SECONDS))
+          }, 1000)
+          recordingLimitTimerRef.current = window.setTimeout(() => {
+            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+              submitAfterStopRef.current = true
+              message.warning('录音已达到 3 分钟上限，已自动提交')
+              stopRecording()
+            }
+          }, MAX_RECORDING_SECONDS * 1000)
+          return
+        } catch {
+          // 降级失败时沿用统一报错提示
+        }
+      }
+      message.error('无法访问麦克风，请检查浏览器权限或切换输入设备')
       setRecording(false)
     }
   }
@@ -594,7 +849,7 @@ export function InterviewPage() {
     if (inputMode !== 'voice' || !interviewId || !currentQuestion || currentStage === 'END') {
       return
     }
-    const questionKey = pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}:${followUpCount}:${liveScore}`
+    const questionKey = buildQuestionKey()
     if (lastQuestionKeyRef.current === questionKey) {
       return
     }
@@ -614,7 +869,7 @@ export function InterviewPage() {
     }
     pendingCountdownQuestionKeyRef.current = ''
     startCountdownRecording(true)
-  }, [inputMode, interviewId, currentQuestion, currentStage, outputMode, ttsAudioUrl, pipelineMeta?.trace_id, followUpCount, liveScore])
+  }, [inputMode, interviewId, currentQuestion, currentStage, outputMode, ttsAudioUrl, pipelineMeta?.trace_id])
 
   const recordingProgressPercent = Math.round((recordingElapsedSeconds / MAX_RECORDING_SECONDS) * 100)
   const formatDuration = (seconds: number) => {
@@ -633,6 +888,22 @@ export function InterviewPage() {
     }
     return parsed.toLocaleString('zh-CN', { hour12: false })
   }
+  /** 阶段文案配色，仅作用于问题区右上角阶段名。 */
+  const stageTextStyle = useMemo(() => {
+    const styleMap: Record<string, { color: string; background: string }> = {
+      SELF_INTRO: { color: '#ad6800', background: '#fff7e6' },
+      TECHNICAL: { color: '#1d39c4', background: '#e6f4ff' },
+      PROJECT: { color: '#237804', background: '#f6ffed' },
+      SCENARIO: { color: '#531dab', background: '#f9f0ff' },
+      END: { color: '#595959', background: '#fafafa' },
+    }
+    return styleMap[currentStage] || styleMap.TECHNICAL
+  }, [currentStage])
+  /** 将轮次按顺序整理，避免后端返回顺序波动影响展示。 */
+  const sortedTurns = useMemo(
+    () => [...(playbackQuery.data?.turns ?? [])].sort((left, right) => left.sequence - right.sequence),
+    [playbackQuery.data?.turns],
+  )
 
   if (!routeInterviewId) {
     return (
@@ -652,6 +923,11 @@ export function InterviewPage() {
               dataSource={pausedQuery.data?.items ?? []}
               pagination={false}
               columns={[
+                {
+                  title: '面试名称',
+                  dataIndex: 'session_name',
+                  render: (value?: string) => value || '-',
+                },
                 { title: '会话ID', dataIndex: 'interview_id' },
                 { title: '简历', dataIndex: 'resume_id' },
                 { title: '岗位', dataIndex: 'job_role' },
@@ -720,8 +996,12 @@ export function InterviewPage() {
                 })
               }}
             >
-              <Form.Item name="session_name" label="面试名称">
-                <Input placeholder="例如：Web前端场景专项（可选）" maxLength={128} />
+              <Form.Item
+                name="session_name"
+                label="面试名称"
+                rules={[{ required: true, whitespace: true, message: '请输入面试名称' }]}
+              >
+                <Input placeholder="例如：Web前端场景专项" maxLength={128} />
               </Form.Item>
               <Form.Item name="question_types" label="题目类型">
                 <Checkbox.Group
@@ -856,9 +1136,21 @@ export function InterviewPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 16, width: '100%' }}>
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <Card title="会话信息">
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: historyCollapsed
+          ? 'minmax(0, 1fr) minmax(0, 3fr)'
+          : 'minmax(0, 2fr) minmax(0, 4fr) minmax(0, 2fr)',
+        gap: 16,
+        width: '100%',
+        transition: 'grid-template-columns 0.2s ease',
+        boxSizing: 'border-box',
+        overflowX: 'hidden',
+      }}
+    >
+      <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0 }}>
+        {/* <Card title="会话信息">
           <Space wrap>
             <Tag color="volcano">轮次：第 {followUpCount + 1} 轮</Tag>
             <Tag color="blue">阶段：{currentStage}</Tag>
@@ -869,66 +1161,130 @@ export function InterviewPage() {
             <Tag color="purple">输出模式：{outputMode}</Tag>
             <Tag color="geekblue">会话ID：{interviewId}</Tag>
           </Space>
-        </Card>
+        </Card> */}
         <Card title="面试详情">
           <Space direction="vertical" size={10} style={{ width: '100%' }}>
-            <div>
-              <Typography.Text type="secondary">创建时间</Typography.Text>
-              <div>{formatDateTime(playbackQuery.data?.meta.started_at)}</div>
-            </div>
-            <div>
-              <Typography.Text type="secondary">开始时间</Typography.Text>
-              <div>{formatDateTime(playbackQuery.data?.meta.started_at)}</div>
-            </div>
-            <div>
-              <Typography.Text type="secondary">面试时长</Typography.Text>
-              <div>{formatDuration(interviewElapsedSeconds)}</div>
-            </div>
-            <div>
-              <Typography.Text type="secondary">状态</Typography.Text>
-              <div>
-                <Tag color={interviewStatusQuery.data?.status === 'PAUSED' ? 'gold' : 'blue'}>
-                  {interviewStatusQuery.data?.status || 'ACTIVE'}
-                </Tag>
-              </div>
-            </div>
-            <div>
-              <Typography.Text type="secondary">简历信息</Typography.Text>
-              <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Typography.Text>{playbackQuery.data?.resume.file_name || resumeId || '--'}</Typography.Text>
-                <Button
-                  size="small"
-                  loading={previewMutation.isPending}
-                  disabled={!playbackQuery.data?.resume.resume_id}
-                  onClick={() =>
-                    previewMutation.mutate({
-                      resumeId: playbackQuery.data?.resume.resume_id || '',
-                      fileName: playbackQuery.data?.resume.file_name || 'resume',
-                    })
-                  }
-                >
-                  预览
-                </Button>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <CalendarOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">创建时间</Typography.Text>
+                  <div>{formatDateTime(playbackQuery.data?.meta.started_at)}</div>
+                </div>
               </Space>
             </div>
-            <div>
-              <Typography.Text type="secondary">职位描述</Typography.Text>
-              <div>{interviewStatusQuery.data?.job_role || '--'}</div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <ClockCircleOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">开始时间</Typography.Text>
+                  <div>{formatDateTime(playbackQuery.data?.meta.started_at)}</div>
+                </div>
+              </Space>
+            </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <HourglassOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">面试时长</Typography.Text>
+                  <div>{formatDuration(interviewElapsedSeconds)}</div>
+                </div>
+              </Space>
+            </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <FlagOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div style={{ width: '100%' }}>
+                  <Typography.Text type="secondary">状态</Typography.Text>
+                  <div>
+                    <Tag color={interviewStatusQuery.data?.status === 'PAUSED' ? 'gold' : 'blue'}>
+                      {interviewStatusQuery.data?.status || 'ACTIVE'}
+                    </Tag>
+                  </div>
+                </div>
+              </Space>
+            </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <FilePdfOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div style={{ width: '100%' }}>
+                  <Typography.Text type="secondary">简历信息</Typography.Text>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <Typography.Text style={{ flex: 1, minWidth: 0 }} ellipsis={{ tooltip: true }}>
+                      {playbackQuery.data?.resume.file_name || resumeId || '--'}
+                    </Typography.Text>
+                    <Button
+                      size="small"
+                      style={{ flex: '0 0 auto' }}
+                      loading={previewMutation.isPending}
+                      disabled={!playbackQuery.data?.resume.resume_id}
+                      onClick={() =>
+                        previewMutation.mutate({
+                          resumeId: playbackQuery.data?.resume.resume_id || '',
+                          fileName: playbackQuery.data?.resume.file_name || 'resume',
+                        })
+                      }
+                    >
+                      预览
+                    </Button>
+                  </div>
+                </div>
+              </Space>
+            </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <UserOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">职位描述</Typography.Text>
+                  <div>{interviewStatusQuery.data?.job_role || '--'}</div>
+                </div>
+              </Space>
             </div>
           </Space>
         </Card>
         <ProviderHealthBanner health={providerHealth} />
       </Space>
 
-      <div style={{ display: 'grid', gridTemplateRows: '1fr 2fr', gap: 16, minHeight: 560 }}>
-        <Card title="问题区" extra={<Typography.Text strong>轮次 {questionRound}</Typography.Text>}>
+      <div style={{ display: 'grid', gridTemplateRows: '1fr 2fr', gap: 16, minHeight: 560, minWidth: 0 }}>
+        <Card
+          title="问题区"
+          extra={
+            <Space size={8}>
+              <Typography.Text strong>
+                阶段{' '}
+                <span
+                  style={{
+                    color: stageTextStyle.color,
+                    background: stageTextStyle.background,
+                    borderRadius: 6,
+                    padding: '2px 8px',
+                  }}
+                >
+                  {currentStage}
+                </span>
+              </Typography.Text>
+              <Typography.Text strong>轮次 {questionRound}</Typography.Text>
+            </Space>
+          }
+        >
           {outputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Paragraph style={{ marginBottom: 0 }}>
                 {currentQuestion ? '已生成语音题目，可直接播放。' : '等待题目生成...'}
               </Typography.Paragraph>
               {ttsAudioUrl ? (
-                <audio ref={autoPlayAudioRef} controls src={ttsAudioUrl} style={{ width: '100%' }} onEnded={handleQuestionAudioEnded}>
+                <audio
+                  ref={autoPlayAudioRef}
+                  controls
+                  src={ttsAudioUrl}
+                  style={{ width: '100%' }}
+                  onPlay={() => setQuestionAudioPlaying(true)}
+                  onPause={() => setQuestionAudioPlaying(false)}
+                  onAbort={() => setQuestionAudioPlaying(false)}
+                  onEmptied={() => setQuestionAudioPlaying(false)}
+                  onError={() => setQuestionAudioPlaying(false)}
+                  onEnded={handleQuestionAudioEnded}
+                >
                   您的浏览器不支持音频播放。
                 </audio>
               ) : (
@@ -944,6 +1300,14 @@ export function InterviewPage() {
           {inputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Text>本题目语音作答</Typography.Text>
+              <Select
+                style={{ width: '100%' }}
+                loading={audioDevicesLoading}
+                placeholder="选择麦克风设备"
+                value={selectedAudioInputId || undefined}
+                options={audioInputDevices}
+                onChange={(value) => setSelectedAudioInputId(value)}
+              />
               <Button
                 block
                 size="large"
@@ -957,9 +1321,9 @@ export function InterviewPage() {
                   fontWeight: 600,
                 }}
                 loading={submitMutation.isPending}
-                disabled={submitMutation.isPending || currentStage === 'END'}
+                disabled={submitMutation.isPending || currentStage === 'END' || questionAudioPlaying}
                 onClick={() => {
-                  if (submitMutation.isPending || currentStage === 'END') {
+                  if (submitMutation.isPending || currentStage === 'END' || questionAudioPlaying) {
                     return
                   }
                   if (recording) {
@@ -980,7 +1344,11 @@ export function InterviewPage() {
               </Button>
               {!submitMutation.isPending ? (
                 <Typography.Text type="secondary">
-                  {recording ? '系统将在 3 分钟后自动结束并提交回答。' : '可点击按钮立即开始，或等待倒计时结束自动开始录音。'}
+                  {questionAudioPlaying
+                    ? '题目语音播放中，播放完成后才可作答。'
+                    : recording
+                      ? '系统将在 3 分钟后自动结束并提交回答。'
+                      : '可点击按钮立即开始，或等待倒计时结束自动开始录音。'}
                 </Typography.Text>
               ) : null}
             </Space>
@@ -1016,42 +1384,103 @@ export function InterviewPage() {
           </div>
         </Card>
       </div>
+      {!historyCollapsed ? (
+        <div style={{ minWidth: 0, height: 720, maxHeight: 720 }}>
+          <Card
+            title="历史记录"
+            style={{ height: '100%' }}
+            bodyStyle={{ padding: 12, height: 'calc(100% - 57px)', overflowY: 'auto', overflowX: 'hidden' }}
+          >
+            {sortedTurns.length === 0 ? (
+              <Typography.Text type="secondary">当前还没有历史轮次，完成一轮后会显示在这里。</Typography.Text>
+            ) : (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {sortedTurns.map((turn) => (
+                  <div key={turn.turn_id} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Typography.Text type="secondary">第 {turn.sequence} 轮</Typography.Text>
+                    <div
+                      style={{
+                        alignSelf: 'flex-start',
+                        maxWidth: '95%',
+                        background: '#f6faff',
+                        border: '1px solid #d9ecff',
+                        borderRadius: 12,
+                        padding: '8px 10px',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      <Typography.Text strong>面试官：</Typography.Text>
+                      <Typography.Text>{turn.question || '（暂无问题文本）'}</Typography.Text>
+                    </div>
+                    <div
+                      style={{
+                        alignSelf: 'flex-end',
+                        maxWidth: '95%',
+                        background: '#f6fff8',
+                        border: '1px solid #dcf3e4',
+                        borderRadius: 12,
+                        padding: '8px 10px',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      <Typography.Text strong>我：</Typography.Text>
+                      <Typography.Text>{turn.answer || '（本轮回答为空）'}</Typography.Text>
+                    </div>
+                  </div>
+                ))}
+              </Space>
+            )}
+          </Card>
+        </div>
+      ) : null}
       <div
         style={{
           position: 'fixed',
           right: 24,
           top: 180,
-          zIndex: 10,
+          zIndex: 30,
         }}
       >
-        <Dropdown
-          trigger={['click']}
-          menu={{
-            items: [
-              {
-                key: 'pause',
-                label: '暂停并保存进度',
-                disabled: pauseMutation.isPending || finishMutation.isPending,
+        <Space direction="vertical" size={8}>
+          <Button
+            aria-label={historyCollapsed ? '展开历史记录' : '收起历史记录'}
+            icon={<UnorderedListOutlined />}
+            onClick={() => setHistoryCollapsed((previous) => !previous)}
+            style={{ width: 48, height: 48 }}
+          />
+          <Dropdown
+            trigger={['click']}
+            menu={{
+              items: [
+                {
+                  key: 'pause',
+                  label: '暂停并保存进度',
+                  disabled: pauseMutation.isPending || finishMutation.isPending,
+                },
+                {
+                  key: 'finish',
+                  label: '结束面试',
+                  danger: true,
+                  disabled: finishMutation.isPending || pauseMutation.isPending,
+                },
+              ],
+              onClick: ({ key }) => {
+                if (key === 'pause') {
+                  pauseMutation.mutate()
+                }
+                if (key === 'finish') {
+                  finishMutation.mutate()
+                }
               },
-              {
-                key: 'finish',
-                label: '结束面试',
-                danger: true,
-                disabled: finishMutation.isPending || pauseMutation.isPending,
-              },
-            ],
-            onClick: ({ key }) => {
-              if (key === 'pause') {
-                pauseMutation.mutate()
-              }
-              if (key === 'finish') {
-                finishMutation.mutate()
-              }
-            },
-          }}
-        >
-          <Button loading={pauseMutation.isPending || finishMutation.isPending}>⋮</Button>
-        </Dropdown>
+            }}
+          >
+            <Button loading={pauseMutation.isPending || finishMutation.isPending} style={{ width: 48, height: 48 }}>
+              ⋮
+            </Button>
+          </Dropdown>
+        </Space>
       </div>
       <Modal
         title={`简历预览 - ${previewTitle}`}

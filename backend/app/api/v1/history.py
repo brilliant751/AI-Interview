@@ -45,9 +45,13 @@ async def list_history(
     items = [
         HistoryItem(
             interview_id=row["interview_id"],
+            session_name=str(row.get("session_name") or ""),
             resume_id=row["resume_id"],
             job_role=row["job_role"],
             status=row["status"],
+            jd_id=str(row.get("jd_id") or ""),
+            jd_title=str(row.get("jd_snapshot_title") or ""),
+            jd_source_type=str(row.get("jd_source_type") or ""),
             started_at=row["started_at"] or row["created_at"],
             finished_at=row.get("finished_at"),
             turn_count=int(row.get("turn_count") or 0),

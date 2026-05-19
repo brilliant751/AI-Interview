@@ -20,6 +20,7 @@ from app.services.report_worker import ReportWorker
 from app.services.voice_service import VoiceService
 
 logger = logging.getLogger(__name__)
+INTERVIEW_END_MESSAGE = "本次面试已结束，正在生成报告。"
 
 
 class InterviewService:
@@ -40,7 +41,23 @@ class InterviewService:
             raise ApiError(code="RESUME_404_NOT_FOUND", message="简历不存在", status_code=404)
         if str(resume.get("user_id") or "") != user_id:
             raise ApiError(code="RESUME_403_FORBIDDEN", message="无权使用该简历", status_code=403)
-        session = self.repo.create_session(user_id=user_id, payload=payload)
+        jd_id = str(payload.get("jd_id") or "").strip()
+        jd_snapshot: dict[str, str] = {}
+        if jd_id:
+            jd = self.repo.get_jd(jd_id)
+            if not jd or int(jd.get("is_deleted") or 0) == 1:
+                raise ApiError(code="JD_404_NOT_FOUND", message="JD 不存在", status_code=404)
+            is_system = str(jd.get("source_type") or "") == "SYSTEM_PRESET"
+            if (not is_system) and str(jd.get("user_id") or "") != user_id:
+                raise ApiError(code="JD_403_FORBIDDEN", message="无权访问该 JD", status_code=403)
+            if str(jd.get("job_role") or "") != str(payload.get("job_role") or ""):
+                raise ApiError(code="JD_409_ROLE_MISMATCH", message="JD 岗位方向与面试方向不匹配", status_code=409)
+            jd_snapshot = {
+                "jd_id": jd_id,
+                "jd_snapshot_title": str(jd.get("title") or ""),
+                "jd_snapshot_content": str(jd.get("content_text") or "")[:2000],
+            }
+        session = self.repo.create_session(user_id=user_id, payload=payload, jd_snapshot=jd_snapshot)
         first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
         output_mode = str(payload.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
@@ -221,10 +238,51 @@ class InterviewService:
             follow_up_count += 1
             ensure_behavior_followup_limit(stage, follow_up_count)
 
+        live_score = min(95, max(40, 60 + min(len(answer) // 10, 35)))
+        if stage == InterviewStage.SELF_INTRO.value:
+            next_stage = InterviewStage.PROJECT_DEEP_DIVE.value
+            follow_up_count = 0
+            technical_count = 0
+        elif stage == InterviewStage.PROJECT_DEEP_DIVE.value:
+            next_stage = InterviewStage.TECHNICAL.value
+        elif stage == InterviewStage.TECHNICAL.value:
+            technical_count += 1
+            if technical_count < 3:
+                next_stage = InterviewStage.TECHNICAL.value
+            elif technical_count < 5 and len(answer) < 30:
+                next_stage = InterviewStage.TECHNICAL.value
+            else:
+                next_stage = InterviewStage.BEHAVIORAL.value
+        elif stage == InterviewStage.BEHAVIORAL.value:
+            next_stage = InterviewStage.END.value if follow_up_count >= 3 else InterviewStage.BEHAVIORAL.value
+        else:
+            next_stage = stage
+
+        if next_stage != stage:
+            ensure_transition_allowed(stage, next_stage)
+            follow_up_count = 0
+
         references = self.rag_service.retrieve(session["job_role"], answer, top_k=2)
-        references = [*resume_references, *references][:4]
+        jd_snapshot_content = str(session.get("jd_snapshot_content") or "").strip()
+        jd_snapshot_title = str(session.get("jd_snapshot_title") or "").strip()
+        jd_references: list[dict[str, Any]] = []
+        if jd_snapshot_content:
+            jd_references.append(
+                {
+                    "title": f"JD要求：{jd_snapshot_title or '岗位描述'}",
+                    "content": jd_snapshot_content[:400],
+                    "score": 0.0,
+                    "source_path": "jd",
+                    "retrieval_mode": "jd",
+                }
+            )
+        references = [*jd_references, *resume_references, *references][:4]
         generation_mode = "mock"
-        if self.question_workflow.llm_provider in {"openai", "ollama"}:
+        if next_stage == InterviewStage.END.value:
+            next_question = INTERVIEW_END_MESSAGE
+            providers["llm"] = "finalizer"
+            provider_status["llm"] = "UP"
+        elif self.question_workflow.llm_provider in {"openai", "ollama"}:
             try:
                 next_question = self.question_workflow.generate(
                     answer=answer,
@@ -259,33 +317,9 @@ class InterviewService:
             providers["llm"] = self.question_workflow.llm_provider
             provider_status["llm"] = "UP"
 
-        live_score = min(95, max(40, 60 + min(len(answer) // 10, 35)))
-        if stage == InterviewStage.SELF_INTRO.value:
-            next_stage = InterviewStage.PROJECT_DEEP_DIVE.value
-            follow_up_count = 0
-            technical_count = 0
-        elif stage == InterviewStage.PROJECT_DEEP_DIVE.value:
-            next_stage = InterviewStage.TECHNICAL.value
-        elif stage == InterviewStage.TECHNICAL.value:
-            technical_count += 1
-            if technical_count < 3:
-                next_stage = InterviewStage.TECHNICAL.value
-            elif technical_count < 5 and len(answer) < 30:
-                next_stage = InterviewStage.TECHNICAL.value
-            else:
-                next_stage = InterviewStage.BEHAVIORAL.value
-        elif stage == InterviewStage.BEHAVIORAL.value:
-            next_stage = InterviewStage.END.value if follow_up_count >= 3 else InterviewStage.BEHAVIORAL.value
-        else:
-            next_stage = stage
-
-        if next_stage != stage:
-            ensure_transition_allowed(stage, next_stage)
-            follow_up_count = 0
-
         output_mode = session["output_mode"]
         tts_audio_url = None
-        if output_mode == "voice":
+        if output_mode == "voice" and next_stage != InterviewStage.END.value:
             try:
                 tts_audio_url = self.voice_service.tts(next_question)
                 providers["tts"] = self.voice_service.tts_provider
@@ -311,12 +345,27 @@ class InterviewService:
             latency_ms=latency_ms,
             generation_mode=generation_mode,
         )
-        self.repo.update_session_stage(
-            interview_id=interview_id,
-            stage=next_stage,
-            follow_up_count=follow_up_count,
-            technical_count=technical_count,
-        )
+        if next_stage == InterviewStage.END.value:
+            self.repo.finish_session(interview_id)
+            self.repo.upsert_report(
+                interview_id,
+                {
+                    "status": "GENERATING",
+                    "overall_score": None,
+                    "strengths": "[]",
+                    "weaknesses": "[]",
+                    "suggestions": "[]",
+                    "error_message": None,
+                },
+            )
+            self.report_worker.enqueue(interview_id)
+        else:
+            self.repo.update_session_stage(
+                interview_id=interview_id,
+                stage=next_stage,
+                follow_up_count=follow_up_count,
+                technical_count=technical_count,
+            )
 
         log_pipeline_event(
             event="submit_turn",

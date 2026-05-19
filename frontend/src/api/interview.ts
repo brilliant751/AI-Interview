@@ -9,6 +9,7 @@ export interface CreateInterviewPayload {
   output_mode: 'text' | 'voice'
   session_name?: string
   question_types?: Array<'project' | 'technical' | 'scenario'>
+  jd_id?: string
 }
 
 /** 会话创建响应。 */
@@ -84,9 +85,13 @@ export interface HistoryResponse {
   total: number
   items: Array<{
     interview_id: string
+    session_name?: string
     resume_id: string
     job_role: string
     status: string
+    jd_id?: string
+    jd_title?: string
+    jd_source_type?: string
     started_at: string
     finished_at?: string
     turn_count: number
@@ -120,6 +125,9 @@ export interface InterviewPlaybackResponse {
     job_role: string
     difficulty: string
     status: string
+    jd_id?: string
+    jd_title?: string
+    jd_source_type?: string
     started_at: string
     finished_at?: string
     duration_seconds: number
@@ -146,10 +154,40 @@ export interface InterviewStatusResponse {
   difficulty: 'easy' | 'medium' | 'hard'
   input_mode: 'text' | 'voice'
   output_mode: 'text' | 'voice'
+  jd_id?: string
+  jd_title?: string
+  jd_source_type?: string
   current_question: string
   tts_audio_url?: string
   duration_seconds: number
   duration_updated_at?: string
+}
+
+/** JD 列表响应。 */
+export interface JdListResponse {
+  items: Array<{
+    jd_id: string
+    source_type: 'USER_UPLOAD' | 'SYSTEM_PRESET'
+    company_id: string
+    company_name: string
+    title: string
+    job_role: string
+    status: string
+    content_text: string
+    created_at: string
+    updated_at: string
+  }>
+}
+
+/** 公司列表响应。 */
+export interface CompanyListResponse {
+  items: Array<{
+    company_id: string
+    name: string
+    status: string
+    created_at: string
+    updated_at: string
+  }>
 }
 
 /** 上传简历并返回简历 ID。 */
@@ -251,4 +289,53 @@ export async function fetchInterviewStatus(
 export async function fetchInterviewPlayback(interviewId: string): Promise<InterviewPlaybackResponse> {
   const { data } = await apiClient.get<InterviewPlaybackResponse>(`/interviews/${interviewId}/playback`)
   return data
+}
+
+/** 上传 JD。 */
+export async function uploadJd(payload: {
+  job_role: string
+  title?: string
+  file?: File
+  content_text?: string
+  company_id?: string
+}) {
+  const formData = new FormData()
+  formData.append('job_role', payload.job_role)
+  if (payload.title) {
+    formData.append('title', payload.title)
+  }
+  if (payload.file) {
+    formData.append('file', payload.file)
+  }
+  if (payload.content_text) {
+    formData.append('content_text', payload.content_text)
+  }
+  if (payload.company_id) {
+    formData.append('company_id', payload.company_id)
+  }
+  const { data } = await apiClient.post('/jds', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return data as { jd_id: string; title: string; job_role: 'java' | 'web' }
+}
+
+/** 查询公司列表。 */
+export async function fetchCompanies(): Promise<CompanyListResponse> {
+  const { data } = await apiClient.get<CompanyListResponse>('/companies')
+  return data
+}
+
+/** 查询 JD 列表。 */
+export async function fetchJds(params?: {
+  job_role?: string
+  source_type?: 'USER_UPLOAD' | 'SYSTEM_PRESET'
+  title?: string
+}): Promise<JdListResponse> {
+  const { data } = await apiClient.get<JdListResponse>('/jds', { params })
+  return data
+}
+
+/** 删除 JD。 */
+export async function deleteJd(jdId: string): Promise<void> {
+  await apiClient.delete(`/jds/${jdId}`)
 }

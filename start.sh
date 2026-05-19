@@ -109,16 +109,8 @@ ensure_backend_dependencies() {
     "$BACKEND_PYTHON" -m ensurepip --upgrade
   fi
   "$BACKEND_PYTHON" -m pip install --upgrade pip >/dev/null
-  "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirement.txt"
-  "$BACKEND_PYTHON" -m pip install \
-    openai \
-    httpx \
-    funasr \
-    paddlepaddle \
-    paddlespeech \
-    soundfile \
-    pytest \
-    ruff
+  "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
+  "$BACKEND_PYTHON" -m pip install pytest ruff
 }
 
 prepare_model_cache_dirs() {

@@ -20,6 +20,7 @@ export function AppLayout(props: { children: ReactNode }) {
     ? [
         { to: '/interview', label: '模拟面试' },
         { to: '/resumes', label: '简历管理' },
+        { to: '/jobs', label: '岗位管理' },
         { to: '/history', label: '历史记录' },
       ]
     : [
@@ -78,7 +79,7 @@ export function AppLayout(props: { children: ReactNode }) {
           ) : null}
         </div>
       </Header>
-      <Content style={{ padding: '24px 16px', maxWidth: 980, margin: '0 auto', width: '100%' }}>
+      <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>
         {props.children}
       </Content>
     </Layout>

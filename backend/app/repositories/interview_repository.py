@@ -60,6 +60,9 @@ class InterviewRepository:
                   interview_id TEXT PRIMARY KEY,
                   user_id TEXT,
                   resume_id TEXT NOT NULL,
+                  jd_id TEXT,
+                  jd_snapshot_title TEXT NOT NULL DEFAULT '',
+                  jd_snapshot_content TEXT NOT NULL DEFAULT '',
                   session_name TEXT NOT NULL DEFAULT '',
                   question_types TEXT NOT NULL DEFAULT '[]',
                   job_role TEXT NOT NULL,
@@ -104,6 +107,30 @@ class InterviewRepository:
                   weaknesses TEXT NOT NULL DEFAULT '[]',
                   suggestions TEXT NOT NULL DEFAULT '[]',
                   error_message TEXT,
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS job_descriptions (
+                  jd_id TEXT PRIMARY KEY,
+                  user_id TEXT,
+                  company_id TEXT,
+                  source_type TEXT NOT NULL,
+                  title TEXT NOT NULL,
+                  job_role TEXT NOT NULL,
+                  content_text TEXT NOT NULL DEFAULT '',
+                  storage_path TEXT,
+                  status TEXT NOT NULL DEFAULT 'READY',
+                  is_deleted INTEGER NOT NULL DEFAULT 0,
+                  deleted_at TEXT,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS companies (
+                  company_id TEXT PRIMARY KEY,
+                  name TEXT NOT NULL UNIQUE,
+                  status TEXT NOT NULL DEFAULT 'ACTIVE',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
 
@@ -179,6 +206,10 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_sessions", "finished_at", "TEXT")
             self._ensure_column(conn, "interview_sessions", "duration_seconds", "INTEGER NOT NULL DEFAULT 0")
             self._ensure_column(conn, "interview_sessions", "duration_updated_at", "TEXT")
+            self._ensure_column(conn, "interview_sessions", "jd_id", "TEXT")
+            self._ensure_column(conn, "interview_sessions", "jd_snapshot_title", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "jd_snapshot_content", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "job_descriptions", "company_id", "TEXT")
             self._ensure_column(conn, "interview_turns", "user_id", "TEXT")
             conn.execute(
                 """
@@ -233,9 +264,15 @@ class InterviewRepository:
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_created ON interview_sessions(user_id, created_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_session_jd_id ON interview_sessions(jd_id)")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_turns_user_interview_created ON interview_turns(user_id, interview_id, created_at ASC)"
             )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_user_created ON job_descriptions(user_id, created_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_role_source ON job_descriptions(job_role, source_type)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_company_id ON job_descriptions(company_id)")
+            self._seed_companies(conn)
+            self._seed_preset_jds(conn)
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
         """确保表包含指定列，缺失则补齐。"""
@@ -243,6 +280,82 @@ class InterviewRepository:
         exists = any(str(row["name"]) == column for row in rows)
         if not exists:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+    def _seed_companies(self, conn: sqlite3.Connection) -> None:
+        """初始化主流公司数据。"""
+        companies = [
+            ("cmp_bytedance", "字节跳动"),
+            ("cmp_didi", "滴滴"),
+            ("cmp_alibaba", "阿里巴巴"),
+            ("cmp_tencent", "腾讯"),
+            ("cmp_baidu", "百度"),
+            ("cmp_meituan", "美团"),
+            ("cmp_huawei", "华为"),
+            ("cmp_xiaomi", "小米"),
+            ("cmp_jd", "京东"),
+            ("cmp_pinduoduo", "拼多多"),
+            ("cmp_kuaishou", "快手"),
+            ("cmp_360", "360"),
+            ("cmp_netease", "网易"),
+            ("cmp_bilibili", "哔哩哔哩"),
+            ("cmp_xiaohongshu", "小红书"),
+            ("cmp_douyin", "抖音"),
+            ("cmp_citic", "中信证券"),
+            ("cmp_efunds", "易方达基金"),
+            ("cmp_mckinsey", "麦肯锡"),
+            ("cmp_webank", "微众银行"),
+            ("cmp_youzan", "有赞"),
+            ("cmp_yuanfudao", "猿辅导"),
+            ("cmp_huolala", "货拉拉"),
+            ("cmp_shuran", "数然科技"),
+            ("cmp_rongke", "融科智联"),
+            ("cmp_ates", "阿特斯阳光电力"),
+            ("cmp_mingsheng", "明胜品智"),
+            ("cmp_tencent_games", "腾讯游戏"),
+        ]
+        for company_id, name in companies:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO companies(company_id, name, status)
+                VALUES (?, ?, 'ACTIVE')
+                """,
+                (company_id, name),
+            )
+
+    def _seed_preset_jds(self, conn: sqlite3.Connection) -> None:
+        """初始化系统预置 JD 数据。"""
+        presets = [
+            ("jd_preset_algo_bytedance", "字节跳动", "算法实习生-推荐/搜索", "算法", "推荐算法、排序模型、用户行为分析"),
+            ("jd_preset_llm_alibaba", "阿里巴巴", "大模型研发实习生", "算法", "大模型训练、SFT、RLHF、推理优化、多模态"),
+            ("jd_preset_cpp_tencent", "腾讯", "C++后端开发实习生", "后端开发", "后端服务、分布式系统、高并发"),
+            ("jd_preset_fe_kuaishou", "快手", "前端开发实习生", "前端开发", "Web前端、H5、跨端开发"),
+            ("jd_preset_data_jd", "京东", "数据开发实习生", "数据开发", "数据仓库、ETL、数据治理、数据分析"),
+            ("jd_preset_label_mingsheng", "明胜品智", "AI数据标注实习生", "数据标注", "图像/文本/语音标注与质量审核"),
+            ("jd_preset_pm_meituan", "美团", "产品经理实习生", "产品", "需求调研、PRD、跨部门协同、数据分析"),
+            ("jd_preset_ops_pdd", "拼多多", "电商运营实习生", "运营", "店铺运营、活动策划、用户增长"),
+            ("jd_preset_content_xhs", "小红书", "内容运营实习生", "运营", "社区内容策划、创作者运营、数据复盘"),
+            ("jd_preset_marketing_douyin", "抖音", "市场推广实习生", "市场", "品牌营销、活动策划、用户增长"),
+            ("jd_preset_gameops_tg", "腾讯游戏", "游戏运营实习生", "运营", "版本活动、玩家运营、数据分析"),
+            ("jd_preset_ib_citic", "中信证券", "投行实习生-股权承做", "金融", "IPO、再融资、并购重组、材料撰写"),
+            ("jd_preset_research_efunds", "易方达基金", "行业研究实习生", "金融", "消费/科技/医药研究、报告撰写"),
+            ("jd_preset_consult_mckinsey", "麦肯锡", "咨询实习生", "咨询", "战略咨询、行业研究、项目支持"),
+            ("jd_preset_risk_webank", "微众银行", "风险管理实习生", "风控", "信用风险、市场风险、模型验证"),
+            ("jd_preset_java_didi", "滴滴", "Java开发实习生（秋储）", "后端开发", "Java Web、业务系统开发、高可用服务"),
+            ("jd_preset_java_tencent", "腾讯", "Java后台开发实习生", "后端开发", "Java后台服务、接口开发、性能优化"),
+            ("jd_preset_java_youzan", "有赞", "Java Web开发实习生", "后端开发", "电商SaaS后端、接口与数据库设计"),
+            ("jd_preset_java_huolala", "货拉拉", "Java后端开发实习生", "后端开发", "物流系统微服务开发、接口设计"),
+        ]
+        for jd_id, company_name, title, job_role, summary in presets:
+            company = conn.execute("SELECT company_id FROM companies WHERE name = ? LIMIT 1", (company_name,)).fetchone()
+            company_id = str(company["company_id"]) if company else None
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO job_descriptions(
+                  jd_id, user_id, company_id, source_type, title, job_role, content_text, status, is_deleted
+                ) VALUES (?, NULL, ?, 'SYSTEM_PRESET', ?, ?, ?, 'READY', 0)
+                """,
+                (jd_id, company_id, title, job_role, summary),
+            )
 
     def create_resume(self, user_id: str, filename: str, storage_path: str, status: str, parsed_text: str, parse_error: str) -> dict:
         """创建简历记录。"""
@@ -311,20 +424,24 @@ class InterviewRepository:
                 (user_id, resume_id),
             )
 
-    def create_session(self, user_id: str, payload: dict) -> dict:
+    def create_session(self, user_id: str, payload: dict, jd_snapshot: dict | None = None) -> dict:
         """创建面试会话记录。"""
         interview_id = f"int_{uuid.uuid4().hex[:12]}"
+        snapshot = jd_snapshot or {}
         with self._session() as conn:
             conn.execute(
                 """
                 INSERT INTO interview_sessions(
-                  interview_id, user_id, resume_id, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'SELF_INTRO', 0, 0, 0, datetime('now'), datetime('now'))
+                  interview_id, user_id, resume_id, jd_id, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'SELF_INTRO', 0, 0, 0, datetime('now'), datetime('now'))
                 """,
                 (
                     interview_id,
                     user_id,
                     payload["resume_id"],
+                    snapshot.get("jd_id"),
+                    str(snapshot.get("jd_snapshot_title") or ""),
+                    str(snapshot.get("jd_snapshot_content") or ""),
                     str(payload.get("session_name") or ""),
                     json.dumps(payload.get("question_types") or ["project", "technical", "scenario"], ensure_ascii=False),
                     payload["job_role"],
@@ -334,6 +451,111 @@ class InterviewRepository:
                 ),
             )
         return {"interview_id": interview_id, "current_stage": "SELF_INTRO"}
+
+    def create_jd(
+        self,
+        user_id: str | None,
+        source_type: str,
+        company_id: str | None,
+        title: str,
+        job_role: str,
+        content_text: str,
+        storage_path: str | None = None,
+        status: str = "READY",
+    ) -> dict:
+        """创建 JD 记录。"""
+        jd_id = f"jd_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO job_descriptions(
+                  jd_id, user_id, company_id, source_type, title, job_role, content_text, storage_path, status, is_deleted, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, datetime('now'))
+                """,
+                (jd_id, user_id, company_id, source_type, title, job_role, content_text, storage_path, status),
+            )
+            row = conn.execute("SELECT * FROM job_descriptions WHERE jd_id = ?", (jd_id,)).fetchone()
+        return dict(row) if row else {}
+
+    def get_jd(self, jd_id: str) -> dict | None:
+        """查询单个 JD。"""
+        with self._session() as conn:
+            row = conn.execute("SELECT * FROM job_descriptions WHERE jd_id = ?", (jd_id,)).fetchone()
+        return dict(row) if row else None
+
+    def list_jds(
+        self,
+        user_id: str,
+        job_role: str | None = None,
+        source_type: str | None = None,
+        title: str | None = None,
+    ) -> list[dict]:
+        """查询用户可见 JD（系统预置 + 用户上传）。"""
+        where = "WHERE is_deleted = 0 AND (source_type = 'SYSTEM_PRESET' OR user_id = ?)"
+        params: list[object] = [user_id]
+        if job_role:
+            where += " AND job_role = ?"
+            params.append(job_role)
+        if source_type:
+            where += " AND source_type = ?"
+            params.append(source_type)
+        if title:
+            where += " AND title LIKE ?"
+            params.append(f"%{title}%")
+        with self._session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                  j.jd_id,
+                  j.user_id,
+                  j.company_id,
+                  COALESCE(c.name, '') AS company_name,
+                  j.source_type,
+                  j.title,
+                  j.job_role,
+                  j.status,
+                  j.content_text,
+                  j.created_at,
+                  j.updated_at
+                FROM job_descriptions j
+                LEFT JOIN companies c ON c.company_id = j.company_id
+                {where}
+                ORDER BY j.created_at DESC
+                """,
+                params,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_companies(self) -> list[dict]:
+        """查询公司列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT company_id, name, status, created_at, updated_at
+                FROM companies
+                WHERE status = 'ACTIVE'
+                ORDER BY name ASC
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_company(self, company_id: str) -> dict | None:
+        """查询单个公司。"""
+        with self._session() as conn:
+            row = conn.execute("SELECT * FROM companies WHERE company_id = ?", (company_id,)).fetchone()
+        return dict(row) if row else None
+
+    def soft_delete_jd(self, user_id: str, jd_id: str) -> None:
+        """软删除用户上传 JD。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE job_descriptions
+                SET is_deleted = 1, deleted_at = datetime('now'), updated_at = datetime('now')
+                WHERE jd_id = ? AND user_id = ? AND source_type = 'USER_UPLOAD' AND is_deleted = 0
+                """,
+                (jd_id, user_id),
+            )
 
     def get_session(self, interview_id: str) -> dict | None:
         """查询单个会话。"""
@@ -642,7 +864,11 @@ class InterviewRepository:
                 f"""
                 SELECT
                   s.interview_id,
+                  s.session_name,
                   s.resume_id,
+                  s.jd_id,
+                  s.jd_snapshot_title,
+                  COALESCE(j.source_type, '') AS jd_source_type,
                   s.job_role,
                   s.status,
                   s.started_at,
@@ -656,6 +882,7 @@ class InterviewRepository:
                   ) AS turn_count
                 FROM interview_sessions s
                 LEFT JOIN interview_reports r ON r.interview_id = s.interview_id
+                LEFT JOIN job_descriptions j ON j.jd_id = s.jd_id
                 {where}
                 ORDER BY s.created_at DESC
                 LIMIT ? OFFSET ?
@@ -670,10 +897,12 @@ class InterviewRepository:
         with self._session() as conn:
             session = conn.execute(
                 """
-                SELECT interview_id, resume_id, job_role, difficulty, status, started_at, finished_at, user_id
-                     , duration_seconds, duration_updated_at
-                FROM interview_sessions
-                WHERE interview_id = ?
+                SELECT s.interview_id, s.resume_id, s.job_role, s.difficulty, s.status, s.started_at, s.finished_at, s.user_id
+                     , s.jd_id, s.jd_snapshot_title, COALESCE(j.source_type, '') AS jd_source_type
+                     , s.duration_seconds, s.duration_updated_at
+                FROM interview_sessions s
+                LEFT JOIN job_descriptions j ON j.jd_id = s.jd_id
+                WHERE s.interview_id = ?
                 """,
                 (interview_id,),
             ).fetchone()

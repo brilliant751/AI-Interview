@@ -1,12 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Button, Card, Checkbox, Form, Input, Modal, Radio, Select, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Form, Input, Modal, Radio, Select, Space, Table, Tabs, Tag, Typography, Upload, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { fetchProviderHealth } from '../api/admin'
 import { ProviderHealthBanner } from '../components/ProviderHealthBanner'
-import { createInterview, fetchHistory, fetchInterviewStatus, fetchResumes } from '../api/interview'
+import { createInterview, fetchHistory, fetchInterviewStatus, fetchJds, fetchResumes, uploadJd } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试准备页面。 */
@@ -19,6 +19,13 @@ export function InterviewPreparePage() {
   const setProviderHealth = useInterviewStore((state) => state.setProviderHealth)
   const [resumePickerOpen, setResumePickerOpen] = useState(false)
   const [pendingResumeId, setPendingResumeId] = useState('')
+  const [jdPickerOpen, setJdPickerOpen] = useState(false)
+  const [pendingJdId, setPendingJdId] = useState('')
+  const [selectedJdTitle, setSelectedJdTitle] = useState('')
+  const [currentJobRole, setCurrentJobRole] = useState<'java' | 'web'>('java')
+  const [jdUploadTitle, setJdUploadTitle] = useState('')
+  const [activeBindingTab, setActiveBindingTab] = useState<'resume' | 'jd'>('resume')
+  const [form] = Form.useForm()
 
   /** 查询 provider 健康状态。 */
   const healthQuery = useQuery({
@@ -46,7 +53,10 @@ export function InterviewPreparePage() {
   const resumeQuery = useQuery({
     queryKey: ['resumes', 'prepare-picker'],
     queryFn: () => fetchResumes({ page: 1, page_size: 50 }),
-    enabled: resumePickerOpen,
+  })
+  const jdQuery = useQuery({
+    queryKey: ['jds', currentJobRole, jdPickerOpen],
+    queryFn: () => fetchJds({ job_role: currentJobRole }),
   })
 
   /** 查询暂停中的面试。 */
@@ -115,22 +125,119 @@ export function InterviewPreparePage() {
         />
       </div>
       <Card size="small" style={{ marginBottom: 16 }}>
-        <Space>
-          <Typography.Text strong>已绑定简历：</Typography.Text>
-          {resumeId ? (
-            <Tag color="blue">{selectedResumeName ? `${selectedResumeName} (${resumeId})` : resumeId}</Tag>
-          ) : (
-            <Tag color="red">未选择</Tag>
-          )}
-          <Button
-            onClick={() => {
-              setResumePickerOpen(true)
-            }}
-          >
-            选择简历
-          </Button>
-          <Button onClick={() => navigate('/resumes')}>去上传/管理简历</Button>
-        </Space>
+        <Tabs
+          activeKey={activeBindingTab}
+          onChange={(value) => setActiveBindingTab(value as 'resume' | 'jd')}
+          items={[
+            {
+              key: 'resume',
+              label: '简历',
+              children: (
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space>
+                    <Typography.Text strong>已绑定简历：</Typography.Text>
+                    {resumeId ? (
+                      <Tag color="blue">{selectedResumeName ? `${selectedResumeName} (${resumeId})` : resumeId}</Tag>
+                    ) : (
+                      <Tag color="red">未选择</Tag>
+                    )}
+                    <Button onClick={() => setResumePickerOpen(true)}>选择简历</Button>
+                    <Button onClick={() => navigate('/resumes')}>去上传/管理简历</Button>
+                  </Space>
+                  <Table
+                    rowKey="resume_id"
+                    size="small"
+                    loading={resumeQuery.isLoading}
+                    dataSource={resumeQuery.data?.items ?? []}
+                    pagination={false}
+                    columns={[
+                      { title: '文件名', dataIndex: 'file_name' },
+                      { title: '状态', dataIndex: 'parse_status' },
+                      {
+                        title: '操作',
+                        key: 'actions',
+                        render: (_, row: { resume_id: string; file_name: string }) => (
+                          <Button
+                            size="small"
+                            type={resumeId === row.resume_id ? 'default' : 'primary'}
+                            onClick={() => {
+                              setResumeId(row.resume_id)
+                              message.success(`已绑定简历：${row.file_name}`)
+                            }}
+                          >
+                            {resumeId === row.resume_id ? '已绑定' : '绑定'}
+                          </Button>
+                        ),
+                      },
+                    ]}
+                    locale={{ emptyText: '暂无简历，请先上传。' }}
+                  />
+                </Space>
+              ),
+            },
+            {
+              key: 'jd',
+              label: '岗位（JD）',
+              children: (
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <Space>
+                    <Typography.Text strong>已绑定岗位：</Typography.Text>
+                    {form.getFieldValue('jd_id') ? (
+                      <Tag color="gold">{selectedJdTitle || form.getFieldValue('jd_id')}</Tag>
+                    ) : (
+                      <Tag>未绑定 JD（仅按方向）</Tag>
+                    )}
+                    <Button onClick={() => setJdPickerOpen(true)}>选择/上传 JD</Button>
+                    <Button
+                      onClick={() => {
+                        form.setFieldValue('jd_id', '')
+                        setPendingJdId('')
+                        setSelectedJdTitle('')
+                        message.success('已清空 JD 绑定')
+                      }}
+                    >
+                      清空绑定
+                    </Button>
+                  </Space>
+                  <Table
+                    rowKey="jd_id"
+                    size="small"
+                    loading={jdQuery.isLoading}
+                    dataSource={jdQuery.data?.items ?? []}
+                    pagination={false}
+                    columns={[
+                      { title: '标题', dataIndex: 'title' },
+                      {
+                        title: '来源',
+                        dataIndex: 'source_type',
+                        render: (value: string) => (value === 'SYSTEM_PRESET' ? '系统预置' : '我的上传'),
+                      },
+                      {
+                        title: '操作',
+                        key: 'actions',
+                        render: (_, row: { jd_id: string; title: string }) => (
+                          <Button
+                            size="small"
+                            type={form.getFieldValue('jd_id') === row.jd_id ? 'default' : 'primary'}
+                            onClick={() => {
+                              form.setFieldValue('jd_id', row.jd_id)
+                              setPendingJdId(row.jd_id)
+                              setSelectedJdTitle(row.title)
+                              message.success(`已绑定岗位：${row.title}`)
+                            }}
+                          >
+                            {form.getFieldValue('jd_id') === row.jd_id ? '已绑定' : '绑定'}
+                          </Button>
+                        ),
+                      },
+                    ]}
+                    locale={{ emptyText: '暂无岗位描述，可上传一份 JD。' }}
+                  />
+                </Space>
+              ),
+            },
+          ]}
+        />
       </Card>
       <Card title="继续暂停的面试" size="small" style={{ marginBottom: 16 }}>
         <Table
@@ -139,6 +246,11 @@ export function InterviewPreparePage() {
           dataSource={pausedQuery.data?.items ?? []}
           pagination={false}
           columns={[
+            {
+              title: '面试名称',
+              dataIndex: 'session_name',
+              render: (value?: string) => value || '-',
+            },
             { title: '会话ID', dataIndex: 'interview_id' },
             { title: '简历', dataIndex: 'resume_id' },
             { title: '岗位', dataIndex: 'job_role' },
@@ -186,11 +298,17 @@ export function InterviewPreparePage() {
             output_mode: values.output_mode,
             session_name: values.session_name,
             question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
+            jd_id: values.jd_id || '',
           })
         }}
+        form={form}
       >
-        <Form.Item name="session_name" label="面试名称">
-          <Input placeholder="例如：Java后端一面（可选）" maxLength={128} />
+        <Form.Item
+          name="session_name"
+          label="面试名称"
+          rules={[{ required: true, whitespace: true, message: '请输入面试名称' }]}
+        >
+          <Input placeholder="例如：Java后端一面" maxLength={128} />
         </Form.Item>
         <Form.Item name="question_types" label="题目类型">
           <Checkbox.Group
@@ -203,11 +321,42 @@ export function InterviewPreparePage() {
         </Form.Item>
         <Form.Item name="job_role" label="岗位方向">
           <Select
+            onChange={(value: 'java' | 'web') => {
+              setCurrentJobRole(value)
+              const jdId = form.getFieldValue('jd_id')
+              const items = jdQuery.data?.items || []
+              const target = items.find((item) => item.jd_id === jdId)
+              if (jdId && target && target.job_role !== value) {
+                form.setFieldValue('jd_id', '')
+                setPendingJdId('')
+                setSelectedJdTitle('')
+                message.info('岗位方向已变更，不匹配的 JD 绑定已清空')
+              }
+            }}
             options={[
               { label: 'Java', value: 'java' },
               { label: 'Web', value: 'web' },
             ]}
           />
+        </Form.Item>
+        <Form.Item name="jd_id" label="岗位描述（可选）">
+          <Space>
+            {form.getFieldValue('jd_id') ? (
+              <Tag color="gold">{selectedJdTitle || form.getFieldValue('jd_id')}</Tag>
+            ) : (
+              <Tag>未绑定 JD（仅按方向）</Tag>
+            )}
+            <Button onClick={() => setJdPickerOpen(true)}>选择/上传 JD</Button>
+            <Button
+              onClick={() => {
+                form.setFieldValue('jd_id', '')
+                setPendingJdId('')
+                setSelectedJdTitle('')
+              }}
+            >
+              清空绑定
+            </Button>
+          </Space>
         </Form.Item>
         <Form.Item name="difficulty" label="难度">
           <Radio.Group
@@ -275,6 +424,75 @@ export function InterviewPreparePage() {
             { title: '创建时间', dataIndex: 'created_at' },
           ]}
           locale={{ emptyText: '暂无简历，请先去简历管理页上传。' }}
+        />
+      </Modal>
+      <Modal
+        title="选择岗位描述（JD）"
+        open={jdPickerOpen}
+        onCancel={() => setJdPickerOpen(false)}
+        onOk={() => {
+          form.setFieldValue('jd_id', pendingJdId)
+          const item = (jdQuery.data?.items || []).find((row) => row.jd_id === pendingJdId)
+          setSelectedJdTitle(item?.title || '')
+          setJdPickerOpen(false)
+          message.success(pendingJdId ? '已绑定 JD' : '已设置为不绑定 JD')
+        }}
+        okText="确认绑定"
+        cancelText="取消"
+      >
+        <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+          <Input
+            placeholder="上传 JD 时可填写标题（可选）"
+            value={jdUploadTitle}
+            onChange={(event) => setJdUploadTitle(event.target.value)}
+          />
+          <Upload
+            showUploadList={false}
+            customRequest={async (options) => {
+              const file = options.file as File
+              try {
+                await uploadJd({ file, job_role: currentJobRole, title: jdUploadTitle.trim() || undefined })
+                message.success('JD 上传成功')
+                setJdUploadTitle('')
+                await jdQuery.refetch()
+                options.onSuccess?.({}, file)
+              } catch (error) {
+                message.error('JD 上传失败，请重试')
+                options.onError?.(error as Error)
+              }
+            }}
+          >
+            <Button>上传我的 JD</Button>
+          </Upload>
+        </Space>
+        <Table
+          rowKey="jd_id"
+          loading={jdQuery.isLoading}
+          dataSource={[{ jd_id: '', title: '不绑定 JD（仅按岗位方向）', source_type: '-', job_role: currentJobRole }, ...(jdQuery.data?.items || [])]}
+          pagination={false}
+          onRow={(record) => ({
+            onClick: () => setPendingJdId(record.jd_id),
+          })}
+          rowSelection={{
+            type: 'radio',
+            selectedRowKeys: [pendingJdId],
+            onChange: (keys) => setPendingJdId(String(keys[0] || '')),
+          }}
+          columns={[
+            {
+              title: '标题',
+              dataIndex: 'title',
+            },
+            {
+              title: '来源',
+              dataIndex: 'source_type',
+              render: (value: string) => (value === 'SYSTEM_PRESET' ? '系统预置' : value === 'USER_UPLOAD' ? '我的上传' : '-'),
+            },
+            {
+              title: '方向',
+              dataIndex: 'job_role',
+            },
+          ]}
         />
       </Modal>
     </Card>

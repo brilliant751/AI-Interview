@@ -39,7 +39,7 @@ cd backend
 python3.11 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
 
 ### 前端
@@ -76,6 +76,10 @@ PYTHONPATH=backend python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 - `AI_INTERVIEW_CHROMA_DIR`：默认 `backend/assets/data/chroma`
 - `AI_INTERVIEW_USER_TOKEN`：默认 `user-token`
 - `AI_INTERVIEW_ADMIN_TOKEN`：默认 `admin-token`
+- `AI_INTERVIEW_LLM_PROVIDER`：默认 `mock`，接入 GLM 可设为 `openai`
+- `AI_INTERVIEW_LLM_MODEL`：例如 `glm-4.7-flash`
+- `AI_INTERVIEW_PROVIDER_BASE_URL`：兼容 OpenAI API 的地址，例如 `https://open.bigmodel.cn/api/paas/v4/`
+- `AI_INTERVIEW_OPENAI_API_KEY`：兼容 OpenAI API 的密钥（可填写智谱 BigModel Key）
 
 ## 启动前端
 

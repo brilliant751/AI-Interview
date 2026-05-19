@@ -32,6 +32,7 @@ describe('AppLayout', () => {
 
     expect(screen.getByText('AI Interview')).toBeInTheDocument()
     expect(screen.getByText('简历管理')).toBeInTheDocument()
+    expect(screen.getByText('岗位管理')).toBeInTheDocument()
     expect(screen.getByText('模拟面试')).toBeInTheDocument()
     expect(screen.getByText('历史记录')).toBeInTheDocument()
     act(() => {

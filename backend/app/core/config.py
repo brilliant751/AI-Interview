@@ -68,6 +68,7 @@ class Settings(BaseSettings):
     provider_timeout_seconds: float = 20.0
     provider_max_retries: int = 2
     provider_base_url: str = ""
+    provider_trust_env: bool = True
     ollama_base_url: str = "http://localhost:11434"
     # 兼容期配置：SDK 模式默认不依赖 URL，可用于灰度或历史配置兼容。
     funasr_base_url: str = "http://localhost:10095"
@@ -82,7 +83,9 @@ class Settings(BaseSettings):
             for provider in [self.llm_provider, self.asr_provider, self.tts_provider]
         )
         if self.app_env == "dev" and need_key and not self.openai_api_key.strip():
-            raise ValueError("dev 环境使用 openai provider 时必须配置 AI_INTERVIEW_OPENAI_API_KEY")
+            raise ValueError(
+                "dev 环境使用 openai provider 时必须配置 AI_INTERVIEW_OPENAI_API_KEY（支持兼容 OpenAI API 的第三方密钥）"
+            )
         return self
 
 
