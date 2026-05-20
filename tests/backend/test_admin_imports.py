@@ -42,7 +42,11 @@ def _install_email_validator_stub() -> None:
 
     def validate_email(email: str, *args, **kwargs) -> SimpleNamespace:
         """返回最小邮箱校验结果，供测试环境使用。"""
-        return SimpleNamespace(email=email, normalized=email)
+        return SimpleNamespace(
+            email=email,
+            normalized=email,
+            local_part=email.split("@", 1)[0],
+        )
 
     email_validator_stub.EmailNotValidError = EmailNotValidError
     email_validator_stub.validate_email = validate_email
