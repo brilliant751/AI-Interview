@@ -139,6 +139,11 @@ export function InterviewPreparePage() {
           dataSource={pausedQuery.data?.items ?? []}
           pagination={false}
           columns={[
+            {
+              title: '面试名称',
+              dataIndex: 'session_name',
+              render: (value?: string) => value || '-',
+            },
             { title: '会话ID', dataIndex: 'interview_id' },
             { title: '简历', dataIndex: 'resume_id' },
             { title: '岗位', dataIndex: 'job_role' },
@@ -189,8 +194,12 @@ export function InterviewPreparePage() {
           })
         }}
       >
-        <Form.Item name="session_name" label="面试名称">
-          <Input placeholder="例如：Java后端一面（可选）" maxLength={128} />
+        <Form.Item
+          name="session_name"
+          label="面试名称"
+          rules={[{ required: true, whitespace: true, message: '请输入面试名称' }]}
+        >
+          <Input placeholder="例如：Java后端一面" maxLength={128} />
         </Form.Item>
         <Form.Item name="question_types" label="题目类型">
           <Checkbox.Group

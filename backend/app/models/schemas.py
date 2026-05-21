@@ -211,6 +211,7 @@ class HistoryItem(BaseModel):
     """历史记录条目。"""
 
     interview_id: str
+    session_name: str = ""
     resume_id: str
     job_role: str
     status: str

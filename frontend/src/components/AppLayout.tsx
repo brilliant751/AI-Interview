@@ -78,7 +78,7 @@ export function AppLayout(props: { children: ReactNode }) {
           ) : null}
         </div>
       </Header>
-      <Content style={{ padding: '24px 16px', maxWidth: 980, margin: '0 auto', width: '100%' }}>
+      <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>
         {props.children}
       </Content>
     </Layout>
