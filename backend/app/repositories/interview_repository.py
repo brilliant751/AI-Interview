@@ -20,6 +20,7 @@ class InterviewRepository:
         """创建数据库连接。"""
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON;")
         return conn
 
     @contextmanager
@@ -35,13 +36,62 @@ class InterviewRepository:
         finally:
             conn.close()
 
+    def _practice_tables_sql(self) -> str:
+        """返回题库练习域的表结构 DDL。"""
+        return """
+                CREATE TABLE IF NOT EXISTS practice_sessions (
+                  practice_id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  job_role TEXT NOT NULL,
+                  mode TEXT NOT NULL,
+                  question_count INTEGER NOT NULL CHECK(question_count > 0),
+                  status TEXT NOT NULL DEFAULT 'ACTIVE',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS practice_session_questions (
+                  session_question_id TEXT PRIMARY KEY,
+                  practice_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  question_order INTEGER NOT NULL CHECK(question_order > 0),
+                  source_question_id TEXT,
+                  category TEXT,
+                  stem TEXT NOT NULL,
+                  analysis TEXT,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  UNIQUE(practice_id, question_order),
+                  UNIQUE(practice_id, session_question_id),
+                  FOREIGN KEY (practice_id) REFERENCES practice_sessions(practice_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS practice_answers (
+                  answer_id TEXT PRIMARY KEY,
+                  practice_id TEXT NOT NULL,
+                  session_question_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  answer_text TEXT NOT NULL,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  UNIQUE(practice_id, session_question_id),
+                  FOREIGN KEY (practice_id) REFERENCES practice_sessions(practice_id) ON DELETE CASCADE,
+                  FOREIGN KEY (practice_id, session_question_id) REFERENCES practice_session_questions(practice_id, session_question_id) ON DELETE CASCADE
+                );
+        """
+
+    def _practice_indexes_sql(self) -> str:
+        """返回题库练习域的索引 DDL。"""
+        return """
+                CREATE INDEX IF NOT EXISTS idx_practice_sessions_user_created ON practice_sessions(user_id, created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_practice_questions_session_order ON practice_session_questions(practice_id, question_order ASC);
+                CREATE INDEX IF NOT EXISTS idx_practice_answers_user_session ON practice_answers(user_id, practice_id, created_at ASC);
+        """
+
     def init_schema(self) -> None:
         """初始化核心表结构。"""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         with self._session() as conn:
             conn.execute("PRAGMA journal_mode=WAL;")
             conn.executescript(
-                """
+                f"""
                 CREATE TABLE IF NOT EXISTS resumes (
                   resume_id TEXT PRIMARY KEY,
                   user_id TEXT,
@@ -149,10 +199,12 @@ class InterviewRepository:
                   used_at TEXT,
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
+                {self._practice_tables_sql()}
 
                 CREATE INDEX IF NOT EXISTS idx_user_accounts_email ON user_accounts(email);
                 CREATE INDEX IF NOT EXISTS idx_refresh_user_expires ON auth_refresh_tokens(user_id, expires_at);
                 CREATE INDEX IF NOT EXISTS idx_reset_user_expires ON auth_password_reset_tokens(user_id, expires_at);
+                {self._practice_indexes_sql()}
                 """
             )
             self._ensure_column(conn, "interview_sessions", "technical_count", "INTEGER NOT NULL DEFAULT 0")
@@ -231,11 +283,13 @@ class InterviewRepository:
                 WHERE duration_updated_at IS NULL OR duration_updated_at = ''
                 """
             )
+            self._upgrade_practice_schema(conn)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_created ON interview_sessions(user_id, created_at DESC)")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_turns_user_interview_created ON interview_turns(user_id, interview_id, created_at ASC)"
             )
+            conn.executescript(self._practice_indexes_sql())
 
     def _ensure_column(self, conn: sqlite3.Connection, table: str, column: str, ddl: str) -> None:
         """确保表包含指定列，缺失则补齐。"""
@@ -243,6 +297,217 @@ class InterviewRepository:
         exists = any(str(row["name"]) == column for row in rows)
         if not exists:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+    def _practice_schema_needs_upgrade(self, conn: sqlite3.Connection) -> bool:
+        """检查 practice 表是否仍是缺少约束的旧结构。"""
+        expected_tokens = {
+            "practice_sessions": ["check(question_count > 0)"],
+            "practice_session_questions": [
+                "check(question_order > 0)",
+                "unique(practice_id, question_order)",
+                "unique(practice_id, session_question_id)",
+                "foreign key (practice_id) references practice_sessions(practice_id) on delete cascade",
+            ],
+            "practice_answers": [
+                "unique(practice_id, session_question_id)",
+                "foreign key (practice_id) references practice_sessions(practice_id) on delete cascade",
+                "foreign key (practice_id, session_question_id) references practice_session_questions(practice_id, session_question_id) on delete cascade",
+            ],
+        }
+        for table, tokens in expected_tokens.items():
+            row = conn.execute(
+                """
+                SELECT sql FROM sqlite_master
+                WHERE type = 'table' AND name = ?
+                """,
+                (table,),
+            ).fetchone()
+            if not row or not row["sql"]:
+                return True
+            normalized_sql = " ".join(str(row["sql"]).lower().split())
+            if any(token not in normalized_sql for token in tokens):
+                return True
+        return False
+
+    def _upgrade_practice_schema(self, conn: sqlite3.Connection) -> None:
+        """按确定性重建方式升级旧版 practice 表结构。"""
+        if not self._practice_schema_needs_upgrade(conn):
+            return
+
+        conn.execute("DROP TABLE IF EXISTS practice_answers__legacy")
+        conn.execute("DROP TABLE IF EXISTS practice_session_questions__legacy")
+        conn.execute("DROP TABLE IF EXISTS practice_sessions__legacy")
+
+        existing_tables = {
+            str(row["name"])
+            for row in conn.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (?, ?, ?)",
+                ("practice_sessions", "practice_session_questions", "practice_answers"),
+            ).fetchall()
+        }
+        if "practice_answers" in existing_tables:
+            conn.execute("ALTER TABLE practice_answers RENAME TO practice_answers__legacy")
+        if "practice_session_questions" in existing_tables:
+            conn.execute("ALTER TABLE practice_session_questions RENAME TO practice_session_questions__legacy")
+        if "practice_sessions" in existing_tables:
+            conn.execute("ALTER TABLE practice_sessions RENAME TO practice_sessions__legacy")
+
+        conn.executescript(self._practice_tables_sql())
+
+        if "practice_sessions" in existing_tables:
+            conn.execute(
+                """
+                INSERT INTO practice_sessions(practice_id, user_id, job_role, mode, question_count, status, created_at)
+                SELECT
+                  practice_id,
+                  user_id,
+                  job_role,
+                  mode,
+                  CASE WHEN question_count IS NULL OR question_count <= 0 THEN 1 ELSE question_count END,
+                  COALESCE(NULLIF(status, ''), 'ACTIVE'),
+                  COALESCE(NULLIF(created_at, ''), datetime('now'))
+                FROM practice_sessions__legacy
+                WHERE practice_id IS NOT NULL
+                  AND user_id IS NOT NULL
+                  AND job_role IS NOT NULL
+                  AND mode IS NOT NULL
+                """
+            )
+
+        if "practice_session_questions" in existing_tables:
+            conn.execute(
+                """
+                WITH ranked_questions AS (
+                  SELECT
+                    session_question_id,
+                    practice_id,
+                    user_id,
+                    question_order,
+                    source_question_id,
+                    category,
+                    stem,
+                    analysis,
+                    COALESCE(NULLIF(created_at, ''), datetime('now')) AS created_at,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY practice_id, question_order
+                      ORDER BY COALESCE(NULLIF(created_at, ''), datetime('now')) ASC, session_question_id ASC, rowid ASC
+                    ) AS order_rn,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY practice_id, session_question_id
+                      ORDER BY COALESCE(NULLIF(created_at, ''), datetime('now')) ASC, question_order ASC, rowid ASC
+                    ) AS snapshot_rn
+                  FROM practice_session_questions__legacy
+                  WHERE practice_id IS NOT NULL
+                    AND user_id IS NOT NULL
+                    AND session_question_id IS NOT NULL
+                    AND question_order > 0
+                    AND stem IS NOT NULL
+                    AND stem != ''
+                )
+                INSERT INTO practice_session_questions(
+                  session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, analysis, created_at
+                )
+                SELECT
+                  q.session_question_id,
+                  q.practice_id,
+                  q.user_id,
+                  q.question_order,
+                  q.source_question_id,
+                  q.category,
+                  q.stem,
+                  q.analysis,
+                  q.created_at
+                FROM ranked_questions q
+                JOIN practice_sessions s
+                  ON s.practice_id = q.practice_id
+                 AND s.user_id = q.user_id
+                WHERE q.order_rn = 1
+                  AND q.snapshot_rn = 1
+                """
+            )
+
+        if "practice_answers" in existing_tables:
+            conn.execute(
+                """
+                WITH ranked_answers AS (
+                  SELECT
+                    answer_id,
+                    practice_id,
+                    session_question_id,
+                    user_id,
+                    answer_text,
+                    COALESCE(NULLIF(created_at, ''), datetime('now')) AS created_at,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY answer_id
+                      ORDER BY COALESCE(NULLIF(created_at, ''), datetime('now')) ASC, rowid ASC
+                    ) AS answer_rn
+                    ,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY practice_id, session_question_id
+                      ORDER BY COALESCE(NULLIF(created_at, ''), datetime('now')) ASC, answer_id ASC, rowid ASC
+                    ) AS session_question_rn
+                  FROM practice_answers__legacy
+                  WHERE answer_id IS NOT NULL
+                    AND practice_id IS NOT NULL
+                    AND session_question_id IS NOT NULL
+                    AND user_id IS NOT NULL
+                    AND answer_text IS NOT NULL
+                    AND answer_text != ''
+                )
+                INSERT INTO practice_answers(answer_id, practice_id, session_question_id, user_id, answer_text, created_at)
+                SELECT
+                  a.answer_id,
+                  a.practice_id,
+                  a.session_question_id,
+                  a.user_id,
+                  a.answer_text,
+                  a.created_at
+                FROM ranked_answers a
+                JOIN practice_sessions s
+                  ON s.practice_id = a.practice_id
+                 AND s.user_id = a.user_id
+                JOIN practice_session_questions q
+                 ON q.practice_id = a.practice_id
+                 AND q.session_question_id = a.session_question_id
+                 AND q.user_id = a.user_id
+                WHERE a.answer_rn = 1
+                  AND a.session_question_rn = 1
+                """
+            )
+
+        conn.execute("DROP TABLE IF EXISTS practice_answers__legacy")
+        conn.execute("DROP TABLE IF EXISTS practice_session_questions__legacy")
+        conn.execute("DROP TABLE IF EXISTS practice_sessions__legacy")
+
+    def _require_practice_session_owner(self, conn: sqlite3.Connection, user_id: str, practice_id: str) -> None:
+        """确保用户对练习会话具备访问权限。"""
+        row = conn.execute(
+            """
+            SELECT practice_id FROM practice_sessions
+            WHERE practice_id = ? AND user_id = ?
+            """,
+            (practice_id, user_id),
+        ).fetchone()
+        if not row:
+            raise ValueError("练习会话不存在或无权访问")
+
+    def _require_practice_question_owner(
+        self,
+        conn: sqlite3.Connection,
+        user_id: str,
+        practice_id: str,
+        session_question_id: str,
+    ) -> None:
+        """确保用户对题目快照具备访问权限。"""
+        row = conn.execute(
+            """
+            SELECT session_question_id FROM practice_session_questions
+            WHERE practice_id = ? AND session_question_id = ? AND user_id = ?
+            """,
+            (practice_id, session_question_id, user_id),
+        ).fetchone()
+        if not row:
+            raise ValueError("题目快照不存在或无权访问")
 
     def create_resume(self, user_id: str, filename: str, storage_path: str, status: str, parsed_text: str, parse_error: str) -> dict:
         """创建简历记录。"""
@@ -334,6 +599,304 @@ class InterviewRepository:
                 ),
             )
         return {"interview_id": interview_id, "current_stage": "SELF_INTRO"}
+
+    def create_practice_session(self, user_id: str, payload: dict) -> dict:
+        """创建题库练习会话记录。"""
+        practice_id = f"prac_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO practice_sessions(practice_id, user_id, job_role, mode, question_count, status)
+                VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+                """,
+                (
+                    practice_id,
+                    user_id,
+                    payload["job_role"],
+                    payload["mode"],
+                    int(payload["question_count"]),
+                ),
+            )
+        return {"practice_id": practice_id, "status": "ACTIVE"}
+
+    def create_practice_session_with_snapshots(self, user_id: str, payload: dict, question_snapshots: list[dict]) -> dict:
+        """以单事务创建练习会话及其题目快照。"""
+        practice_id = f"prac_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO practice_sessions(practice_id, user_id, job_role, mode, question_count, status)
+                VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+                """,
+                (
+                    practice_id,
+                    user_id,
+                    payload["job_role"],
+                    payload["mode"],
+                    int(payload["question_count"]),
+                ),
+            )
+            for index, question_data in enumerate(question_snapshots, start=1):
+                conn.execute(
+                    """
+                    INSERT INTO practice_session_questions(
+                      session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, analysis
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        f"psq_{uuid.uuid4().hex[:12]}",
+                        practice_id,
+                        user_id,
+                        index,
+                        question_data.get("source_question_id"),
+                        question_data.get("category"),
+                        question_data["stem"],
+                        question_data.get("analysis"),
+                    ),
+                )
+        return {"practice_id": practice_id, "status": "ACTIVE"}
+
+    def get_practice_session(self, user_id: str, practice_id: str) -> dict | None:
+        """查询单个题库练习会话。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM practice_sessions
+                WHERE practice_id = ? AND user_id = ?
+                """,
+                (practice_id, user_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def get_practice_session_by_id(self, practice_id: str) -> dict | None:
+        """按练习会话标识查询题库练习会话。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT * FROM practice_sessions
+                WHERE practice_id = ?
+                """,
+                (practice_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def add_practice_question_snapshot(
+        self,
+        user_id: str,
+        practice_id: str,
+        question_order: int,
+        question_data: dict,
+    ) -> str:
+        """为练习会话写入题目快照。"""
+        session_question_id = f"psq_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            self._require_practice_session_owner(conn, user_id, practice_id)
+            conn.execute(
+                """
+                INSERT INTO practice_session_questions(
+                  session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, analysis
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_question_id,
+                    practice_id,
+                    user_id,
+                    int(question_order),
+                    question_data.get("source_question_id"),
+                    question_data.get("category"),
+                    question_data["stem"],
+                    question_data.get("analysis"),
+                ),
+            )
+        return session_question_id
+
+    def list_practice_question_snapshots(self, user_id: str, practice_id: str) -> list[dict]:
+        """按顺序查询用户的题目快照列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT session_question_id, practice_id, question_order, source_question_id, category, stem, analysis, created_at
+                FROM practice_session_questions
+                WHERE practice_id = ? AND user_id = ?
+                ORDER BY question_order ASC, created_at ASC
+                """,
+                (practice_id, user_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def update_practice_session_status(self, user_id: str, practice_id: str, status: str) -> bool:
+        """更新当前用户题库练习会话状态。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE practice_sessions
+                SET status = ?
+                WHERE practice_id = ? AND user_id = ?
+                """,
+                (status, practice_id, user_id),
+            )
+        return row.rowcount > 0
+
+    def add_practice_answer(
+        self,
+        user_id: str,
+        practice_id: str,
+        session_question_id: str,
+        answer_text: str,
+    ) -> str:
+        """写入题库练习答案。"""
+        answer_id = f"ans_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            self._require_practice_question_owner(conn, user_id, practice_id, session_question_id)
+            conn.execute(
+                """
+                INSERT INTO practice_answers(answer_id, practice_id, session_question_id, user_id, answer_text)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    answer_id,
+                    practice_id,
+                    session_question_id,
+                    user_id,
+                    answer_text,
+                ),
+            )
+        return answer_id
+
+    def list_practice_answers(self, user_id: str, practice_id: str) -> list[dict]:
+        """按写入顺序查询用户的练习答案列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT answer_id, practice_id, session_question_id, answer_text, created_at
+                FROM practice_answers
+                WHERE practice_id = ? AND user_id = ?
+                ORDER BY created_at ASC, answer_id ASC
+                """,
+                (practice_id, user_id),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_practice_records(self, user_id: str) -> list[dict]:
+        """查询当前用户的题库练习记录列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                  s.practice_id,
+                  s.job_role,
+                  s.mode,
+                  s.status,
+                  s.question_count,
+                  s.created_at,
+                  COUNT(a.answer_id) AS answered_count
+                FROM practice_sessions s
+                LEFT JOIN practice_answers a
+                  ON a.practice_id = s.practice_id
+                 AND a.user_id = s.user_id
+                WHERE s.user_id = ?
+                GROUP BY s.practice_id, s.job_role, s.mode, s.status, s.question_count, s.created_at
+                ORDER BY s.created_at DESC, s.practice_id DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_practice_record_detail(self, user_id: str, practice_id: str) -> dict | None:
+        """按会话读取题库练习记录明细。"""
+        with self._session() as conn:
+            session = conn.execute(
+                """
+                SELECT practice_id, job_role, mode, status, question_count, created_at, NULL AS finished_at
+                FROM practice_sessions
+                WHERE practice_id = ? AND user_id = ?
+                """,
+                (practice_id, user_id),
+            ).fetchone()
+            if session is None:
+                return None
+            items = conn.execute(
+                """
+                SELECT
+                  q.session_question_id,
+                  q.question_order,
+                  q.category,
+                  q.stem,
+                  q.analysis,
+                  a.answer_text,
+                  a.created_at AS answered_at
+                FROM practice_session_questions q
+                LEFT JOIN practice_answers a
+                  ON a.practice_id = q.practice_id
+                 AND a.session_question_id = q.session_question_id
+                 AND a.user_id = q.user_id
+                WHERE q.practice_id = ? AND q.user_id = ?
+                ORDER BY q.question_order ASC, q.created_at ASC
+                """,
+                (practice_id, user_id),
+            ).fetchall()
+        return {
+            "session": dict(session),
+            "items": [dict(row) for row in items],
+        }
+
+    def list_question_bank_items(self, job_role: str, categories: list[str] | None = None) -> list[dict]:
+        """按岗位和类别查询题库候选题。"""
+        sql = """
+            SELECT record_id, category, question, analysis
+            FROM question_bank
+            WHERE role = ?
+        """
+        params: list[object] = [job_role]
+        normalized_categories = [item for item in (categories or []) if item]
+        if normalized_categories:
+            placeholders = ", ".join("?" for _ in normalized_categories)
+            sql += f" AND category IN ({placeholders})"
+            params.extend(normalized_categories)
+        sql += " ORDER BY question_no ASC, record_id ASC"
+        with self._session() as conn:
+            rows = conn.execute(sql, tuple(params)).fetchall()
+        return [dict(row) for row in rows]
+
+    def list_admin_question_bank_items(
+        self,
+        job_role: str,
+        category: str | None,
+        keyword: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[dict], int]:
+        """按岗位、类别和关键词分页读取管理端题库列表。"""
+        where = ["role = ?"]
+        params: list[object] = [job_role]
+        if category:
+            where.append("category = ?")
+            params.append(category)
+        if keyword:
+            where.append("(title LIKE ? OR question LIKE ? OR COALESCE(analysis, '') LIKE ?)")
+            keyword_like = f"%{keyword}%"
+            params.extend([keyword_like, keyword_like, keyword_like])
+        where_clause = " AND ".join(where)
+        with self._session() as conn:
+            total = int(
+                conn.execute(
+                    f"SELECT COUNT(*) FROM question_bank WHERE {where_clause}",
+                    tuple(params),
+                ).fetchone()[0]
+            )
+            rows = conn.execute(
+                f"""
+                SELECT record_id, role, question_no, title, category, question, analysis, source_path, updated_at
+                FROM question_bank
+                WHERE {where_clause}
+                ORDER BY question_no ASC, record_id ASC
+                LIMIT ? OFFSET ?
+                """,
+                tuple([*params, limit, offset]),
+            ).fetchall()
+        return [dict(row) for row in rows], total
 
     def get_session(self, interview_id: str) -> dict | None:
         """查询单个会话。"""

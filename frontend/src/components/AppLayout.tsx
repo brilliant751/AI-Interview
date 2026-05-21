@@ -19,6 +19,7 @@ export function AppLayout(props: { children: ReactNode }) {
   const links = isAuthenticated
     ? [
         { to: '/interview', label: '模拟面试' },
+        { to: '/practice', label: '题库练习' },
         { to: '/resumes', label: '简历管理' },
         { to: '/history', label: '历史记录' },
       ]
@@ -29,6 +30,7 @@ export function AppLayout(props: { children: ReactNode }) {
 
   if (user?.role === 'admin') {
     links.push({ to: '/admin/imports', label: '知识库重建' })
+    links.push({ to: '/admin/questions', label: '题库管理' })
   }
 
   /** 执行退出登录。 */

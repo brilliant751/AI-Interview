@@ -8,6 +8,10 @@ import { HistoryPage } from '../pages/HistoryPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
 import { LoginPage } from '../pages/LoginPage'
+import { PracticePreparePage } from '../pages/PracticePreparePage'
+import { PracticeRecordsPage } from '../pages/PracticeRecordsPage'
+import { PracticeSessionPage } from '../pages/PracticeSessionPage'
+import { QuestionBankManagePage } from '../pages/QuestionBankManagePage'
 import { RegisterPage } from '../pages/RegisterPage'
 import { ReportPage } from '../pages/ReportPage'
 import { ResetPasswordPage } from '../pages/ResetPasswordPage'
@@ -119,11 +123,45 @@ export function AppRouter() {
             }
           />
           <Route
+            path="/practice"
+            element={
+              <ProtectedRoute>
+                <PracticePreparePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/:practiceId"
+            element={
+              <ProtectedRoute>
+                <PracticeSessionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/practice/:practiceId/records"
+            element={
+              <ProtectedRoute>
+                <PracticeRecordsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/imports"
             element={
               <ProtectedRoute>
                 <AdminRoute>
                   <AdminImportsPage />
+                </AdminRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/questions"
+            element={
+              <ProtectedRoute>
+                <AdminRoute>
+                  <QuestionBankManagePage />
                 </AdminRoute>
               </ProtectedRoute>
             }

@@ -301,6 +301,119 @@
           }
         }
       ]
+    },
+    {
+      "name": "Practice",
+      "item": [
+        {
+          "name": "Create Practice Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"job_role\": \"java\",\n  \"mode\": \"sequence\",\n  \"question_count\": 5,\n  \"category_filters\": [\"technical\", \"project\"]\n}"
+            },
+            "url": "{{base_url}}/practice/sessions"
+          }
+        },
+        {
+          "name": "Get Practice Session",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/sessions/{{practice_id}}"
+          }
+        },
+        {
+          "name": "Submit Practice Answer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_question_id\": \"{{session_question_id}}\",\n  \"answer_text\": \"我的答案\"\n}"
+            },
+            "url": "{{base_url}}/practice/sessions/{{practice_id}}/answers"
+          }
+        },
+        {
+          "name": "Finish Practice Session",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/sessions/{{practice_id}}/finish"
+          }
+        },
+        {
+          "name": "List Practice Records",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/records"
+          }
+        },
+        {
+          "name": "Get Practice Session Records",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/sessions/{{practice_id}}/records"
+          }
+        },
+        {
+          "name": "Admin List Question Bank",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/questions?job_role=java&page=1&page_size=10"
+          }
+        },
+        {
+          "name": "Admin Upload Question Bank Markdown",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "job_role", "value": "java", "type": "text" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{base_url}}/practice/questions/upload"
+          }
+        },
+        {
+          "name": "Admin Create Question Bank Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"job_role\": \"java\",\n  \"category\": \"technical\",\n  \"title\": \"什么是 JVM\",\n  \"question\": \"请解释 JVM 的作用\",\n  \"analysis\": \"从运行时和内存模型切入\",\n  \"source_note\": \"postman\"\n}"
+            },
+            "url": "{{base_url}}/practice/questions"
+          }
+        },
+        {
+          "name": "Admin Get Practice Import Task",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/practice/questions/import-tasks/{{task_id}}"
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -308,6 +421,9 @@
     { "key": "access_token", "value": "" },
     { "key": "refresh_token", "value": "" },
     { "key": "resume_id", "value": "" },
-    { "key": "interview_id", "value": "" }
+    { "key": "interview_id", "value": "" },
+    { "key": "practice_id", "value": "" },
+    { "key": "session_question_id", "value": "" },
+    { "key": "task_id", "value": "" }
   ]
 }

@@ -8,6 +8,7 @@ import sqlite3
 from pathlib import Path
 
 from common import DATA_ROOT, write_json
+from normalize_materials import normalize_question_category
 
 
 def parse_args() -> argparse.Namespace:
@@ -69,10 +70,18 @@ def iter_rows(input_dir: Path) -> list[dict]:
     return rows
 
 
+def group_rows_by_source(rows: list[dict]) -> dict[tuple[str, str], list[dict]]:
+    """按岗位和源文件分组，便于以文件快照方式重建题库。"""
+    grouped: dict[tuple[str, str], list[dict]] = {}
+    for row in rows:
+        group_key = (row["role"], row["source_path"])
+        grouped.setdefault(group_key, []).append(row)
+    return grouped
+
+
 def upsert_rows(conn: sqlite3.Connection, rows: list[dict]) -> tuple[int, int]:
-    """执行批量 upsert 并返回成功数与失败数。"""
+    """按材料文件快照重建题库并返回成功数与失败数。"""
     ok = 0
-    failed = 0
     sql = """
         INSERT INTO question_bank (
           record_id, role, question_no, title, category, question, analysis, source_path, raw_markdown
@@ -88,26 +97,35 @@ def upsert_rows(conn: sqlite3.Connection, rows: list[dict]) -> tuple[int, int]:
           raw_markdown=excluded.raw_markdown,
           updated_at=datetime('now');
     """
-    for row in rows:
-        try:
-            conn.execute(
-                sql,
-                (
-                    row["record_id"],
-                    row["role"],
-                    row["question_no"],
-                    row["title"],
-                    row.get("category", ""),
-                    row["question"],
-                    row.get("analysis", ""),
-                    row["source_path"],
-                    row.get("raw_markdown", ""),
-                ),
-            )
-            ok += 1
-        except Exception:
-            failed += 1
-    return ok, failed
+    grouped_rows = group_rows_by_source(rows)
+    for (role, source_path), source_rows in grouped_rows.items():
+        conn.execute("DELETE FROM question_bank WHERE role = ? AND source_path = ?", (role, source_path))
+        for row in source_rows:
+            try:
+                conn.execute(
+                    sql,
+                    (
+                        row["record_id"],
+                        row["role"],
+                        row["question_no"],
+                        row["title"],
+                        normalize_question_category(row.get("category", "")),
+                        row["question"],
+                        row.get("analysis", ""),
+                        row["source_path"],
+                        row.get("raw_markdown", ""),
+                    ),
+                )
+                ok += 1
+            except Exception as exc:
+                row_identity = {
+                    "record_id": row.get("record_id", ""),
+                    "role": row.get("role", ""),
+                    "question_no": row.get("question_no", ""),
+                    "source_path": row.get("source_path", ""),
+                }
+                raise RuntimeError(f"题库写入失败，记录标识：{json.dumps(row_identity, ensure_ascii=False)}") from exc
+    return ok, 0
 
 
 def main() -> int:
@@ -130,8 +148,21 @@ def main() -> int:
     conn = sqlite3.connect(str(db_path))
     try:
         init_schema(conn)
-        with conn:
-            ok, failed = upsert_rows(conn, rows)
+        try:
+            with conn:
+                ok, failed = upsert_rows(conn, rows)
+        except RuntimeError as exc:
+            report = {
+                "total_rows": len(rows),
+                "inserted_or_updated": 0,
+                "failed": 1,
+                "dry_run": False,
+                "error": str(exc),
+            }
+            write_json(Path(args.report), report)
+            print(str(exc))
+            print(f"报告已输出：{args.report}")
+            return 1
         report = {"total_rows": len(rows), "inserted_or_updated": ok, "failed": failed, "dry_run": False}
         write_json(Path(args.report), report)
         print("题库构建完成：" + json.dumps(report, ensure_ascii=False))

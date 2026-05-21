@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test'
+import path from 'node:path'
 
 /** Playwright 最小可运行配置。 */
 export default defineConfig({
@@ -7,13 +8,13 @@ export default defineConfig({
   retries: 0,
   use: {
     baseURL: 'http://127.0.0.1:4173',
-    channel: 'chrome',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173',
+    cwd: path.resolve(__dirname),
     port: 4173,
     reuseExistingServer: true,
   },

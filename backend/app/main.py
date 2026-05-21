@@ -18,6 +18,8 @@ from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
 from app.services.interview_service import InterviewService
 from app.services.material_import_service import MaterialImportService
+from app.services.practice_service import PracticeService
+from app.services.question_bank_service import QuestionBankService
 from app.services.report_worker import ReportWorker
 
 logger = logging.getLogger(__name__)
@@ -49,12 +51,19 @@ async def lifespan(app: FastAPI):
     material_import_service = MaterialImportService(repo_root=REPO_ROOT)
     audit_service = AuditService()
     auth_service = AuthService(repo=repo, audit_service=audit_service)
+    question_bank_service = QuestionBankService(
+        repo=repo,
+        import_service=material_import_service,
+        repo_root=REPO_ROOT,
+    )
     app.state.repo = repo
     app.state.report_worker = report_worker
     app.state.material_import_service = material_import_service
     app.state.audit_service = audit_service
     app.state.auth_service = auth_service
+    app.state.question_bank_service = question_bank_service
     app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker)
+    app.state.practice_service = PracticeService(repo=repo)
     logger.info("应用启动完成，数据库与服务已初始化")
     yield
     await material_import_service.shutdown()

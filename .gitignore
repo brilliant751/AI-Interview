@@ -5,6 +5,7 @@ txt/
 # Python
 __pycache__/
 .venv/
+.venv-ci/
 venv/
 .pytest_cache/
 .ruff_cache/
