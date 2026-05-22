@@ -3,7 +3,7 @@ import { apiClient } from './client'
 /** 创建会话请求体。 */
 export interface CreateInterviewPayload {
   resume_id: string
-  job_role: 'java' | 'web'
+  job_role?: 'java' | 'web'
   difficulty: 'easy' | 'medium' | 'hard'
   input_mode: 'text' | 'voice'
   output_mode: 'text' | 'voice'

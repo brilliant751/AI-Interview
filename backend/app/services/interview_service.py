@@ -20,7 +20,9 @@ from app.services.report_worker import ReportWorker
 from app.services.voice_service import VoiceService
 
 logger = logging.getLogger(__name__)
+resume_context_logger = logging.getLogger("app.resume_context")
 INTERVIEW_END_MESSAGE = "本次面试已结束，正在生成报告。"
+INTERVIEW_FIRST_QUESTION = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
 
 
 class InterviewService:
@@ -42,6 +44,9 @@ class InterviewService:
         if str(resume.get("user_id") or "") != user_id:
             raise ApiError(code="RESUME_403_FORBIDDEN", message="无权使用该简历", status_code=403)
         jd_id = str(payload.get("jd_id") or "").strip()
+        normalized_role = str(payload.get("job_role") or "").strip()
+        if not jd_id and not normalized_role:
+            raise ApiError(code="INTERVIEW_400_ROLE_OR_JD_REQUIRED", message="岗位方向与岗位描述至少选择一个", status_code=400)
         jd_snapshot: dict[str, str] = {}
         if jd_id:
             jd = self.repo.get_jd(jd_id)
@@ -50,15 +55,19 @@ class InterviewService:
             is_system = str(jd.get("source_type") or "") == "SYSTEM_PRESET"
             if (not is_system) and str(jd.get("user_id") or "") != user_id:
                 raise ApiError(code="JD_403_FORBIDDEN", message="无权访问该 JD", status_code=403)
-            if str(jd.get("job_role") or "") != str(payload.get("job_role") or ""):
+            jd_role = str(jd.get("job_role") or "").strip()
+            if normalized_role and jd_role != normalized_role:
                 raise ApiError(code="JD_409_ROLE_MISMATCH", message="JD 岗位方向与面试方向不匹配", status_code=409)
+            if not normalized_role:
+                normalized_role = jd_role
             jd_snapshot = {
                 "jd_id": jd_id,
                 "jd_snapshot_title": str(jd.get("title") or ""),
                 "jd_snapshot_content": str(jd.get("content_text") or "")[:2000],
             }
+        payload["job_role"] = normalized_role
         session = self.repo.create_session(user_id=user_id, payload=payload, jd_snapshot=jd_snapshot)
-        first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
+        first_question = INTERVIEW_FIRST_QUESTION
         output_mode = str(payload.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
         if output_mode == "voice":
@@ -106,7 +115,7 @@ class InterviewService:
             resumed = self.repo.resume_session(user_id=user_id, interview_id=interview_id)
             if not resumed:
                 raise ApiError(code="STATE_409", message="面试状态不允许恢复", status_code=409)
-        first_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
+        first_question = INTERVIEW_FIRST_QUESTION
         question = self.repo.get_last_next_question(user_id=user_id, interview_id=interview_id) or first_question
         output_mode = str(session.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
@@ -185,6 +194,24 @@ class InterviewService:
             for text in picked
         ]
 
+    def _build_conversation_history(self, previous_turns: list[dict[str, Any]], current_answer: str) -> list[dict[str, str]]:
+        """按固定 role 格式构建历史消息：assistant -> user 交替。"""
+        history: list[dict[str, str]] = []
+        assistant_question = INTERVIEW_FIRST_QUESTION
+        for turn in previous_turns:
+            answer_text = str(turn.get("answer_text") or "").strip()
+            if answer_text:
+                history.append({"role": "assistant", "content": assistant_question})
+                history.append({"role": "user", "content": answer_text})
+            next_question = str(turn.get("next_question") or "").strip()
+            if next_question:
+                assistant_question = next_question
+        normalized_answer = (current_answer or "").strip()
+        if normalized_answer:
+            history.append({"role": "assistant", "content": assistant_question})
+            history.append({"role": "user", "content": normalized_answer})
+        return history
+
     def submit_turn_with_audio(self, interview_id: str, stage: str, audio_bytes: bytes, filename: str, user_id: str) -> dict:
         """处理 multipart 音频上传的轮次提交。"""
         payload = {
@@ -227,7 +254,49 @@ class InterviewService:
 
         answer, input_source = self._resolve_answer(payload)
         resume = self.repo.get_resume(session["resume_id"]) or {}
-        resume_references = self._build_resume_references(str(resume.get("parsed_text") or ""), answer)
+        resume_text = str(resume.get("parsed_text") or "").strip()
+        if resume_text:
+            logger.info(
+                "简历解析内容已加载：resume_id=%s，总长度=%s，预览=%s",
+                str(session.get("resume_id") or ""),
+                len(resume_text),
+                resume_text[:300].replace("\n", " "),
+            )
+            resume_context_logger.info(
+                "简历解析内容已加载：trace_id=%s interview_id=%s resume_id=%s 总长度=%s 预览=%s",
+                trace_id,
+                interview_id,
+                str(session.get("resume_id") or ""),
+                len(resume_text),
+                resume_text[:300].replace("\n", " "),
+            )
+        else:
+            logger.info("简历解析内容为空：resume_id=%s", str(session.get("resume_id") or ""))
+            resume_context_logger.info(
+                "简历解析内容为空：trace_id=%s interview_id=%s resume_id=%s",
+                trace_id,
+                interview_id,
+                str(session.get("resume_id") or ""),
+            )
+        resume_references = self._build_resume_references(resume_text, answer)
+        if resume_references:
+            logger.info(
+                "简历命中要点（将参与本轮提问）：%s",
+                " | ".join(str(item.get("content") or "")[:120].replace("\n", " ") for item in resume_references),
+            )
+            resume_context_logger.info(
+                "简历命中要点（将参与本轮提问）：trace_id=%s interview_id=%s 内容=%s",
+                trace_id,
+                interview_id,
+                " | ".join(str(item.get("content") or "")[:120].replace("\n", " ") for item in resume_references),
+            )
+        else:
+            logger.info("本轮未命中简历要点，继续使用岗位/JD/知识库上下文。")
+            resume_context_logger.info(
+                "本轮未命中简历要点：trace_id=%s interview_id=%s，继续使用岗位/JD/知识库上下文。",
+                trace_id,
+                interview_id,
+            )
         if input_source == "ASR_SERVER":
             providers["asr"] = self.voice_service.asr_provider
             provider_status["asr"] = self.voice_service.health().get("asr", "UNKNOWN")
@@ -277,6 +346,8 @@ class InterviewService:
                 }
             )
         references = [*jd_references, *resume_references, *references][:4]
+        previous_turns = self.repo.list_turns(interview_id)
+        history_messages = self._build_conversation_history(previous_turns=previous_turns, current_answer=answer)
         generation_mode = "mock"
         if next_stage == InterviewStage.END.value:
             next_question = INTERVIEW_END_MESSAGE
@@ -290,6 +361,12 @@ class InterviewService:
                     stage=stage,
                     technical_count=technical_count,
                     follow_up_count=follow_up_count,
+                    history_messages=history_messages,
+                    job_role=str(session.get("job_role") or ""),
+                    jd_content=jd_snapshot_content,
+                    resume_content=resume_text,
+                    trace_id=trace_id,
+                    interview_id=interview_id,
                 )
                 providers["llm"] = self.question_workflow.llm_provider
                 provider_status["llm"] = self.question_workflow.health().get("llm", "UNKNOWN")
@@ -344,6 +421,14 @@ class InterviewService:
             trace_id=trace_id,
             latency_ms=latency_ms,
             generation_mode=generation_mode,
+        )
+        resume_context_logger.info(
+            "轮次已写入：trace_id=%s interview_id=%s turn_id=%s stage=%s generation_mode=%s",
+            trace_id,
+            interview_id,
+            turn_id,
+            stage,
+            generation_mode,
         )
         if next_stage == InterviewStage.END.value:
             self.repo.finish_session(interview_id)

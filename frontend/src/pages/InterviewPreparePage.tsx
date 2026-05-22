@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Button, Card, Checkbox, Form, Input, Modal, Radio, Select, Space, Table, Tabs, Tag, Typography, Upload, message } from 'antd'
+import { Button, Card, Checkbox, Form, Input, Modal, Radio, Select, Space, Switch, Table, Tabs, Tag, Typography, Upload, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -24,7 +24,10 @@ export function InterviewPreparePage() {
   const [selectedJdTitle, setSelectedJdTitle] = useState('')
   const [currentJobRole, setCurrentJobRole] = useState<'java' | 'web'>('java')
   const [jdUploadTitle, setJdUploadTitle] = useState('')
+  const [jdFilterRole, setJdFilterRole] = useState('')
+  const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [activeBindingTab, setActiveBindingTab] = useState<'resume' | 'jd'>('resume')
+  const [positionMode, setPositionMode] = useState<'role' | 'jd'>('role')
   const [form] = Form.useForm()
 
   /** 查询 provider 健康状态。 */
@@ -49,15 +52,27 @@ export function InterviewPreparePage() {
     setPendingResumeId(resumeId)
   }, [resumeId])
 
+
   /** 查询可选简历。 */
   const resumeQuery = useQuery({
     queryKey: ['resumes', 'prepare-picker'],
     queryFn: () => fetchResumes({ page: 1, page_size: 50 }),
   })
   const jdQuery = useQuery({
-    queryKey: ['jds', currentJobRole, jdPickerOpen],
-    queryFn: () => fetchJds({ job_role: currentJobRole }),
+    queryKey: ['jds', jdPickerOpen, jdFilterRole, jdFilterTitle],
+    queryFn: () =>
+      fetchJds({
+        job_role: jdFilterRole.trim() || undefined,
+        title: jdFilterTitle.trim() || undefined,
+      }),
+    enabled: jdPickerOpen,
   })
+
+  useEffect(() => {
+    if (jdPickerOpen) {
+      void jdQuery.refetch()
+    }
+  }, [jdPickerOpen, jdQuery])
 
   /** 查询暂停中的面试。 */
   const pausedQuery = useQuery({
@@ -77,7 +92,7 @@ export function InterviewPreparePage() {
     onSuccess: (data, variables) => {
       setSessionConfig({
         interviewId: data.interview_id,
-        jobRole: variables.job_role,
+        jobRole: variables.job_role || currentJobRole,
         difficulty: variables.difficulty,
         inputMode: variables.input_mode,
         outputMode: variables.output_mode,
@@ -292,13 +307,13 @@ export function InterviewPreparePage() {
           }
           createMutation.mutate({
             resume_id: resumeId,
-            job_role: values.job_role,
+            job_role: positionMode === 'role' ? values.job_role : undefined,
             difficulty: values.difficulty,
             input_mode: values.input_mode,
             output_mode: values.output_mode,
             session_name: values.session_name,
             question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
-            jd_id: values.jd_id || '',
+            jd_id: positionMode === 'jd' ? values.jd_id : undefined,
           })
         }}
         form={form}
@@ -319,45 +334,52 @@ export function InterviewPreparePage() {
             ]}
           />
         </Form.Item>
-        <Form.Item name="job_role" label="岗位方向">
-          <Select
-            onChange={(value: 'java' | 'web') => {
-              setCurrentJobRole(value)
-              const jdId = form.getFieldValue('jd_id')
-              const items = jdQuery.data?.items || []
-              const target = items.find((item) => item.jd_id === jdId)
-              if (jdId && target && target.job_role !== value) {
-                form.setFieldValue('jd_id', '')
-                setPendingJdId('')
-                setSelectedJdTitle('')
-                message.info('岗位方向已变更，不匹配的 JD 绑定已清空')
-              }
-            }}
-            options={[
-              { label: 'Java', value: 'java' },
-              { label: 'Web', value: 'web' },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item name="jd_id" label="岗位描述（可选）">
+        <Form.Item label="岗位信息模式">
           <Space>
-            {form.getFieldValue('jd_id') ? (
-              <Tag color="gold">{selectedJdTitle || form.getFieldValue('jd_id')}</Tag>
-            ) : (
-              <Tag>未绑定 JD（仅按方向）</Tag>
-            )}
-            <Button onClick={() => setJdPickerOpen(true)}>选择/上传 JD</Button>
-            <Button
-              onClick={() => {
-                form.setFieldValue('jd_id', '')
-                setPendingJdId('')
-                setSelectedJdTitle('')
+            <Typography.Text>岗位方向</Typography.Text>
+            <Switch
+              checked={positionMode === 'jd'}
+              checkedChildren="JD"
+              unCheckedChildren="方向"
+              onChange={(checked) => {
+                const mode: 'role' | 'jd' = checked ? 'jd' : 'role'
+                setPositionMode(mode)
+                if (mode === 'role') {
+                  form.setFieldValue('jd_id', '')
+                  setPendingJdId('')
+                  setSelectedJdTitle('')
+                }
               }}
-            >
-              清空绑定
-            </Button>
+            />
+            <Typography.Text>岗位描述（JD）</Typography.Text>
           </Space>
         </Form.Item>
+        {positionMode === 'role' ? (
+          <Form.Item name="job_role" label="岗位方向" rules={[{ required: true, message: '请选择岗位方向' }]}>
+            <Select
+              onChange={(value: 'java' | 'web') => setCurrentJobRole(value)}
+              options={[
+                { label: 'Java', value: 'java' },
+                { label: 'Web', value: 'web' },
+              ]}
+            />
+          </Form.Item>
+        ) : (
+          <Form.Item name="jd_id" label="岗位描述（JD）" rules={[{ required: true, whitespace: true, message: '请选择岗位描述' }]}>
+            <Space>
+              {form.getFieldValue('jd_id') ? (
+                <Tag color="gold">{selectedJdTitle || form.getFieldValue('jd_id')}</Tag>
+              ) : (
+                <Tag color="red">未选择 JD</Tag>
+              )}
+              <Button
+                onClick={() => setJdPickerOpen(true)}
+              >
+                选择 JD
+              </Button>
+            </Space>
+          </Form.Item>
+        )}
         <Form.Item name="difficulty" label="难度">
           <Radio.Group
             options={[
@@ -435,12 +457,37 @@ export function InterviewPreparePage() {
           const item = (jdQuery.data?.items || []).find((row) => row.jd_id === pendingJdId)
           setSelectedJdTitle(item?.title || '')
           setJdPickerOpen(false)
-          message.success(pendingJdId ? '已绑定 JD' : '已设置为不绑定 JD')
+          message.success('已绑定 JD')
         }}
         okText="确认绑定"
         cancelText="取消"
+        width={1100}
+        styles={{ body: { height: 640, overflow: 'hidden' } }}
       >
-        <Space direction="vertical" style={{ width: '100%', marginBottom: 12 }}>
+        <Space direction="vertical" style={{ width: '100%', height: '100%' }}>
+          <Space wrap style={{ width: '100%' }}>
+            <Input
+              placeholder="按 job_role 搜索，例如：java / web / 后端开发"
+              value={jdFilterRole}
+              onChange={(event) => setJdFilterRole(event.target.value)}
+              style={{ width: 320 }}
+            />
+            <Input
+              placeholder="按标题关键词搜索"
+              value={jdFilterTitle}
+              onChange={(event) => setJdFilterTitle(event.target.value)}
+              style={{ width: 320 }}
+            />
+            <Button onClick={() => void jdQuery.refetch()}>搜索</Button>
+            <Button
+              onClick={() => {
+                setJdFilterRole('')
+                setJdFilterTitle('')
+              }}
+            >
+              清空筛选
+            </Button>
+          </Space>
           <Input
             placeholder="上传 JD 时可填写标题（可选）"
             value={jdUploadTitle}
@@ -468,8 +515,9 @@ export function InterviewPreparePage() {
         <Table
           rowKey="jd_id"
           loading={jdQuery.isLoading}
-          dataSource={[{ jd_id: '', title: '不绑定 JD（仅按岗位方向）', source_type: '-', job_role: currentJobRole }, ...(jdQuery.data?.items || [])]}
+          dataSource={jdQuery.data?.items || []}
           pagination={false}
+          scroll={{ y: 420 }}
           onRow={(record) => ({
             onClick: () => setPendingJdId(record.jd_id),
           })}
@@ -484,6 +532,11 @@ export function InterviewPreparePage() {
               dataIndex: 'title',
             },
             {
+              title: '公司',
+              dataIndex: 'company_name',
+              render: (value: string) => value || '-',
+            },
+            {
               title: '来源',
               dataIndex: 'source_type',
               render: (value: string) => (value === 'SYSTEM_PRESET' ? '系统预置' : value === 'USER_UPLOAD' ? '我的上传' : '-'),
@@ -491,6 +544,19 @@ export function InterviewPreparePage() {
             {
               title: '方向',
               dataIndex: 'job_role',
+            },
+            {
+              title: '内容摘要',
+              dataIndex: 'content_text',
+              render: (value: string) => (
+                <Typography.Paragraph style={{ marginBottom: 0 }} ellipsis={{ rows: 2, expandable: false }}>
+                  {value || '-'}
+                </Typography.Paragraph>
+              ),
+            },
+            {
+              title: '更新时间',
+              dataIndex: 'updated_at',
             },
           ]}
         />

@@ -819,7 +819,7 @@ components:
         total: { type: integer }
     InterviewCreateRequest:
       type: object
-      required: [resume_id, job_role]
+      required: [resume_id]
       properties:
         resume_id: { type: string }
         jd_id: { type: string }
@@ -827,7 +827,7 @@ components:
         question_types:
           type: array
           items: { type: string, enum: [project, technical, scenario] }
-        job_role: { type: string, enum: [java, web] }
+        job_role: { type: string, enum: [java, web], nullable: true }
         difficulty: { type: string, enum: [easy, medium, hard] }
         input_mode: { type: string, enum: [text, voice] }
         output_mode: { type: string, enum: [text, voice] }

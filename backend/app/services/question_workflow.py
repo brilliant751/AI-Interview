@@ -153,17 +153,55 @@ class QuestionWorkflow:
         )
         return output["question"]
 
-    def generate_by_llm(self, answer: str, references: list[dict[str, Any]]) -> str:
+    def generate_by_llm(
+        self,
+        answer: str,
+        references: list[dict[str, Any]],
+        stage: str,
+        history_messages: list[dict[str, str]] | None = None,
+        job_role: str = "",
+        jd_content: str = "",
+        resume_content: str = "",
+        trace_id: str = "",
+        interview_id: str = "",
+    ) -> str:
         """调用 LLM 生成问题。"""
         if self.llm_provider == "openai":
-            return self._get_openai_client().generate_question(answer=answer, references=references)
+            return self._get_openai_client().generate_question(
+                answer=answer,
+                references=references,
+                stage=stage,
+                history_messages=history_messages or [],
+                job_role=job_role,
+                jd_content=jd_content,
+                resume_content=resume_content,
+                trace_id=trace_id,
+                interview_id=interview_id,
+            )
         if self.llm_provider == "ollama":
             ref_titles = "；".join(ref.get("title", "") for ref in references[:3] if ref.get("title"))
             ref_hint = ref_titles or "岗位基础能力"
             ref_context = self._build_reference_context(references=references)
+            dialogue_context = ""
+            for message in history_messages or []:
+                role = str(message.get("role") or "").strip()
+                content = str(message.get("content") or "").strip()
+                if role and content:
+                    dialogue_context += f"role: {role}\ncontent: {content}\n\n"
+            role_or_jd = (jd_content or "").strip() or f"岗位方向：{job_role or '未提供'}"
+            prefix = ""
+            if stage == "PROJECT_DEEP_DIVE" and (resume_content or "").strip():
+                prefix = (
+                    "【简历内容（仅项目经历轮使用）】\n"
+                    f"{resume_content[:2400]}\n"
+                    "请围绕候选人简历项目经历进行追问。\n\n"
+                )
             prompt = (
-                "你是资深中文技术面试官，请基于候选人回答生成一个追问问题。"
-                f"候选人回答：{answer}\n"
+                "你是资深中文技术面试官，请基于完整历史对话生成一个追问问题。\n"
+                f"{prefix}"
+                f"岗位方向或岗位描述：{role_or_jd}\n"
+                f"当前阶段：{stage}\n"
+                f"历史对话（固定格式）：\n{dialogue_context}"
                 f"参考主题：{ref_hint}\n"
                 f"参考资料（含JD与简历）：\n{ref_context}\n"
                 "要求：只输出一句中文问题，并优先验证候选人经历与JD要求的匹配度。"
@@ -178,10 +216,26 @@ class QuestionWorkflow:
         stage: str,
         technical_count: int = 0,
         follow_up_count: int = 0,
+        history_messages: list[dict[str, str]] | None = None,
+        job_role: str = "",
+        jd_content: str = "",
+        resume_content: str = "",
+        trace_id: str = "",
+        interview_id: str = "",
     ) -> str:
         """统一生成入口：openai 优先，失败由上层降级。"""
         if self.llm_provider in {"openai", "ollama"}:
-            return self.generate_by_llm(answer=answer, references=references)
+            return self.generate_by_llm(
+                answer=answer,
+                references=references,
+                stage=stage,
+                history_messages=history_messages,
+                job_role=job_role,
+                jd_content=jd_content,
+                resume_content=resume_content,
+                trace_id=trace_id,
+                interview_id=interview_id,
+            )
         return self.generate_template(
             answer=answer,
             references=references,

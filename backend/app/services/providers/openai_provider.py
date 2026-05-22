@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from io import BytesIO
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+resume_context_logger = logging.getLogger("app.resume_context")
 
 
 class OpenAIProviderClient:
@@ -84,40 +88,79 @@ class OpenAIProviderClient:
                 chunks.append(f"- {title}")
         return "\n".join(chunks) if chunks else "无"
 
-    def generate_question(self, answer: str, references: list[dict]) -> str:
+    def generate_question(
+        self,
+        answer: str,
+        references: list[dict],
+        stage: str,
+        history_messages: list[dict[str, str]],
+        job_role: str,
+        jd_content: str,
+        resume_content: str,
+        trace_id: str,
+        interview_id: str,
+    ) -> str:
         """调用 LLM 生成下一题。"""
-        ref_titles = "；".join(ref.get("title", "") for ref in references[:3] if ref.get("title"))
-        ref_hint = ref_titles or "岗位基础能力"
         ref_context = self._build_reference_context(references=references)
-        result = self.client.chat.completions.create(
-            model=self.settings.llm_model,
-            messages=[
+        role_or_jd = (jd_content or "").strip() or f"岗位方向：{job_role or '未提供'}"
+        messages: list[dict[str, str]] = [
+            {
+                "role": "system",
+                "content": (
+                    "你是一位资深中文技术面试官。"
+                    "你的目标是基于候选人历史回答，提出一个具体、可追问、可验证的下一问。"
+                    "优先围绕技术决策、实现细节、权衡取舍、排障过程、结果度量。"
+                    "不要复述题干，不要泛泛而谈，不要同时问多个问题。"
+                    "如候选人回答过短（如“不会”“不清楚”“no”），应先做澄清式追问。"
+                ),
+            }
+        ]
+        if stage == "PROJECT_DEEP_DIVE" and (resume_content or "").strip():
+            sent_resume_content = resume_content[:2400]
+            logger.info(
+                "发送给大模型的简历内容（项目经历轮）：总长度=%s，发送长度=%s，内容预览=%s",
+                len(resume_content),
+                len(sent_resume_content),
+                sent_resume_content[:400].replace("\n", " "),
+            )
+            resume_context_logger.info(
+                "发送给大模型的简历内容（项目经历轮）：trace_id=%s interview_id=%s 总长度=%s 发送长度=%s 内容预览=%s",
+                trace_id,
+                interview_id,
+                len(resume_content),
+                len(sent_resume_content),
+                sent_resume_content[:400].replace("\n", " "),
+            )
+            messages.append(
                 {
                     "role": "system",
                     "content": (
-                        "你是一位资深中文技术面试官。"
-                        "你的目标是基于候选人刚才的回答，提出一个具体、可追问、可验证的下一问。"
-                        "优先围绕技术决策、实现细节、权衡取舍、排障过程、结果度量。"
-                        "不要复述题干，不要泛泛而谈，不要同时问多个问题。"
-                        "如候选人回答过短（如“不会”“不清楚”“no”），应先做澄清式追问。"
+                        "【简历内容（仅项目经历轮使用）】\n"
+                        f"{sent_resume_content}\n"
+                        "请围绕候选人简历中的项目经历进行追问。"
                     ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        "请生成下一轮技术追问。"
-                        f"候选人回答：{answer}\n"
-                        f"参考主题：{ref_hint}\n"
-                        f"参考资料（含JD与简历）：\n{ref_context}\n"
-                        "输出要求："
-                        "1) 只输出一句中文问句；"
-                        "2) 20-50字；"
-                        "3) 必须与候选人回答或参考主题直接相关；"
-                        "4) 优先验证候选人经历是否匹配JD要求；"
-                        "5) 不要输出解释、前缀或编号。"
-                    ),
-                },
-            ],
+                }
+            )
+        messages.append(
+            {
+                "role": "system",
+                "content": (
+                    f"岗位方向或岗位描述：{role_or_jd}\n"
+                    f"当前阶段：{stage}\n"
+                    f"参考资料（含JD与简历）：\n{ref_context}"
+                ),
+            }
+        )
+        for message in history_messages:
+            role = str(message.get("role") or "").strip().lower()
+            content = str(message.get("content") or "").strip()
+            if role in {"assistant", "user"} and content:
+                messages.append({"role": role, "content": content})
+        if not history_messages:
+            messages.append({"role": "user", "content": answer})
+        result = self.client.chat.completions.create(
+            model=self.settings.llm_model,
+            messages=messages,
             # 通过 extra_body 透传 GLM 扩展字段，关闭思考模式，避免仅返回 reasoning_content。
             extra_body={"thinking": {"type": "disabled"}},
             max_tokens=256,

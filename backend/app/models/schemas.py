@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class ResumeUploadResponse(BaseModel):
@@ -37,7 +37,7 @@ class InterviewCreateRequest(BaseModel):
     """创建面试会话请求。"""
 
     resume_id: str = Field(min_length=6)
-    job_role: Literal["java", "web"]
+    job_role: Optional[Literal["java", "web"]] = None
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     input_mode: Literal["text", "voice"] = "text"
     output_mode: Literal["text", "voice"] = "text"
@@ -46,6 +46,13 @@ class InterviewCreateRequest(BaseModel):
         default_factory=lambda: ["project", "technical", "scenario"]
     )
     jd_id: str = ""
+
+    @model_validator(mode="after")
+    def validate_role_or_jd(self) -> "InterviewCreateRequest":
+        """校验岗位方向与岗位描述至少提供一个。"""
+        if self.job_role is None and not (self.jd_id or "").strip():
+            raise ValueError("job_role 与 jd_id 至少提供一个")
+        return self
 
 
 class InterviewCreateResponse(BaseModel):
