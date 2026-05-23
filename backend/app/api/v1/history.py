@@ -48,6 +48,7 @@ async def list_history(
             session_name=str(row.get("session_name") or ""),
             resume_id=row["resume_id"],
             job_role=row["job_role"],
+            difficulty=str(row.get("difficulty") or "medium"),
             status=row["status"],
             jd_id=str(row.get("jd_id") or ""),
             jd_title=str(row.get("jd_snapshot_title") or ""),

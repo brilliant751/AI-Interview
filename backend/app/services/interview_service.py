@@ -359,6 +359,7 @@ class InterviewService:
                     answer=answer,
                     references=references,
                     stage=stage,
+                    difficulty=str(session.get("difficulty") or "medium"),
                     technical_count=technical_count,
                     follow_up_count=follow_up_count,
                     history_messages=history_messages,
@@ -376,6 +377,7 @@ class InterviewService:
                     answer=answer,
                     references=references,
                     stage=stage,
+                    difficulty=str(session.get("difficulty") or "medium"),
                     technical_count=technical_count,
                     follow_up_count=follow_up_count,
                 )
@@ -388,6 +390,7 @@ class InterviewService:
                 answer=answer,
                 references=references,
                 stage=stage,
+                difficulty=str(session.get("difficulty") or "medium"),
                 technical_count=technical_count,
                 follow_up_count=follow_up_count,
             )

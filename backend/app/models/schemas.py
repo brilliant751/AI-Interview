@@ -225,6 +225,7 @@ class HistoryItem(BaseModel):
     session_name: str = ""
     resume_id: str
     job_role: str
+    difficulty: str = "medium"
     status: str
     jd_id: str = ""
     jd_title: str = ""

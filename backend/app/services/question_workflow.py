@@ -102,23 +102,45 @@ class QuestionWorkflow:
                 contexts.append(f"- {title}")
         return "\n".join(contexts) if contexts else "无"
 
+    def _sanitize_spoken_question(self, text: str) -> str:
+        """清理模型可能返回的装饰性内容，保留可直接说出口的一句问句。"""
+        normalized = (text or "").strip()
+        if not normalized:
+            return normalized
+        lines = [line.strip() for line in normalized.splitlines() if line.strip()]
+        filtered = [
+            line
+            for line in lines
+            if ("追问意图" not in line and not line.startswith("*(") and not line.startswith("（追问意图"))
+        ]
+        merged = " ".join(filtered) if filtered else normalized
+        cleaned = merged.replace("**", "").replace("```", "").strip()
+        return cleaned
+
     def generate_template(
         self,
         answer: str,
         references: list[dict[str, Any]],
         stage: str,
+        difficulty: str = "medium",
         technical_count: int = 0,
         follow_up_count: int = 0,
     ) -> str:
         """基于模板生成问题，作为兜底方案。"""
         ref_hint = self._pick_reference_hint(references)
         answer_hint = answer.strip().replace("\n", " ")[:24]
+        difficulty_hint_map = {
+            "easy": "请保持基础难度，先核验核心概念与实际参与度。",
+            "medium": "请保持标准难度，兼顾实现细节、取舍与结果。",
+            "hard": "请提高难度，深入追问边界条件、故障排查与优化证据。",
+        }
+        difficulty_hint = difficulty_hint_map.get(difficulty, difficulty_hint_map["medium"])
 
         if stage == "TECHNICAL":
             prompts = [
-                f"基于你刚才提到的“{answer_hint}”，请展开说明你在“{ref_hint}”上的技术方案和实现细节。",
-                f"你在“{ref_hint}”里具体负责了哪些部分？结合你刚才提到的“{answer_hint}”，说说遇到过什么技术难点以及怎么解决的。",
-                f"如果围绕“{ref_hint}”继续深入，结合你刚才的回答“{answer_hint}”，你会如何优化当前方案的性能、稳定性或可维护性？",
+                f"{difficulty_hint} 基于你刚才提到的“{answer_hint}”，请展开说明你在“{ref_hint}”上的技术方案和实现细节。",
+                f"{difficulty_hint} 你在“{ref_hint}”里具体负责了哪些部分？结合你刚才提到的“{answer_hint}”，说说遇到过什么技术难点以及怎么解决的。",
+                f"{difficulty_hint} 如果围绕“{ref_hint}”继续深入，结合你刚才的回答“{answer_hint}”，你会如何优化当前方案的性能、稳定性或可维护性？",
             ]
             return prompts[technical_count % len(prompts)]
 
@@ -158,6 +180,7 @@ class QuestionWorkflow:
         answer: str,
         references: list[dict[str, Any]],
         stage: str,
+        difficulty: str = "medium",
         history_messages: list[dict[str, str]] | None = None,
         job_role: str = "",
         jd_content: str = "",
@@ -171,6 +194,7 @@ class QuestionWorkflow:
                 answer=answer,
                 references=references,
                 stage=stage,
+                difficulty=difficulty,
                 history_messages=history_messages or [],
                 job_role=job_role,
                 jd_content=jd_content,
@@ -189,6 +213,12 @@ class QuestionWorkflow:
                 if role and content:
                     dialogue_context += f"role: {role}\ncontent: {content}\n\n"
             role_or_jd = (jd_content or "").strip() or f"岗位方向：{job_role or '未提供'}"
+            difficulty_hint_map = {
+                "easy": "基础难度：优先核验基础概念与实际参与度。",
+                "medium": "标准难度：兼顾实现细节、方案取舍与结果评估。",
+                "hard": "高难度：深入追问边界条件、故障排查、性能优化与反思。",
+            }
+            difficulty_hint = difficulty_hint_map.get(difficulty, difficulty_hint_map["medium"])
             prefix = ""
             if stage == "PROJECT_DEEP_DIVE" and (resume_content or "").strip():
                 prefix = (
@@ -197,14 +227,16 @@ class QuestionWorkflow:
                     "请围绕候选人简历项目经历进行追问。\n\n"
                 )
             prompt = (
-                "你是资深中文技术面试官，请基于完整历史对话生成一个追问问题。\n"
+                "你是资深中文技术面试官。你的回答就是面试官现场说出的下一句提问。\n"
+                "请像真人一样自然说话，口语化、简洁、直接，不要写成说明文。\n"
                 f"{prefix}"
                 f"岗位方向或岗位描述：{role_or_jd}\n"
                 f"当前阶段：{stage}\n"
+                f"面试难度：{difficulty}（{difficulty_hint}）\n"
                 f"历史对话（固定格式）：\n{dialogue_context}"
                 f"参考主题：{ref_hint}\n"
                 f"参考资料（含JD与简历）：\n{ref_context}\n"
-                "要求：只输出一句中文问题，并优先验证候选人经历与JD要求的匹配度。"
+                "要求：只输出一句中文口语化问句，禁止输出“追问意图”、括号解释、分点、Markdown 标题或加粗。"
             )
             return self._get_ollama_client().generate_question(prompt)
         raise RuntimeError("当前 LLM provider 未实现真实调用")
@@ -214,6 +246,7 @@ class QuestionWorkflow:
         answer: str,
         references: list[dict[str, Any]],
         stage: str,
+        difficulty: str = "medium",
         technical_count: int = 0,
         follow_up_count: int = 0,
         history_messages: list[dict[str, str]] | None = None,
@@ -225,10 +258,11 @@ class QuestionWorkflow:
     ) -> str:
         """统一生成入口：openai 优先，失败由上层降级。"""
         if self.llm_provider in {"openai", "ollama"}:
-            return self.generate_by_llm(
+            question = self.generate_by_llm(
                 answer=answer,
                 references=references,
                 stage=stage,
+                difficulty=difficulty,
                 history_messages=history_messages,
                 job_role=job_role,
                 jd_content=jd_content,
@@ -236,13 +270,16 @@ class QuestionWorkflow:
                 trace_id=trace_id,
                 interview_id=interview_id,
             )
-        return self.generate_template(
+            return self._sanitize_spoken_question(question)
+        question = self.generate_template(
             answer=answer,
             references=references,
             stage=stage,
+            difficulty=difficulty,
             technical_count=technical_count,
             follow_up_count=follow_up_count,
         )
+        return self._sanitize_spoken_question(question)
 
     def health(self) -> dict[str, str]:
         """返回 LLM provider 健康状态。"""

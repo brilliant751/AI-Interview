@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
+import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Radio, Select, Space, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -71,6 +71,17 @@ export function InterviewPage() {
   const [jdFilterRole, setJdFilterRole] = useState('')
   const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
+  const [questionAudioEnded, setQuestionAudioEnded] = useState(false)
+  const [displayedQuestionText, setDisplayedQuestionText] = useState('')
+  const questionStreamTimerRef = useRef<number | null>(null)
+  const audioBarSeedsRef = useRef(
+    Array.from({ length: 14 }, () => ({
+      base: Math.floor(24 + Math.random() * 42),
+      duration: Math.floor(720 + Math.random() * 760),
+      delay: Math.floor(Math.random() * 480),
+      animationType: Math.floor(Math.random() * 4),
+    })),
+  )
   const endRedirectedRef = useRef(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
@@ -276,6 +287,9 @@ export function InterviewPage() {
   /** 组件卸载时，清理录音与计时器资源。 */
   useEffect(() => {
     return () => {
+      if (questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+      }
       if (countdownTimerRef.current !== null) {
         window.clearInterval(countdownTimerRef.current)
       }
@@ -296,6 +310,34 @@ export function InterviewPage() {
       }
     }
   }, [])
+
+  /** 新题目出现时按字符流式显示文本，便于边听边看。 */
+  useEffect(() => {
+    if (questionStreamTimerRef.current !== null) {
+      window.clearInterval(questionStreamTimerRef.current)
+      questionStreamTimerRef.current = null
+    }
+    setDisplayedQuestionText('')
+    const text = (currentQuestion || '').trim()
+    if (!text) {
+      return
+    }
+    let cursor = 0
+    questionStreamTimerRef.current = window.setInterval(() => {
+      cursor += 1
+      setDisplayedQuestionText(text.slice(0, cursor))
+      if (cursor >= text.length && questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+        questionStreamTimerRef.current = null
+      }
+    }, 80)
+    return () => {
+      if (questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+        questionStreamTimerRef.current = null
+      }
+    }
+  }, [currentQuestion, pipelineMeta?.trace_id, currentStage])
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
   const resetRoundRuntimeState = () => {
@@ -401,6 +443,11 @@ export function InterviewPage() {
     })
   }, [outputMode, ttsAudioUrl, resumeReplayTick])
 
+  /** 题目更新后重置重播状态。 */
+  useEffect(() => {
+    setQuestionAudioEnded(false)
+  }, [ttsAudioUrl, pipelineMeta?.trace_id, currentQuestion, currentStage])
+
   /** 切换会话时重置录音与倒计时状态，避免继承上一次轮次。 */
   useEffect(() => {
     if (!interviewId) {
@@ -432,6 +479,7 @@ export function InterviewPage() {
   /** 题目语音播放结束后触发倒计时。 */
   const handleQuestionAudioEnded = () => {
     setQuestionAudioPlaying(false)
+    setQuestionAudioEnded(true)
     if (inputMode !== 'voice' || !interviewId || !currentQuestion || currentStage === 'END') {
       return
     }
@@ -1019,7 +1067,7 @@ export function InterviewPage() {
                   jd_id: createPositionMode === 'jd' ? values.jd_id : undefined,
                   difficulty: values.difficulty,
                   input_mode: values.input_mode,
-                  output_mode: values.output_mode,
+                  output_mode: 'voice',
                   session_name: values.session_name,
                   question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
                 })
@@ -1099,14 +1147,6 @@ export function InterviewPage() {
                 />
               </Form.Item>
               <Form.Item name="input_mode" label="输入模式">
-                <Radio.Group
-                  options={[
-                    { label: '文本', value: 'text' },
-                    { label: '语音', value: 'voice' },
-                  ]}
-                />
-              </Form.Item>
-              <Form.Item name="output_mode" label="输出模式">
                 <Radio.Group
                   options={[
                     { label: '文本', value: 'text' },
@@ -1390,6 +1430,21 @@ export function InterviewPage() {
                 </div>
               </Space>
             </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <FlagOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">面试难度</Typography.Text>
+                  <div>
+                    {interviewStatusQuery.data?.difficulty === 'easy'
+                      ? '简单'
+                      : interviewStatusQuery.data?.difficulty === 'hard'
+                        ? '困难'
+                        : '中等'}
+                  </div>
+                </div>
+              </Space>
+            </div>
           </Space>
         </Card>
         <ProviderHealthBanner health={providerHealth} />
@@ -1419,24 +1474,106 @@ export function InterviewPage() {
         >
           {outputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Typography.Paragraph style={{ marginBottom: 0 }}>
-                {currentQuestion ? '已生成语音题目，可直接播放。' : '等待题目生成...'}
-              </Typography.Paragraph>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {!currentQuestion
+                    ? '等待题目生成...'
+                    : questionAudioPlaying
+                      ? '正在播放语音题目'
+                      : questionAudioEnded
+                        ? '语音播放结束，可重播题目'
+                        : '语音题目已就绪'}
+                </Typography.Paragraph>
+                {questionAudioEnded ? (
+                  <Tooltip title="重播题目语音">
+                    <Button
+                      shape="circle"
+                      icon={<RedoOutlined />}
+                      onClick={() => {
+                        if (!autoPlayAudioRef.current) {
+                          return
+                        }
+                        autoPlayAudioRef.current.currentTime = 0
+                        setQuestionAudioEnded(false)
+                        void autoPlayAudioRef.current.play().catch(() => {
+                          message.warning('重播失败，请重试')
+                        })
+                      }}
+                    />
+                  </Tooltip>
+                ) : null}
+              </div>
               {ttsAudioUrl ? (
-                <audio
-                  ref={autoPlayAudioRef}
-                  controls
-                  src={ttsAudioUrl}
-                  style={{ width: '100%' }}
-                  onPlay={() => setQuestionAudioPlaying(true)}
-                  onPause={() => setQuestionAudioPlaying(false)}
-                  onAbort={() => setQuestionAudioPlaying(false)}
-                  onEmptied={() => setQuestionAudioPlaying(false)}
-                  onError={() => setQuestionAudioPlaying(false)}
-                  onEnded={handleQuestionAudioEnded}
-                >
-                  您的浏览器不支持音频播放。
-                </audio>
+                <>
+                  <audio
+                    ref={autoPlayAudioRef}
+                    src={ttsAudioUrl}
+                    style={{ display: 'none' }}
+                    onPlay={() => {
+                      setQuestionAudioPlaying(true)
+                      setQuestionAudioEnded(false)
+                    }}
+                    onPause={() => setQuestionAudioPlaying(false)}
+                    onAbort={() => setQuestionAudioPlaying(false)}
+                    onEmptied={() => setQuestionAudioPlaying(false)}
+                    onError={() => setQuestionAudioPlaying(false)}
+                    onEnded={handleQuestionAudioEnded}
+                  >
+                    您的浏览器不支持音频播放。
+                  </audio>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: 96,
+                      padding: '12px 16px',
+                      borderRadius: 10,
+                      background: '#f5f8ff',
+                      border: '1px solid #dce7ff',
+                    }}
+                  >
+                    {audioBarSeedsRef.current.map((seed, index) => {
+                      const active = questionAudioPlaying
+                      const barHeight = active ? seed.base : Math.max(18, Math.floor(seed.base * 0.45))
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            width: 10,
+                            height: barHeight,
+                            borderRadius: 4,
+                            background: active ? '#4f7cff' : '#9eb7ff',
+                            transformOrigin: 'bottom center',
+                            animation: active ? `question-voice-bar-${seed.animationType} ${seed.duration}ms ease-in-out infinite` : 'none',
+                            animationDelay: `${seed.delay}ms`,
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                  <Typography.Paragraph
+                    style={{
+                      marginBottom: 0,
+                      minHeight: 72,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      background: '#fafafa',
+                      border: '1px dashed #e0e0e0',
+                      borderRadius: 8,
+                      padding: 10,
+                    }}
+                  >
+                    {displayedQuestionText || '...'}
+                  </Typography.Paragraph>
+                  <style>{`
+                    @keyframes question-voice-bar-0 { 0%, 100% { transform: scaleY(0.55);} 50% { transform: scaleY(1.25);} }
+                    @keyframes question-voice-bar-1 { 0%, 100% { transform: scaleY(0.7);} 50% { transform: scaleY(1.35);} }
+                    @keyframes question-voice-bar-2 { 0%, 100% { transform: scaleY(0.5);} 50% { transform: scaleY(1.1);} }
+                    @keyframes question-voice-bar-3 { 0%, 100% { transform: scaleY(0.65);} 50% { transform: scaleY(1.3);} }
+                  `}</style>
+                </>
               ) : (
                 <Typography.Text type="secondary">当前题目语音暂不可用，可先参考文本作答。</Typography.Text>
               )}

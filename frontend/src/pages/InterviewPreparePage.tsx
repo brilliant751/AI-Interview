@@ -310,7 +310,7 @@ export function InterviewPreparePage() {
             job_role: positionMode === 'role' ? values.job_role : undefined,
             difficulty: values.difficulty,
             input_mode: values.input_mode,
-            output_mode: values.output_mode,
+            output_mode: 'voice',
             session_name: values.session_name,
             question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
             jd_id: positionMode === 'jd' ? values.jd_id : undefined,
@@ -390,14 +390,6 @@ export function InterviewPreparePage() {
           />
         </Form.Item>
         <Form.Item name="input_mode" label="输入模式">
-          <Radio.Group
-            options={[
-              { label: '文本', value: 'text' },
-              { label: '语音', value: 'voice' },
-            ]}
-          />
-        </Form.Item>
-        <Form.Item name="output_mode" label="输出模式">
           <Radio.Group
             options={[
               { label: '文本', value: 'text' },

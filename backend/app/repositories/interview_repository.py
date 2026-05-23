@@ -1626,6 +1626,7 @@ class InterviewRepository:
                   s.jd_snapshot_title,
                   COALESCE(j.source_type, '') AS jd_source_type,
                   s.job_role,
+                  s.difficulty,
                   s.status,
                   s.started_at,
                   s.finished_at,

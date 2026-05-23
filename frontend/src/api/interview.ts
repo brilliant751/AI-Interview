@@ -88,6 +88,7 @@ export interface HistoryResponse {
     session_name?: string
     resume_id: string
     job_role: string
+    difficulty: string
     status: string
     jd_id?: string
     jd_title?: string

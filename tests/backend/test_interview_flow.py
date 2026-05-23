@@ -188,6 +188,7 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual(200, paused_history.status_code)
         self.assertGreaterEqual(paused_history.json()["total"], 1)
         self.assertTrue(all(item["status"] == "FINISHED" for item in paused_history.json()["items"]))
+        self.assertTrue(all("difficulty" in item for item in paused_history.json()["items"]))
 
     def test_update_interview_status_by_query(self) -> None:
         """验证可通过查询参数更新会话状态。"""
@@ -267,6 +268,43 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual("openai", pipeline_meta["providers"]["llm"])
         self.assertIn(pipeline_meta["provider_status"]["llm"], ["UP", "DOWN"])
         self.assertIsNone(turn_resp.json()["tts_audio_url"])
+
+    def test_difficulty_is_forwarded_to_question_workflow(self) -> None:
+        """验证会话难度会透传给问题生成工作流。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": self.default_java_jd_id,
+                "job_role": "java",
+                "difficulty": "hard",
+                "input_mode": "text",
+                "output_mode": "text",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, create_resp.status_code)
+        interview_id = create_resp.json()["interview_id"]
+        service = self.client.app.state.interview_service
+        captured: dict[str, str] = {}
+        original_generate = service.question_workflow.generate
+
+        def _capture_generate(*args, **kwargs):
+            captured["difficulty"] = str(kwargs.get("difficulty") or "")
+            return original_generate(*args, **kwargs)
+
+        service.question_workflow.generate = _capture_generate
+        turn_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/turns",
+            json={"stage": "SELF_INTRO", "answer_text": "我负责高并发链路优化和故障排查。"},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, turn_resp.status_code)
+        self.assertEqual("hard", captured.get("difficulty"))
 
     def test_asr_failure_without_text_fallback(self) -> None:
         """验证仅音频输入且 ASR 失败时返回上游错误。"""
