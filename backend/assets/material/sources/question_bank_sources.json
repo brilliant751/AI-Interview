@@ -1,0 +1,82 @@
+[
+  {
+    "role": "java",
+    "domain": "java",
+    "source_name": "learning-zone/java-basics",
+    "repo_full_name": "learning-zone/java-basics",
+    "url": "https://github.com/learning-zone/java-basics",
+    "license": "NOASSERTION",
+    "license_risk_level": "high",
+    "allowed_for_redistribution": false,
+    "compliance_status": "internal-eval-only",
+    "updated_at": "2026-05-20T15:04:58Z",
+    "format": "Markdown (README + java-multiple-choice-questions-answers.md)",
+    "content_type": "markdown_mcq",
+    "entry_files": [
+      "README.md",
+      "java-multiple-choice-questions-answers.md"
+    ],
+    "extraction_hint": "优先抓取 java-multiple-choice-questions-answers.md，按题号与选项（A/B/C/D）分段解析；答案通常在题后解释段。",
+    "trust_reason": "GitHub 可追溯仓库，Star 较高（1887），近期开源维护；README 明确包含 Java Multiple Choice Questions 入口。"
+  },
+  {
+    "role": "java",
+    "domain": "java",
+    "source_name": "mertsaner/java-interview-questions",
+    "repo_full_name": "mertsaner/java-interview-questions",
+    "url": "https://github.com/mertsaner/java-interview-questions",
+    "license": "NOASSERTION",
+    "license_risk_level": "high",
+    "allowed_for_redistribution": false,
+    "compliance_status": "internal-eval-only",
+    "updated_at": "2026-05-13T15:20:31Z",
+    "format": "Markdown (README + java-multiple-choice-questions-answers.md)",
+    "content_type": "markdown_mcq",
+    "entry_files": [
+      "README.md",
+      "java-multiple-choice-questions-answers.md"
+    ],
+    "extraction_hint": "从 README 的 Java Multiple Choice Questions 链接定位题库文件；按题号正则切分，再抽取选项与答案说明。",
+    "trust_reason": "GitHub 公开仓库，结构清晰并显式提供 Java 选择题章节；最近仍有更新，适合作为可复现抓取源。"
+  },
+  {
+    "role": "web",
+    "domain": "web",
+    "source_name": "lydiahallie/javascript-questions",
+    "repo_full_name": "lydiahallie/javascript-questions",
+    "url": "https://github.com/lydiahallie/javascript-questions",
+    "license": "MIT",
+    "license_risk_level": "low",
+    "allowed_for_redistribution": true,
+    "compliance_status": "permissive-with-attribution",
+    "updated_at": "2026-05-23T09:50:51Z",
+    "format": "Markdown (README 多语言版本)",
+    "content_type": "markdown_mcq",
+    "entry_files": [
+      "README.md",
+      "zh-CN/README-zh_CN.md"
+    ],
+    "extraction_hint": "按问题标题分块，解析 A/B/C/D 选项与折叠答案区；保留题干代码片段用于后续结构化。",
+    "trust_reason": "高 Star（65325）+ MIT License + 持续更新，社区广泛使用，题目质量与覆盖面较高。"
+  },
+  {
+    "role": "web",
+    "domain": "web",
+    "source_name": "freeCodeCamp/Developer_Quiz_Site",
+    "repo_full_name": "freeCodeCamp/Developer_Quiz_Site",
+    "url": "https://github.com/freeCodeCamp/Developer_Quiz_Site",
+    "license": "BSD-3-Clause",
+    "license_risk_level": "low",
+    "allowed_for_redistribution": true,
+    "compliance_status": "permissive-with-attribution",
+    "updated_at": "2026-04-19T15:53:19Z",
+    "format": "YAML/JSON-like quiz data + 前端项目文件",
+    "content_type": "structured_quiz_dataset",
+    "entry_files": [
+      "README.md",
+      "src/data/quizzes"
+    ],
+    "extraction_hint": "从题库数据目录抽取 HTML/CSS/JavaScript 题目；按 topic 字段分组，统一映射为标准题目模型。",
+    "trust_reason": "freeCodeCamp 官方维护，README 声明 1200+ 选择题并覆盖 HTML/CSS/JavaScript，License 明确且可商用合规评估。"
+  }
+]

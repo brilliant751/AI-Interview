@@ -1,6 +1,7 @@
 # Agents
 .ai-workspace/
 txt/
+.playwright-mcp/
 
 # Python
 __pycache__/

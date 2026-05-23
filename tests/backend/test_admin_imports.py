@@ -351,40 +351,96 @@ class AdminImportsTestCase(unittest.TestCase):
         with repo._session() as conn:
             conn.execute(
                 """
-                CREATE TABLE IF NOT EXISTS question_bank (
-                  record_id TEXT PRIMARY KEY,
-                  role TEXT NOT NULL,
-                  question_no INTEGER NOT NULL,
-                  title TEXT NOT NULL,
-                  category TEXT,
-                  question TEXT NOT NULL,
-                  analysis TEXT,
-                  source_path TEXT NOT NULL,
-                  raw_markdown TEXT NOT NULL,
+                CREATE TABLE IF NOT EXISTS practice_choice_questions (
+                  question_id TEXT PRIMARY KEY,
+                  domain TEXT NOT NULL,
+                  question_type TEXT NOT NULL CHECK(question_type = 'single_choice'),
+                  stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
+                  answer_keys TEXT NOT NULL DEFAULT '[]',
+                  explanation TEXT NOT NULL DEFAULT '',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  metadata TEXT NOT NULL DEFAULT '{}',
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 )
                 """
             )
             conn.executemany(
                 """
-                INSERT INTO question_bank(
-                  record_id, role, question_no, title, category, question, analysis, source_path, raw_markdown
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    ("qb-admin-1", "java", 1, "JVM", "technical", "什么是 JVM？", "说明运行时职责。", "mock-a", "raw-a"),
-                    ("qb-admin-2", "java", 2, "项目", "project", "你做过哪些性能优化？", "说明定位手段。", "mock-b", "raw-b"),
+                    ("qb-admin-1", "java", "single_choice", "什么是 JVM？", "[]", "[\"A\"]", "说明运行时职责。", "{}", "{}"),
+                    ("qb-admin-2", "java", "single_choice", "你做过哪些性能优化？", "[]", "[\"B\"]", "说明定位手段。", "{}", "{}"),
                 ],
             )
 
         response = self.client.get(
-            "/api/v1/practice/questions?job_role=java&category=technical&keyword=JVM&page=1&page_size=10",
+            "/api/v1/practice/questions?job_role=java&keyword=JVM&page=1&page_size=10",
             headers=self.admin_headers,
         )
         self.assertEqual(200, response.status_code, msg=response.text)
         payload = response.json()
         self.assertEqual(1, payload["total"])
         self.assertEqual("qb-admin-1", payload["items"][0]["record_id"])
+
+    def test_list_question_bank_category_pagination_total_is_consistent(self) -> None:
+        """带 category 分页时 total 应与过滤结果一致且分页稳定。"""
+        repo = self.client.app.state.repo
+        with repo._session() as conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS practice_choice_questions (
+                  question_id TEXT PRIMARY KEY,
+                  domain TEXT NOT NULL,
+                  question_type TEXT NOT NULL CHECK(question_type = 'single_choice'),
+                  stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
+                  answer_keys TEXT NOT NULL DEFAULT '[]',
+                  explanation TEXT NOT NULL DEFAULT '',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  metadata TEXT NOT NULL DEFAULT '{}',
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                )
+                """
+            )
+            conn.executemany(
+                """
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                [
+                    ("qb-admin-a", "java", "single_choice", "A", "[]", "[\"A\"]", "", "{}", "{\"category\":\"technical\"}"),
+                    ("qb-admin-b", "java", "single_choice", "B", "[]", "[\"A\"]", "", "{}", "{\"category\":\"technical\"}"),
+                    ("qb-admin-c", "java", "single_choice", "C", "[]", "[\"A\"]", "", "{}", "{\"category\":\"technical\"}"),
+                    ("qb-admin-d", "java", "single_choice", "D", "[]", "[\"A\"]", "", "{}", "{\"category\":\"project\"}"),
+                ],
+            )
+
+        page1 = self.client.get(
+            "/api/v1/practice/questions?job_role=java&category=technical&page=1&page_size=2",
+            headers=self.admin_headers,
+        )
+        self.assertEqual(200, page1.status_code, msg=page1.text)
+        payload1 = page1.json()
+        self.assertEqual(3, payload1["total"])
+        self.assertEqual(2, len(payload1["items"]))
+
+        page2 = self.client.get(
+            "/api/v1/practice/questions?job_role=java&category=technical&page=2&page_size=2",
+            headers=self.admin_headers,
+        )
+        self.assertEqual(200, page2.status_code, msg=page2.text)
+        payload2 = page2.json()
+        self.assertEqual(3, payload2["total"])
+        self.assertEqual(1, len(payload2["items"]))
+
+        page1_ids = {item["record_id"] for item in payload1["items"]}
+        page2_ids = {item["record_id"] for item in payload2["items"]}
+        self.assertTrue(page1_ids.isdisjoint(page2_ids))
 
 
 if __name__ == "__main__":

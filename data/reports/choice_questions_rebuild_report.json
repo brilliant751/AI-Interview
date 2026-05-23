@@ -1,0 +1,9 @@
+{
+  "input": "backend/assets/material/choice/normalized/choice_questions.json",
+  "output": "data/converted/choice_questions_zh_reliable.json",
+  "total": 92,
+  "translated_stem": 58,
+  "translated_option_items": 248,
+  "translated_explanation": 10,
+  "generated_at": 1779545034
+}

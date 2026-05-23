@@ -205,6 +205,76 @@ class DataScriptsTestCase(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_import_choice_questions_is_idempotent(self) -> None:
+        """验证选择题导入脚本重复执行时保持幂等。"""
+        import_choice_questions = self.load_script_module("import_choice_questions")
+        sample_rows = [
+            {
+                "question_id": "choice-1",
+                "domain": "java",
+                "question_type": "single_choice",
+                "stem": "JVM 是什么？",
+                "options": [{"key": "A", "text": "虚拟机"}],
+                "answer_keys": ["A"],
+                "explanation": "用于执行 Java 字节码。",
+                "source": {"repo_full_name": "demo/repo"},
+                "metadata": {"source_key": "demo/repo::a.md"},
+            }
+        ]
+        conn = sqlite3.connect(":memory:")
+        try:
+            import_choice_questions.init_schema(conn)
+            with conn:
+                first = import_choice_questions.upsert_rows(conn, sample_rows)
+            with conn:
+                second = import_choice_questions.upsert_rows(conn, sample_rows)
+            count = conn.execute("SELECT COUNT(*) FROM practice_choice_questions").fetchone()[0]
+        finally:
+            conn.close()
+
+        self.assertEqual((1, 0), first)
+        self.assertEqual((1, 0), second)
+        self.assertEqual(1, count)
+
+    def test_import_choice_questions_skips_non_single_choice(self) -> None:
+        """导入脚本应跳过非 single_choice 题目。"""
+        import_choice_questions = self.load_script_module("import_choice_questions")
+        sample_rows = [
+            {
+                "question_id": "choice-1",
+                "domain": "java",
+                "question_type": "single_choice",
+                "stem": "JVM 是什么？",
+                "options": [{"key": "A", "text": "虚拟机"}],
+                "answer_keys": ["A"],
+                "explanation": "用于执行 Java 字节码。",
+                "source": {},
+                "metadata": {},
+            },
+            {
+                "question_id": "choice-2",
+                "domain": "java",
+                "question_type": "multiple_choice",
+                "stem": "哪些是集合？",
+                "options": [{"key": "A", "text": "List"}],
+                "answer_keys": ["A"],
+                "explanation": "",
+                "source": {},
+                "metadata": {},
+            },
+        ]
+        conn = sqlite3.connect(":memory:")
+        try:
+            import_choice_questions.init_schema(conn)
+            with conn:
+                upserted, skipped = import_choice_questions.upsert_rows(conn, sample_rows)
+            count = conn.execute("SELECT COUNT(*) FROM practice_choice_questions").fetchone()[0]
+        finally:
+            conn.close()
+        self.assertEqual(1, upserted)
+        self.assertEqual(1, skipped)
+        self.assertEqual(1, count)
+
     def test_vectorstore_build_dry_run(self) -> None:
         """验证向量索引构建 dry-run 可执行并输出关键字段。"""
         cmd = [

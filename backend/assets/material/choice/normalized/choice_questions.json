@@ -1,0 +1,3542 @@
+[
+  {
+    "question_id": "043fb9c40e99fda16d809c84060773e40ff9b232",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following does not compile?",
+    "options": [
+      {
+        "key": "A",
+        "text": "double num = 2.718;"
+      },
+      {
+        "key": "B",
+        "text": "double num = 2._718;"
+      },
+      {
+        "key": "C",
+        "text": "double num = 2.7_1_8;"
+      },
+      {
+        "key": "D",
+        "text": "None of the above; they all compile"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "Underscores are allowed between any two digits in a numeric literal. Underscores are not allowed adjacent to a decimal point",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "0fd56515de424a71416c8b9a55852b7f19f5ff34",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "How do you force garbage collection to occur at a certain point?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Call System.forceGc()"
+      },
+      {
+        "key": "B",
+        "text": "Call System.gc()"
+      },
+      {
+        "key": "C",
+        "text": "Call System.requireGc()"
+      },
+      {
+        "key": "D",
+        "text": "None of the above"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "While you can suggest to the JVM that it might want to run a garbage collection cycle, the JVM is free to ignore your suggestion.",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "16b3f18d27037ae99612cc6b6dfc60eeb7797914",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following interface is used to declare core methods in java?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "EventListner"
+      },
+      {
+        "key": "C",
+        "text": "Collection"
+      },
+      {
+        "key": "D",
+        "text": "Comparator"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "1cf92244884faf34c06088c694382c525ae2e573",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which statement about a valid .java file is true?",
+    "options": [
+      {
+        "key": "A",
+        "text": "** It can only contain one class declaration."
+      },
+      {
+        "key": "B",
+        "text": "** It can contain one pulic class declaration and one public interface definition."
+      },
+      {
+        "key": "C",
+        "text": "** It must define at least one public class."
+      },
+      {
+        "key": "D",
+        "text": "** It may define at most one public class."
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "21c2ea2ee0c371f66c60f96804a5070c617b9218",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "How do you force garbage collection to occur at a certain point?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Call System.forceGc()"
+      },
+      {
+        "key": "B",
+        "text": "Call System.gc()"
+      },
+      {
+        "key": "C",
+        "text": "Call System.requireGc()"
+      },
+      {
+        "key": "D",
+        "text": "None of the above"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "While you can suggest to the JVM that it might want to run a garbage collection cycle, the JVM is free to ignore your suggestion.",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "2717fc139daa9ed762f89ebd76d1fe593b405ff5",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "What is true of the finalize() method?",
+    "options": [
+      {
+        "key": "A",
+        "text": "It may be called zero or one times."
+      },
+      {
+        "key": "B",
+        "text": "It may be called zero or more times."
+      },
+      {
+        "key": "C",
+        "text": "It will be called exactly once."
+      },
+      {
+        "key": "D",
+        "text": "It may be called one or more times."
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "The `finalize()` method may not be called, such as if your program crashes. However, it is guaranteed to be called no more than once.",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "2db4025eb79ed9bdfcd4a4c99db5fc9d0b4f7a73",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which is correct about an instance variable of type String?",
+    "options": [
+      {
+        "key": "A",
+        "text": "It defaults to an empty string."
+      },
+      {
+        "key": "B",
+        "text": "It defaults to null."
+      },
+      {
+        "key": "C",
+        "text": "It does not have a default value."
+      },
+      {
+        "key": "D",
+        "text": "It will not compile without initializing on the declaration line"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "3d68bc9b261ae73b8fa29d82d22944b231562ea4",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "What is true of the finalize() method?",
+    "options": [
+      {
+        "key": "A",
+        "text": "It may be called zero or one times."
+      },
+      {
+        "key": "B",
+        "text": "It may be called zero or more times."
+      },
+      {
+        "key": "C",
+        "text": "It will be called exactly once."
+      },
+      {
+        "key": "D",
+        "text": "It may be called one or more times."
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "The `finalize()` method may not be called, such as if your program crashes. However, it is guaranteed to be called no more than once.",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "3d8c3071d00f3cec8378ba92f0614a64e534e489",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following declarations does not compile?",
+    "options": [
+      {
+        "key": "A",
+        "text": "double num1, int num2 = 0;"
+      },
+      {
+        "key": "B",
+        "text": "int num1, num2;"
+      },
+      {
+        "key": "C",
+        "text": "int num1, num2 = 0;"
+      },
+      {
+        "key": "D",
+        "text": "int num1 = 0, num2 = 0;"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "A. Option A does not compile because Java does not allow declaring different types as part of the same declaration.",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "42b00295073410af7749e336683aa5d6ea4cc725",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of these interface handle sequences?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "List"
+      },
+      {
+        "key": "C",
+        "text": "Comparator"
+      },
+      {
+        "key": "D",
+        "text": "Collection"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "42c28cf489aa3af6a3975cdace729bf1283a3e4e",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of these interface handle sequences?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "List"
+      },
+      {
+        "key": "C",
+        "text": "Comparator"
+      },
+      {
+        "key": "D",
+        "text": "Collection"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "4962cc86ccc93991831ad4f4fea01447876cb6ff",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following interface is used to declare core methods in java?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "EventListner"
+      },
+      {
+        "key": "C",
+        "text": "Collection"
+      },
+      {
+        "key": "D",
+        "text": "Comparator"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "5252f954c157bb37fe0f14703c58fc36b5456146",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following is true about primitives?",
+    "options": [
+      {
+        "key": "A",
+        "text": "You can call methods on a primitive."
+      },
+      {
+        "key": "B",
+        "text": "You can convert a primitive to a wrapper class object simply by assigning it."
+      },
+      {
+        "key": "C",
+        "text": "You can convert a wrapper class object to a primitive by calling valueOf()."
+      },
+      {
+        "key": "D",
+        "text": "You can store a primitive directly into an ArrayList."
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "5ca6b67aae1a26dd2b5e6287b4715a794a19b399",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the follwing below live on the heap in java?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Class"
+      },
+      {
+        "key": "B",
+        "text": "Instance variable"
+      },
+      {
+        "key": "C",
+        "text": "Method"
+      },
+      {
+        "key": "D",
+        "text": "Object"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "644404323427c245b20663582ceff12edc978f1c",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following is true about primitives?",
+    "options": [
+      {
+        "key": "A",
+        "text": "You can call methods on a primitive."
+      },
+      {
+        "key": "B",
+        "text": "You can convert a primitive to a wrapper class object simply by assigning it."
+      },
+      {
+        "key": "C",
+        "text": "You can convert a wrapper class object to a primitive by calling valueOf()."
+      },
+      {
+        "key": "D",
+        "text": "You can store a primitive directly into an ArrayList."
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "8ea7df4c79865f1dedfc2ea5f642f46080e52dfe",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which two primitives have wrapper classes that are not merely the name of the primitive with an uppercase letter?",
+    "options": [
+      {
+        "key": "A",
+        "text": "byte and char"
+      },
+      {
+        "key": "B",
+        "text": "byte and int"
+      },
+      {
+        "key": "C",
+        "text": "char and int"
+      },
+      {
+        "key": "D",
+        "text": "None of the above"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "The wrapper class for int is Integer and the wrapper class for char is Character. All other primitives have the same name. For example, the wrapper class for boolean is Boolean.",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "a43a595e705816fac1939fa519bdb0ac64f3628b",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the follwing below live on the heap in java?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Class"
+      },
+      {
+        "key": "B",
+        "text": "Instance variable"
+      },
+      {
+        "key": "C",
+        "text": "Method"
+      },
+      {
+        "key": "D",
+        "text": "Object"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "b52b026deb72b0d700ea698f02cd8ccae4b876d4",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of this interface must contain a unique element?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "List"
+      },
+      {
+        "key": "C",
+        "text": "Array"
+      },
+      {
+        "key": "D",
+        "text": "Collection"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "bd098fa2e6460c6d91bc14dade3cad19ae64ab1b",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following declarations does not compile?",
+    "options": [
+      {
+        "key": "A",
+        "text": "double num1, int num2 = 0;"
+      },
+      {
+        "key": "B",
+        "text": "int num1, num2;"
+      },
+      {
+        "key": "C",
+        "text": "int num1, num2 = 0;"
+      },
+      {
+        "key": "D",
+        "text": "int num1 = 0, num2 = 0;"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "A. Option A does not compile because Java does not allow declaring different types as part of the same declaration.",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "cb00fab7168e3e703917f01fb152ebe544968968",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which statement about a valid .java file is true?",
+    "options": [
+      {
+        "key": "A",
+        "text": "** It can only contain one class declaration."
+      },
+      {
+        "key": "B",
+        "text": "** It can contain one pulic class declaration and one public interface definition."
+      },
+      {
+        "key": "C",
+        "text": "** It must define at least one public class."
+      },
+      {
+        "key": "D",
+        "text": "** It may define at most one public class."
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "d31c0fa5b1a39b8f5a47d6b2ba752e1f29874a93",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which is correct about an instance variable of type String?",
+    "options": [
+      {
+        "key": "A",
+        "text": "It defaults to an empty string."
+      },
+      {
+        "key": "B",
+        "text": "It defaults to null."
+      },
+      {
+        "key": "C",
+        "text": "It does not have a default value."
+      },
+      {
+        "key": "D",
+        "text": "It will not compile without initializing on the declaration line"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "e420e4a2b5239c39c346256784700c28becf4fba",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of this interface must contain a unique element?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Set"
+      },
+      {
+        "key": "B",
+        "text": "List"
+      },
+      {
+        "key": "C",
+        "text": "Array"
+      },
+      {
+        "key": "D",
+        "text": "Collection"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "learning-zone/java-basics",
+      "url": "https://github.com/learning-zone/java-basics",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "learning-zone/java-basics::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "e42ea986271a7aa974a1f000ee72f25a03d3ea10",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which of the following does not compile?",
+    "options": [
+      {
+        "key": "A",
+        "text": "double num = 2.718;"
+      },
+      {
+        "key": "B",
+        "text": "double num = 2._718;"
+      },
+      {
+        "key": "C",
+        "text": "double num = 2.7_1_8;"
+      },
+      {
+        "key": "D",
+        "text": "None of the above; they all compile"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "Underscores are allowed between any two digits in a numeric literal. Underscores are not allowed adjacent to a decimal point",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "e9a28af02aef18303454a26da42ef9a6ff4215b5",
+    "domain": "java",
+    "question_type": "single_choice",
+    "stem": "Which two primitives have wrapper classes that are not merely the name of the primitive with an uppercase letter?",
+    "options": [
+      {
+        "key": "A",
+        "text": "byte and char"
+      },
+      {
+        "key": "B",
+        "text": "byte and int"
+      },
+      {
+        "key": "C",
+        "text": "char and int"
+      },
+      {
+        "key": "D",
+        "text": "None of the above"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "The wrapper class for int is Integer and the wrapper class for char is Character. All other primitives have the same name. For example, the wrapper class for boolean is Boolean.",
+    "source": {
+      "repo_full_name": "mertsaner/java-interview-questions",
+      "url": "https://github.com/mertsaner/java-interview-questions",
+      "license": "NOASSERTION",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "java-multiple-choice-questions-answers.md",
+      "default_branch": "HEAD",
+      "source_key": "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md"
+    }
+  },
+  {
+    "question_id": "02ab4711db257b156b93cf3df029ba88ef843b3a",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "With which constructor can we successfully extend the `Dog` class?",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "2"
+      },
+      {
+        "key": "C",
+        "text": "3"
+      },
+      {
+        "key": "D",
+        "text": "4"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "0a4883ba5df7e1ce818b366f09b009f3999dfb33",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪些方法修改了原数组？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`All of them`"
+      },
+      {
+        "key": "B",
+        "text": "`map` `reduce` `slice` `splice`"
+      },
+      {
+        "key": "C",
+        "text": "`map` `slice` `splice`"
+      },
+      {
+        "key": "D",
+        "text": "`splice`"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "0a650b0de79b7fe97c90e0ff180e26773278c3e3",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "这个函数干了什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "Parses JSON to a JavaScript value"
+      },
+      {
+        "key": "B",
+        "text": "Parses a JavaScript object to JSON"
+      },
+      {
+        "key": "C",
+        "text": "Parses any JavaScript value to JSON"
+      },
+      {
+        "key": "D",
+        "text": "Parses JSON to a JavaScript object only"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "0d5afde5388beaecf912c3f47c67b90c9e71f085",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "下面哪些值是 falsy?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`0`, `''`, `undefined`"
+      },
+      {
+        "key": "B",
+        "text": "`0`, `new Number(0)`, `''`, `new Boolean(false)`, `undefined`"
+      },
+      {
+        "key": "C",
+        "text": "`0`, `''`, `new Boolean(false)`, `undefined`"
+      },
+      {
+        "key": "D",
+        "text": "All of them are falsy"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "0f7610be94750fbe9d428cbaadadc9353e4fc6da",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which one is true?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`mouse.bird.size` is not valid"
+      },
+      {
+        "key": "B",
+        "text": "`mouse[bird.size]` is not valid"
+      },
+      {
+        "key": "C",
+        "text": "`mouse[bird[\"size\"]]` is not valid"
+      },
+      {
+        "key": "D",
+        "text": "All of them are valid"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "1381a19e42599a5ca1811ea081b59ff550a4a09d",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "事件传播的三个阶段是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "Target > Capturing > Bubbling"
+      },
+      {
+        "key": "B",
+        "text": "Bubbling > Target > Capturing"
+      },
+      {
+        "key": "C",
+        "text": "Target > Bubbling > Capturing"
+      },
+      {
+        "key": "D",
+        "text": "Capturing > Target > Bubbling"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "16f7cb4523929a01d224e54ee285f6b304ac83f3",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which of the following will modify the `person` object?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`person.name = \"Evan Bacon\"`"
+      },
+      {
+        "key": "B",
+        "text": "`delete person.address`"
+      },
+      {
+        "key": "C",
+        "text": "`person.address.street = \"101 Main St\"`"
+      },
+      {
+        "key": "D",
+        "text": "`person.pet = { name: \"Mara\" }`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "18829c853e72b6cd121c15b401f8825fca6cab1f",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "以下哪一项会对对象 `person` 有副作用？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`person.name = \"Evan Bacon\"`"
+      },
+      {
+        "key": "B",
+        "text": "`delete person.address`"
+      },
+      {
+        "key": "C",
+        "text": "`person.address.street = \"101 Main St\"`"
+      },
+      {
+        "key": "D",
+        "text": "`person.pet = { name: \"Mara\" }`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "18a714f021d09dda6b1143bfbaff09ea4c3c0a32",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "How can we log the values that are commented out after the console.log statement?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`game.next(\"Yes\").value` and `game.next().value`"
+      },
+      {
+        "key": "B",
+        "text": "`game.next.value(\"Yes\")` and `game.next.value()`"
+      },
+      {
+        "key": "C",
+        "text": "`game.next().value` and `game.next(\"Yes\").value`"
+      },
+      {
+        "key": "D",
+        "text": "`game.next.value()` and `game.next.value(\"Yes\")`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "1e56edba4ca07cf7366eded6b75b1bfa0f257aab",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which of these methods modifies the original array?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`All of them`"
+      },
+      {
+        "key": "B",
+        "text": "`map` `reduce` `slice` `splice`"
+      },
+      {
+        "key": "C",
+        "text": "`map` `slice` `splice`"
+      },
+      {
+        "key": "D",
+        "text": "`splice`"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "1fd870a0d6a787dc28e2fe6913adf5d7950f2a16",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "所有对象都有原型。",
+    "options": [
+      {
+        "key": "A",
+        "text": "对"
+      },
+      {
+        "key": "B",
+        "text": "错"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "20e1757200b616326986d2c51acfbfd8e822e98b",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "以下是个纯函数么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "Yes"
+      },
+      {
+        "key": "B",
+        "text": "No"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "21d010061bbe89f7be5d58855bc75ea4f1bb0202",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪一个是正确的？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`mouse.bird.size`是无效的"
+      },
+      {
+        "key": "B",
+        "text": "`mouse[bird.size]`是无效的"
+      },
+      {
+        "key": "C",
+        "text": "`mouse[bird[\"size\"]]`是无效的"
+      },
+      {
+        "key": "D",
+        "text": "以上三个选项都是有效的"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "24c3291ae00e2bc60f61ad10811a4abf93b38cbc",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's the output?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`It's not a string!`"
+      },
+      {
+        "key": "B",
+        "text": "`Yay it's a string!`"
+      },
+      {
+        "key": "C",
+        "text": "`TypeError`"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "24c634058195afe6f001a296bd374d692ecde949",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "输出是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`null`, `undefined`, 🍌"
+      },
+      {
+        "key": "B",
+        "text": "`[]`, `null`, 🍌"
+      },
+      {
+        "key": "C",
+        "text": "`[]`, `[]`, 🍌"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`, `undefined`, 🍌"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "253a003dd742179ef76695369350ea6298638fae",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which of the following options will return `6`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`sumValues([...1, 2, 3])`"
+      },
+      {
+        "key": "B",
+        "text": "`sumValues([...[1, 2, 3]])`"
+      },
+      {
+        "key": "C",
+        "text": "`sumValues(...[1, 2, 3])`"
+      },
+      {
+        "key": "D",
+        "text": "`sumValues([1, 2, 3])`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "31588b48d0295914f5eb79526a346553a74ff6c1",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What will happen?",
+    "options": [
+      {
+        "key": "A",
+        "text": "The `setInterval` callback won't be invoked"
+      },
+      {
+        "key": "B",
+        "text": "The `setInterval` callback gets invoked once"
+      },
+      {
+        "key": "C",
+        "text": "The `setInterval` callback will still be called every second"
+      },
+      {
+        "key": "D",
+        "text": "We never invoked `config.alert()`, config is `null`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "35a366c8edce07705fa9e2eb49753935251e7576",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What are the three phases of event propagation?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Target > Capturing > Bubbling"
+      },
+      {
+        "key": "B",
+        "text": "Bubbling > Target > Capturing"
+      },
+      {
+        "key": "C",
+        "text": "Target > Bubbling > Capturing"
+      },
+      {
+        "key": "D",
+        "text": "Capturing > Target > Bubbling"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "38be83db27a3091b9e96ec0ac0677b8ce59c308d",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "返回值是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`\"one\"`"
+      },
+      {
+        "key": "B",
+        "text": "`\"two\"`"
+      },
+      {
+        "key": "C",
+        "text": "`\"two\" \"one\"`"
+      },
+      {
+        "key": "D",
+        "text": "`\"one\" \"two\"`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "3d80e23d2d42a8b2577971ffa8dba4903d59740c",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪个选项是将`hasName`设置为`true`的方法，前提是不能将`true`作为参数传递？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`!!name`"
+      },
+      {
+        "key": "B",
+        "text": "`name`"
+      },
+      {
+        "key": "C",
+        "text": "`new Boolean(name)`"
+      },
+      {
+        "key": "D",
+        "text": "`name.length`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "3eb9f9e696684b8b1579dcd0b27ee6898580c125",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪个作为`method`的值可以打印`{ name: \"Lydia\", age: 22 }`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`entries`"
+      },
+      {
+        "key": "B",
+        "text": "`values`"
+      },
+      {
+        "key": "C",
+        "text": "`fromEntries`"
+      },
+      {
+        "key": "D",
+        "text": "`forEach`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "4254f4b0c4018f7b916d37c238c8c3d16b158146",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What do we need to add to the `person` object to get `[\"Lydia Hallie\", 21]` as the output of `[...person]`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Nothing, object are iterable by default"
+      },
+      {
+        "key": "B",
+        "text": "`*[Symbol.iterator]() { for (let x in this) yield* this[x] }`"
+      },
+      {
+        "key": "C",
+        "text": "`*[Symbol.iterator]() { yield* Object.values(this) }`"
+      },
+      {
+        "key": "D",
+        "text": "`*[Symbol.iterator]() { for (let x in this) yield this }`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "467f6efae6b51a664ed8f46bb59dd36581658b03",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "如何能打印出`console.log`语句后注释掉的值？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`game.next(\"Yes\").value` and `game.next().value`"
+      },
+      {
+        "key": "B",
+        "text": "`game.next.value(\"Yes\")` and `game.next.value()`"
+      },
+      {
+        "key": "C",
+        "text": "`game.next().value` and `game.next(\"Yes\").value`"
+      },
+      {
+        "key": "D",
+        "text": "`game.next.value()` and `game.next.value(\"Yes\")`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "47f7a65f146f2babbf4791a921abf6ac8bc7a20b",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Is this a pure function?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Yes"
+      },
+      {
+        "key": "B",
+        "text": "No"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "502303b4a3241bd29f6bfb05f52ae7b082eeff80",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "我们怎样才能在 `index.js` 中调用 `sum.js?` 中的 `sum`？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`sum(4)`"
+      },
+      {
+        "key": "B",
+        "text": "`sum.sum(4)`"
+      },
+      {
+        "key": "C",
+        "text": "`sum.default(4)`"
+      },
+      {
+        "key": "D",
+        "text": "默认导出不用 `*` 来导入，只能具名导出"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "50cc08de1917a6c61e274a516ff52c55b7da9fad",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What does this method do?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Parses JSON to a JavaScript value"
+      },
+      {
+        "key": "B",
+        "text": "Parses a JavaScript object to JSON"
+      },
+      {
+        "key": "C",
+        "text": "Parses any JavaScript value to JSON"
+      },
+      {
+        "key": "D",
+        "text": "Parses JSON to a JavaScript object only"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "54d610ff3924bdd0bcadb8c0d95b1747b80e6945",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "当点击按钮时，event.target 是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "Outer `div`"
+      },
+      {
+        "key": "B",
+        "text": "Inner `div`"
+      },
+      {
+        "key": "C",
+        "text": "`button`"
+      },
+      {
+        "key": "D",
+        "text": "一个包含所有嵌套元素的数组。"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "58debd61cf003f633df863b37dd3a79a9243d65b",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "JavaScript 中的一切都是？",
+    "options": [
+      {
+        "key": "A",
+        "text": "基本类型与对象"
+      },
+      {
+        "key": "B",
+        "text": "函数与对象"
+      },
+      {
+        "key": "C",
+        "text": "只有对象"
+      },
+      {
+        "key": "D",
+        "text": "数字与对象"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "59703b662b1014e57d39b7816f3539c266eaa036",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "How long is cool_secret accessible?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Forever, the data doesn't get lost."
+      },
+      {
+        "key": "B",
+        "text": "When the user closes the tab."
+      },
+      {
+        "key": "C",
+        "text": "When the user closes the entire browser, not only the tab."
+      },
+      {
+        "key": "D",
+        "text": "When the user shuts off their computer."
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "5c37e781639456fafaa1fc3bec1c8713ca81df19",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪一个选项会导致报错？",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "1 and 2"
+      },
+      {
+        "key": "C",
+        "text": "3 and 4"
+      },
+      {
+        "key": "D",
+        "text": "3"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "6831f268d0641f6c4b9ac994c40fdbdcd6e4e34c",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "`setInterval` 方法的返回值是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "一个唯一的 id"
+      },
+      {
+        "key": "B",
+        "text": "该方法指定的毫秒数"
+      },
+      {
+        "key": "C",
+        "text": "传递的函数"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "6c4640455aefa692e67da71679b1ca5a4d3a9cff",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "输出什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`It's not a string!`"
+      },
+      {
+        "key": "B",
+        "text": "`Yay it's a string!`"
+      },
+      {
+        "key": "C",
+        "text": "`TypeError`"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "6d0b8314b46c52462f0d5989284cb7d43d63c082",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What should the value of `method` be to log `{ name: \"Lydia\", age: 22 }`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`entries`"
+      },
+      {
+        "key": "B",
+        "text": "`values`"
+      },
+      {
+        "key": "C",
+        "text": "`fromEntries`"
+      },
+      {
+        "key": "D",
+        "text": "`forEach`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "6db49d6c4314fed4997456ac302482c2fde75c30",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which of these values are falsy?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`0`, `''`, `undefined`"
+      },
+      {
+        "key": "B",
+        "text": "`0`, `new Number(0)`, `''`, `new Boolean(false)`, `undefined`"
+      },
+      {
+        "key": "C",
+        "text": "`0`, `''`, `new Boolean(false)`, `undefined`"
+      },
+      {
+        "key": "D",
+        "text": "All of them are falsy"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "75e375d693cf9deb76079b7d5cb1dd738436c862",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "使用哪个构造函数可以成功继承`Dog`类？",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "2"
+      },
+      {
+        "key": "C",
+        "text": "3"
+      },
+      {
+        "key": "D",
+        "text": "4"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "7796c24b5415374712c17691a48d83f22e5f6585",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's the value of `num`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`42`"
+      },
+      {
+        "key": "B",
+        "text": "`\"42\"`"
+      },
+      {
+        "key": "C",
+        "text": "`7`"
+      },
+      {
+        "key": "D",
+        "text": "`NaN`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "7813b2a076006acbb31bb966591c7fb3fa24750b",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What kind of information would get logged?",
+    "options": [
+      {
+        "key": "A",
+        "text": "The result of the `fetch` method."
+      },
+      {
+        "key": "B",
+        "text": "The result of the second invocation of the `fetch` method."
+      },
+      {
+        "key": "C",
+        "text": "The result of the callback in the previous `.then()`."
+      },
+      {
+        "key": "D",
+        "text": "It would always be undefined."
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "7f6fb56c12a1c6572e02508963ba356d3e0db3f5",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "cool_secret 可访问多长时间？",
+    "options": [
+      {
+        "key": "A",
+        "text": "永远，数据不会丢失。"
+      },
+      {
+        "key": "B",
+        "text": "当用户关掉标签页时。"
+      },
+      {
+        "key": "C",
+        "text": "当用户关掉整个浏览器，而不只是关掉标签页。"
+      },
+      {
+        "key": "D",
+        "text": "当用户关闭电脑时。"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "86983418a97e24645ffdee09d6900ea54633628a",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "选择哪一个？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`yield getMembers(teams[i].members)`"
+      },
+      {
+        "key": "B",
+        "text": "`yield* getMembers(teams[i].members)`"
+      },
+      {
+        "key": "C",
+        "text": "`return getMembers(teams[i].members)`"
+      },
+      {
+        "key": "D",
+        "text": "`return yield getMembers(teams[i].members)`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "86b23d682cd925de91de4e23eacf0c5909891bb7",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "哪一个方法会返回 `'Hello world!'` ？",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "2"
+      },
+      {
+        "key": "C",
+        "text": "2 and 3"
+      },
+      {
+        "key": "D",
+        "text": "All of them"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "8cd260764073643e7644d459a1b78b9532f8e5e2",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What is the output?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`\"Sorry, you're too young.\"`"
+      },
+      {
+        "key": "B",
+        "text": "`\"Yay! You're old enough!\"`"
+      },
+      {
+        "key": "C",
+        "text": "`ReferenceError`"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "92555b516e142827161212264f63e52eeb7fc119",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "我们需要向对象 `person` 添加什么，以致执行 `[...person]` 时获得形如 `[\"Lydia Hallie\", 21]` 的输出？",
+    "options": [
+      {
+        "key": "A",
+        "text": "不需要，对象默认就是可迭代的"
+      },
+      {
+        "key": "B",
+        "text": "`*[Symbol.iterator]() { for (let x in this) yield* this[x] }`"
+      },
+      {
+        "key": "C",
+        "text": "`*[Symbol.iterator]() { yield* Object.values(this) }`"
+      },
+      {
+        "key": "D",
+        "text": "`*[Symbol.iterator]() { for (let x in this) yield this }`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "927785d3321e90c0794e2428cf2d12ab0dd76616",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "当我们这么做时，会发生什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "正常运行！"
+      },
+      {
+        "key": "B",
+        "text": "`SyntaxError`. 你不能通过这种方式给函数增加属性。"
+      },
+      {
+        "key": "C",
+        "text": "`undefined`"
+      },
+      {
+        "key": "D",
+        "text": "`ReferenceError`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "9c95f8c8e0aaef02490a6ca39347f42697941379",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "The JavaScript global execution context creates two things for you: the global object, and the \"this\" keyword.",
+    "options": [
+      {
+        "key": "A",
+        "text": "true"
+      },
+      {
+        "key": "B",
+        "text": "false"
+      },
+      {
+        "key": "C",
+        "text": "it depends"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "9cb60519dcf2d9a0770652bf19ad3c78e9407a3f",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What does this return?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`\"one\"`"
+      },
+      {
+        "key": "B",
+        "text": "`\"two\"`"
+      },
+      {
+        "key": "C",
+        "text": "`\"two\" \"one\"`"
+      },
+      {
+        "key": "D",
+        "text": "`\"one\" \"two\"`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "a0713cef9a2780d8c8376eabe44f22afeb1745ca",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "输出的是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`{ name: \"Lydia\" }, \"1997\"`"
+      },
+      {
+        "key": "B",
+        "text": "`{ name: \"Sarah\" }, \"1998\"`"
+      },
+      {
+        "key": "C",
+        "text": "`{ name: \"Lydia\" }, \"1998\"`"
+      },
+      {
+        "key": "D",
+        "text": "`{ name: \"Sarah\" }, \"1997\"`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "a32191b108a4ce981e0ed39daf933159c87e912f",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's its value?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`true`"
+      },
+      {
+        "key": "B",
+        "text": "`false`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "a81df3519aa5af6c81feb25e21354e519b9ea521",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What is the event.target when clicking the button?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Outer `div`"
+      },
+      {
+        "key": "B",
+        "text": "Inner `div`"
+      },
+      {
+        "key": "C",
+        "text": "`button`"
+      },
+      {
+        "key": "D",
+        "text": "An array of all nested elements."
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "a84d456196f2780c978ae6f765ebfdb6cb80f0ae",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "`num`的值是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`42`"
+      },
+      {
+        "key": "B",
+        "text": "`\"42\"`"
+      },
+      {
+        "key": "C",
+        "text": "`7`"
+      },
+      {
+        "key": "D",
+        "text": "`NaN`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "b590f999b6ded46a1fbf362fd0131ade0b4970a2",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "结果是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`5`"
+      },
+      {
+        "key": "B",
+        "text": "`Promise {<pending>: 5}`"
+      },
+      {
+        "key": "C",
+        "text": "`Promise {<fulfilled>: 5}`"
+      },
+      {
+        "key": "D",
+        "text": "`Error`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "b6ccbf1d0e78e5cc4e465569b5653852c6f815bc",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "All object have prototypes.",
+    "options": [
+      {
+        "key": "A",
+        "text": "true"
+      },
+      {
+        "key": "B",
+        "text": "false"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "bcdcdc3c4579d55943430b5f80d531a459e3a243",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "When you click the paragraph, what's the logged output?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`p` `div`"
+      },
+      {
+        "key": "B",
+        "text": "`div` `p`"
+      },
+      {
+        "key": "C",
+        "text": "`p`"
+      },
+      {
+        "key": "D",
+        "text": "`div`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "c37d170c09a2696a13804a593652b3be3625dbe6",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's the value of output?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`3`, `NaN`, `NaN`"
+      },
+      {
+        "key": "B",
+        "text": "`3`, `7`, `NaN`"
+      },
+      {
+        "key": "C",
+        "text": "`3`, `Lydia2`, `[object Object]2`"
+      },
+      {
+        "key": "D",
+        "text": "`\"12\"`, `Lydia2`, `[object Object]2`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "c4b6c185a0c8ab91bacd42e0d9849750a99057ee",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What happens when we do this?",
+    "options": [
+      {
+        "key": "A",
+        "text": "Nothing, this is totally fine!"
+      },
+      {
+        "key": "B",
+        "text": "`SyntaxError`. You cannot add properties to a function this way."
+      },
+      {
+        "key": "C",
+        "text": "`\"Woof\"` gets logged."
+      },
+      {
+        "key": "D",
+        "text": "`ReferenceError`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "c5c61c1128eeb7fea957bc2eed44e7df175bd327",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "How can we invoke `sum` in `sum.js` from `index.js?`",
+    "options": [
+      {
+        "key": "A",
+        "text": "`sum(4)`"
+      },
+      {
+        "key": "B",
+        "text": "`sum.sum(4)`"
+      },
+      {
+        "key": "C",
+        "text": "`sum.default(4)`"
+      },
+      {
+        "key": "D",
+        "text": "Default aren't imported with `*`, only named exports"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "c6113ec910017d8f9ed2952825ef693888ae431a",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "JavaScript 全局执行上下文为你做了两件事：全局对象和 this 关键字。",
+    "options": [
+      {
+        "key": "A",
+        "text": "对"
+      },
+      {
+        "key": "B",
+        "text": "错"
+      },
+      {
+        "key": "C",
+        "text": "看情况"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "c9f9bd24db4654e9f8a4b52018bf9a991eb3ed02",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What does the `setInterval` method return in the browser?",
+    "options": [
+      {
+        "key": "A",
+        "text": "a unique id"
+      },
+      {
+        "key": "B",
+        "text": "the amount of milliseconds specified"
+      },
+      {
+        "key": "C",
+        "text": "the passed function"
+      },
+      {
+        "key": "D",
+        "text": "`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "ceaf4a7b56bfa469aa36e3fc3be48466dbe8360d",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which of the options result(s) in an error?",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "1 and 2"
+      },
+      {
+        "key": "C",
+        "text": "3 and 4"
+      },
+      {
+        "key": "D",
+        "text": "3"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "d057e48d20daecd5f15530eb2a35e056eb73734d",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "下面那个选项将会返回 `6`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`sumValues([...1, 2, 3])`"
+      },
+      {
+        "key": "B",
+        "text": "`sumValues([...[1, 2, 3]])`"
+      },
+      {
+        "key": "C",
+        "text": "`sumValues(...[1, 2, 3])`"
+      },
+      {
+        "key": "D",
+        "text": "`sumValues([1, 2, 3])`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "d527cf4fdf936d77df15b54920bc2c9004bb1b67",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which method(s) will return the value `'Hello world!'`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "1"
+      },
+      {
+        "key": "B",
+        "text": "2"
+      },
+      {
+        "key": "C",
+        "text": "2 and 3"
+      },
+      {
+        "key": "D",
+        "text": "All of them"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "d5329a446a539f375a7fbcab8fa7f871e3926662",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "当您单击该段落时，日志输出是什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`p` `div`"
+      },
+      {
+        "key": "B",
+        "text": "`div` `p`"
+      },
+      {
+        "key": "C",
+        "text": "`p`"
+      },
+      {
+        "key": "D",
+        "text": "`div`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "d578241ca5e87193164d668028ef467b57b3de2f",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Which option is a way to set `hasName` equal to `true`, provided you cannot pass `true` as an argument?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`!!name`"
+      },
+      {
+        "key": "B",
+        "text": "`name`"
+      },
+      {
+        "key": "C",
+        "text": "`new Boolean(name)`"
+      },
+      {
+        "key": "D",
+        "text": "`name.length`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "d64b7bcb19ed2655655231877c33420a3424c66a",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "Everything in JavaScript is either a...",
+    "options": [
+      {
+        "key": "A",
+        "text": "primitive or object"
+      },
+      {
+        "key": "B",
+        "text": "function or object"
+      },
+      {
+        "key": "C",
+        "text": "trick question! only objects"
+      },
+      {
+        "key": "D",
+        "text": "number or object"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "da2a11a88b70317415519f82e397aa8934a997be",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's the value of `sum`?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`105`"
+      },
+      {
+        "key": "B",
+        "text": "`\"105\"`"
+      },
+      {
+        "key": "C",
+        "text": "`TypeError`"
+      },
+      {
+        "key": "D",
+        "text": "`\"10*10+5\"`"
+      }
+    ],
+    "answer_keys": [
+      "A"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "dabebb171ecfda90c279d43660b7fbedaa7d992b",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "What's missing?",
+    "options": [
+      {
+        "key": "A",
+        "text": "`yield getMembers(teams[i].members)`"
+      },
+      {
+        "key": "B",
+        "text": "`yield* getMembers(teams[i].members)`"
+      },
+      {
+        "key": "C",
+        "text": "`return getMembers(teams[i].members)`"
+      },
+      {
+        "key": "D",
+        "text": "`return yield getMembers(teams[i].members)`"
+      }
+    ],
+    "answer_keys": [
+      "B"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "README.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::README.md"
+    }
+  },
+  {
+    "question_id": "e6b7eec19fc315243f40bff169388f90de40cc69",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "什么样的信息将被打印？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`fetch`方法的结果"
+      },
+      {
+        "key": "B",
+        "text": "第二次调用`fetch`方法的结果"
+      },
+      {
+        "key": "C",
+        "text": "前一个`.then()`中回调方法返回的结果"
+      },
+      {
+        "key": "D",
+        "text": "总是`undefined`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "ef0b6855831b13de31f90005334d71d972e5f22d",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "将会发生什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`setInterval` 的回调不会被调用"
+      },
+      {
+        "key": "B",
+        "text": "`setInterval` 的回调被调用一次"
+      },
+      {
+        "key": "C",
+        "text": "`setInterval` 的回调仍然会被每秒钟调用"
+      },
+      {
+        "key": "D",
+        "text": "我们从没调用过 `config.alert()`, config 为 `null`"
+      }
+    ],
+    "answer_keys": [
+      "C"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  },
+  {
+    "question_id": "f589a1b57ed7f4c11da98e6b111fb70fbcb95137",
+    "domain": "web",
+    "question_type": "single_choice",
+    "stem": "依次输出什么？",
+    "options": [
+      {
+        "key": "A",
+        "text": "`I have resolved!`, `second` and `I have resolved!`, `second`"
+      },
+      {
+        "key": "B",
+        "text": "`second`, `I have resolved!` and `second`, `I have resolved!`"
+      },
+      {
+        "key": "C",
+        "text": "`I have resolved!`, `second` and `second`, `I have resolved!`"
+      },
+      {
+        "key": "D",
+        "text": "`second`, `I have resolved!` and `I have resolved!`, `second`"
+      }
+    ],
+    "answer_keys": [
+      "D"
+    ],
+    "explanation": "",
+    "source": {
+      "repo_full_name": "lydiahallie/javascript-questions",
+      "url": "https://github.com/lydiahallie/javascript-questions",
+      "license": "MIT",
+      "commit_or_tag": "HEAD"
+    },
+    "metadata": {
+      "entry_file": "zh-CN/README-zh_CN.md",
+      "default_branch": "HEAD",
+      "source_key": "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md"
+    }
+  }
+]

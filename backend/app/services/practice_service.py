@@ -107,6 +107,58 @@ class PracticeService:
         ]
         return {"items": items, "total": len(items)}
 
+    def get_overview(self, user_id: str) -> dict[str, Any]:
+        """聚合题库练习首页所需概览数据。"""
+        overview = self.repo.get_practice_overview(user_id=user_id, recent_limit=8)
+        role_items: list[dict[str, Any]] = []
+        total_questions = 0
+        total_answered_questions = 0
+        total_sessions = 0
+        active_sessions = 0
+        for row in overview["role_stats"]:
+            role_total_questions = int(row.get("total_questions") or 0)
+            role_answered_questions = int(row.get("answered_questions") or 0)
+            role_sessions = int(row.get("total_sessions") or 0)
+            role_active_sessions = int(row.get("active_sessions") or 0)
+            total_questions += role_total_questions
+            total_answered_questions += role_answered_questions
+            total_sessions += role_sessions
+            active_sessions += role_active_sessions
+            completion_rate = 0
+            if role_total_questions > 0:
+                completion_rate = min(1.0, role_answered_questions / role_total_questions)
+            role_items.append(
+                {
+                    "job_role": str(row["job_role"]),
+                    "total_questions": role_total_questions,
+                    "active_sessions": role_active_sessions,
+                    "finished_sessions": int(row.get("finished_sessions") or 0),
+                    "answered_questions": role_answered_questions,
+                    "completion_rate": round(completion_rate, 4),
+                    "latest_active_practice_id": row.get("latest_active_practice_id"),
+                }
+            )
+        records = [
+            {
+                "practice_id": str(row["practice_id"]),
+                "job_role": str(row["job_role"]),
+                "mode": str(row["mode"]),
+                "status": str(row["status"]),
+                "total_questions": int(row["question_count"]),
+                "answered_count": int(row["answered_count"] or 0),
+                "created_at": str(row["created_at"]),
+            }
+            for row in overview["recent_records"]
+        ]
+        return {
+            "total_questions": total_questions,
+            "total_answered_questions": total_answered_questions,
+            "total_sessions": total_sessions,
+            "active_sessions": active_sessions,
+            "role_stats": role_items,
+            "recent_records": records,
+        }
+
     def get_session_records(self, practice_id: str, user_id: str) -> dict[str, Any]:
         """查询单场题库练习的题目与答案明细。"""
         self._require_owned_session(practice_id=practice_id, user_id=user_id)
@@ -148,9 +200,9 @@ class PracticeService:
         return questions[:question_count]
 
     def _list_question_bank_candidates(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
-        """通过仓储读取岗位题库候选题。"""
+        """通过仓储读取练习专用选择题候选题。"""
         job_role = str(payload["job_role"])
-        categories = [str(item) for item in payload.get("category_filters") or []]
+        categories = [str(item).strip() for item in payload.get("category_filters") or [] if str(item).strip()]
         try:
             rows = self.repo.list_question_bank_items(job_role=job_role, categories=categories)
         except Exception as exc:
@@ -160,12 +212,14 @@ class PracticeService:
             raise ApiError(code="STATE_409", message="题库尚未准备完成，请稍后重试", status_code=409) from exc
         return [
             {
-                "source_question_id": str(row["record_id"]),
-                "category": row.get("category"),
-                "stem": str(row["question"]),
-                "analysis": row.get("analysis"),
+                "source_question_id": str(row["question_id"]),
+                "category": "single_choice",
+                "stem": str(row["stem"]),
+                "options": row.get("options") or [],
+                "analysis": row.get("explanation"),
             }
             for row in rows
+            if str(row.get("question_type") or "") == "single_choice"
         ]
 
     def _require_owned_session(self, practice_id: str, user_id: str) -> dict[str, Any]:
@@ -239,11 +293,17 @@ class PracticeService:
 
     def _to_question_response(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         """将题目快照转换为接口响应结构。"""
+        options = snapshot.get("options") or []
+        if not options and snapshot.get("source_question_id"):
+            source_item = self.repo.get_practice_choice_question(str(snapshot["source_question_id"]))
+            if source_item:
+                options = source_item.get("options") or []
         return {
             "session_question_id": str(snapshot["session_question_id"]),
             "question_order": int(snapshot["question_order"]),
             "source_question_id": snapshot.get("source_question_id"),
             "category": snapshot.get("category"),
             "stem": str(snapshot["stem"]),
+            "options": options,
             "analysis": snapshot.get("analysis"),
         }
