@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from io import BytesIO
 
 from app.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+resume_context_logger = logging.getLogger("app.resume_context")
 
 
 class OpenAIProviderClient:
@@ -12,6 +16,7 @@ class OpenAIProviderClient:
 
     def __init__(self) -> None:
         """初始化 OpenAI 客户端。"""
+        import httpx
         settings = get_settings()
         from openai import OpenAI
 
@@ -19,6 +24,11 @@ class OpenAIProviderClient:
             "api_key": settings.openai_api_key,
             "timeout": settings.provider_timeout_seconds,
             "max_retries": settings.provider_max_retries,
+            # 显式关闭系统代理继承，避免本地 SOCKS 代理导致 SDK 初始化失败。
+            "http_client": httpx.Client(
+                timeout=settings.provider_timeout_seconds,
+                trust_env=settings.provider_trust_env,
+            ),
         }
         if settings.provider_base_url.strip():
             kwargs["base_url"] = settings.provider_base_url.strip()
@@ -54,21 +64,114 @@ class OpenAIProviderClient:
         )
         return response.read()
 
-    def generate_question(self, answer: str, references: list[dict]) -> str:
+    def _build_reference_context(self, references: list[dict], limit: int = 3) -> str:
+        """构建用于提问的参考上下文（JD/简历/知识片段）。"""
+        if not references:
+            return "无"
+
+        def _priority(reference: dict) -> int:
+            source = str(reference.get("source_path") or "").lower()
+            retrieval_mode = str(reference.get("retrieval_mode") or "").lower()
+            if source == "jd" or retrieval_mode == "jd":
+                return 0
+            if source == "resume" or retrieval_mode == "resume":
+                return 1
+            return 2
+
+        chunks: list[str] = []
+        for ref in sorted(references, key=_priority)[:limit]:
+            title = str(ref.get("title") or "参考片段").strip() or "参考片段"
+            content = str(ref.get("content") or "").strip().replace("\n", " ")
+            if content:
+                chunks.append(f"- {title}：{content[:180]}")
+            else:
+                chunks.append(f"- {title}")
+        return "\n".join(chunks) if chunks else "无"
+
+    def generate_question(
+        self,
+        answer: str,
+        references: list[dict],
+        stage: str,
+        history_messages: list[dict[str, str]],
+        job_role: str,
+        jd_content: str,
+        resume_content: str,
+        trace_id: str,
+        interview_id: str,
+    ) -> str:
         """调用 LLM 生成下一题。"""
-        ref_titles = "；".join(ref.get("title", "") for ref in references[:3] if ref.get("title"))
-        ref_hint = ref_titles or "岗位基础能力"
-        result = self.client.responses.create(
-            model=self.settings.llm_model,
-            input=(
-                "你是面试官，请基于候选人回答生成一个追问问题。"
-                f"候选人回答：{answer}\n"
-                f"参考主题：{ref_hint}\n"
-                "要求：只输出一句中文问题。"
-            ),
-            max_output_tokens=120,
+        ref_context = self._build_reference_context(references=references)
+        role_or_jd = (jd_content or "").strip() or f"岗位方向：{job_role or '未提供'}"
+        messages: list[dict[str, str]] = [
+            {
+                "role": "system",
+                "content": (
+                    "你是一位资深中文技术面试官。"
+                    "你的目标是基于候选人历史回答，提出一个具体、可追问、可验证的下一问。"
+                    "优先围绕技术决策、实现细节、权衡取舍、排障过程、结果度量。"
+                    "不要复述题干，不要泛泛而谈，不要同时问多个问题。"
+                    "如候选人回答过短（如“不会”“不清楚”“no”），应先做澄清式追问。"
+                ),
+            }
+        ]
+        if stage == "PROJECT_DEEP_DIVE" and (resume_content or "").strip():
+            sent_resume_content = resume_content[:2400]
+            logger.info(
+                "发送给大模型的简历内容（项目经历轮）：总长度=%s，发送长度=%s，内容预览=%s",
+                len(resume_content),
+                len(sent_resume_content),
+                sent_resume_content[:400].replace("\n", " "),
+            )
+            resume_context_logger.info(
+                "发送给大模型的简历内容（项目经历轮）：trace_id=%s interview_id=%s 总长度=%s 发送长度=%s 内容预览=%s",
+                trace_id,
+                interview_id,
+                len(resume_content),
+                len(sent_resume_content),
+                sent_resume_content[:400].replace("\n", " "),
+            )
+            messages.append(
+                {
+                    "role": "system",
+                    "content": (
+                        "【简历内容（仅项目经历轮使用）】\n"
+                        f"{sent_resume_content}\n"
+                        "请围绕候选人简历中的项目经历进行追问。"
+                    ),
+                }
+            )
+        messages.append(
+            {
+                "role": "system",
+                "content": (
+                    f"岗位方向或岗位描述：{role_or_jd}\n"
+                    f"当前阶段：{stage}\n"
+                    f"参考资料（含JD与简历）：\n{ref_context}"
+                ),
+            }
         )
-        question = (result.output_text or "").strip()
+        for message in history_messages:
+            role = str(message.get("role") or "").strip().lower()
+            content = str(message.get("content") or "").strip()
+            if role in {"assistant", "user"} and content:
+                messages.append({"role": role, "content": content})
+        if not history_messages:
+            messages.append({"role": "user", "content": answer})
+        result = self.client.chat.completions.create(
+            model=self.settings.llm_model,
+            messages=messages,
+            # 通过 extra_body 透传 GLM 扩展字段，关闭思考模式，避免仅返回 reasoning_content。
+            extra_body={"thinking": {"type": "disabled"}},
+            max_tokens=256,
+        )
+        message = result.choices[0].message
+        question = (message.content or "").strip()
+        if not question:
+            reasoning = str(getattr(message, "reasoning_content", "") or "").strip()
+            if reasoning:
+                # 兜底：若上游只返回 reasoning_content，则截取最后一行可读文本作为问题候选。
+                question = reasoning.splitlines()[-1].strip()
         if not question:
             raise ValueError("LLM 返回空问题")
         return question

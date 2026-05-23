@@ -7,6 +7,7 @@ import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
+import { JobManagePage } from '../pages/JobManagePage'
 import { LoginPage } from '../pages/LoginPage'
 import { PracticePreparePage } from '../pages/PracticePreparePage'
 import { PracticeRecordsPage } from '../pages/PracticeRecordsPage'
@@ -111,6 +112,14 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <HistoryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/jobs"
+            element={
+              <ProtectedRoute>
+                <JobManagePage />
               </ProtectedRoute>
             }
           />

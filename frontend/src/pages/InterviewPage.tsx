@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -11,6 +11,7 @@ import {
   createInterview,
   fetchHistory,
   fetchInterviewPlayback,
+  fetchJds,
   fetchInterviewStatus,
   fetchResumeFile,
   fetchResumes,
@@ -36,7 +37,9 @@ export function InterviewPage() {
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [resumePickerOpen, setResumePickerOpen] = useState(false)
+  const [jdPickerOpen, setJdPickerOpen] = useState(false)
   const [pendingResumeId, setPendingResumeId] = useState('')
+  const [pendingJdId, setPendingJdId] = useState('')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [previewTitle, setPreviewTitle] = useState('')
   const [previewType, setPreviewType] = useState('')
@@ -62,10 +65,16 @@ export function InterviewPage() {
   const [selectedAudioInputId, setSelectedAudioInputId] = useState('')
   const [audioDevicesLoading, setAudioDevicesLoading] = useState(false)
   const [resumeReplayTick, setResumeReplayTick] = useState(0)
+  const [createJobRole, setCreateJobRole] = useState<'java' | 'web'>('java')
+  const [createPositionMode, setCreatePositionMode] = useState<'role' | 'jd'>('role')
+  const [createSelectedJdTitle, setCreateSelectedJdTitle] = useState('')
+  const [jdFilterRole, setJdFilterRole] = useState('')
+  const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
   const endRedirectedRef = useRef(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
+  const [createForm] = Form.useForm()
   const parseBackendDate = (value?: string) => {
     if (!value) {
       return null
@@ -213,6 +222,8 @@ export function InterviewPage() {
     syncSessionStatus({
       stage: status.current_stage,
       followUpCount: status.follow_up_count,
+      currentQuestion: status.current_question,
+      ttsAudioUrl: status.tts_audio_url,
     })
   }, [interviewId, interviewStatusQuery.data, setSessionConfig, syncSessionStatus])
 
@@ -445,6 +456,23 @@ export function InterviewPage() {
     enabled: !interviewId,
   })
 
+  /** 查询创建面试弹窗中的 JD 列表。 */
+  const jdQuery = useQuery({
+    queryKey: ['jds', 'interview-page-create', jdPickerOpen, jdFilterRole, jdFilterTitle],
+    queryFn: () =>
+      fetchJds({
+        job_role: jdFilterRole.trim() || undefined,
+        title: jdFilterTitle.trim() || undefined,
+      }),
+    enabled: jdPickerOpen,
+  })
+
+  useEffect(() => {
+    if (jdPickerOpen) {
+      void jdQuery.refetch()
+    }
+  }, [jdPickerOpen, jdQuery])
+
   const selectedResumeName = useMemo(() => {
     const items = resumeQuery.data?.items ?? []
     const current = items.find((item) => item.resume_id === resumeId)
@@ -457,7 +485,7 @@ export function InterviewPage() {
     onSuccess: (data, variables) => {
       setSessionConfig({
         interviewId: data.interview_id,
-        jobRole: variables.job_role,
+        jobRole: variables.job_role || createJobRole,
         difficulty: variables.difficulty,
         inputMode: variables.input_mode,
         outputMode: variables.output_mode,
@@ -553,6 +581,22 @@ export function InterviewPage() {
     },
     onError: async (error) => {
       const axiosError = error as AxiosError<{ error?: { code?: string; message?: string } }>
+      if (axiosError.code === 'ERR_CANCELED') {
+        try {
+          const sessionStatus = await fetchInterviewStatus(interviewId)
+          syncSessionStatus({
+            stage: sessionStatus.current_stage,
+            followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
+          })
+          message.warning('请求已取消，已同步到最新面试状态')
+          return
+        } catch {
+          message.warning('请求已取消，请刷新页面确认当前轮次')
+          return
+        }
+      }
       const apiError = axiosError.response?.data?.error
       const errorCode = apiError?.code || ''
       const errorMessage = apiError?.message || '提交失败，请重试'
@@ -563,6 +607,8 @@ export function InterviewPage() {
           syncSessionStatus({
             stage: sessionStatus.current_stage,
             followUpCount: sessionStatus.follow_up_count,
+            currentQuestion: sessionStatus.current_question,
+            ttsAudioUrl: sessionStatus.tts_audio_url,
           })
           if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
             message.warning('当前会话已结束，正在跳转报告页')
@@ -938,6 +984,7 @@ export function InterviewPage() {
           onCancel={() => setCreateModalOpen(false)}
           footer={null}
           destroyOnClose
+          zIndex={1000}
         >
           <Space direction="vertical" size={12} style={{ width: '100%' }}>
             <Space>
@@ -950,6 +997,7 @@ export function InterviewPage() {
               <Button onClick={() => setResumePickerOpen(true)}>选择简历</Button>
             </Space>
             <Form
+              form={createForm}
               layout="vertical"
               initialValues={{
                 job_role: 'java',
@@ -967,7 +1015,8 @@ export function InterviewPage() {
                 }
                 createMutation.mutate({
                   resume_id: resumeId,
-                  job_role: values.job_role,
+                  job_role: createPositionMode === 'role' ? values.job_role : undefined,
+                  jd_id: createPositionMode === 'jd' ? values.jd_id : undefined,
                   difficulty: values.difficulty,
                   input_mode: values.input_mode,
                   output_mode: values.output_mode,
@@ -992,14 +1041,54 @@ export function InterviewPage() {
                   ]}
                 />
               </Form.Item>
-              <Form.Item name="job_role" label="岗位方向">
-                <Select
-                  options={[
-                    { label: 'Java', value: 'java' },
-                    { label: 'Web', value: 'web' },
-                  ]}
-                />
+              <Form.Item label="岗位信息模式">
+                <Space>
+                  <Typography.Text>岗位方向</Typography.Text>
+                  <Switch
+                    checked={createPositionMode === 'jd'}
+                    checkedChildren="JD"
+                    unCheckedChildren="方向"
+                    onChange={(checked) => {
+                      const mode: 'role' | 'jd' = checked ? 'jd' : 'role'
+                      setCreatePositionMode(mode)
+                      if (mode === 'role') {
+                        createForm.setFieldValue('jd_id', '')
+                        setPendingJdId('')
+                        setCreateSelectedJdTitle('')
+                      }
+                    }}
+                  />
+                  <Typography.Text>岗位描述（JD）</Typography.Text>
+                </Space>
               </Form.Item>
+              {createPositionMode === 'role' ? (
+                <Form.Item name="job_role" label="岗位方向" rules={[{ required: true, message: '请选择岗位方向' }]}>
+                  <Select
+                    onChange={(value: 'java' | 'web') => {
+                      setCreateJobRole(value)
+                    }}
+                    options={[
+                      { label: 'Java', value: 'java' },
+                      { label: 'Web', value: 'web' },
+                    ]}
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item name="jd_id" label="岗位描述（JD）" rules={[{ required: true, whitespace: true, message: '请选择岗位描述' }]}>
+                  <Space>
+                    {createForm.getFieldValue('jd_id') ? (
+                      <Tag color="gold">{createSelectedJdTitle || createForm.getFieldValue('jd_id')}</Tag>
+                    ) : (
+                      <Tag color="red">未选择 JD</Tag>
+                    )}
+                    <Button
+                      onClick={() => setJdPickerOpen(true)}
+                    >
+                      选择 JD
+                    </Button>
+                  </Space>
+                </Form.Item>
+              )}
               <Form.Item name="difficulty" label="难度">
                 <Radio.Group
                   options={[
@@ -1090,6 +1179,87 @@ export function InterviewPage() {
               },
             ]}
             locale={{ emptyText: '暂无简历，请先去简历管理页上传。' }}
+          />
+        </Modal>
+        <Modal
+          title="选择岗位描述（JD）"
+          open={jdPickerOpen}
+          onCancel={() => setJdPickerOpen(false)}
+          onOk={() => {
+            createForm.setFieldValue('jd_id', pendingJdId)
+            const item = (jdQuery.data?.items || []).find((row) => row.jd_id === pendingJdId)
+            setCreateSelectedJdTitle(item?.title || '')
+            setJdPickerOpen(false)
+            message.success('已绑定 JD')
+          }}
+          okText="确认绑定"
+          cancelText="取消"
+          width={1100}
+          styles={{ body: { height: 640, overflow: 'hidden' } }}
+          zIndex={1100}
+        >
+          <Space wrap style={{ width: '100%', marginBottom: 12 }}>
+            <Input
+              placeholder="按 job_role 搜索，例如：java / web / 后端开发"
+              value={jdFilterRole}
+              onChange={(event) => setJdFilterRole(event.target.value)}
+              style={{ width: 320 }}
+            />
+            <Input
+              placeholder="按标题关键词搜索"
+              value={jdFilterTitle}
+              onChange={(event) => setJdFilterTitle(event.target.value)}
+              style={{ width: 320 }}
+            />
+            <Button onClick={() => void jdQuery.refetch()}>搜索</Button>
+            <Button
+              onClick={() => {
+                setJdFilterRole('')
+                setJdFilterTitle('')
+              }}
+            >
+              清空筛选
+            </Button>
+          </Space>
+          <Table
+            rowKey="jd_id"
+            loading={jdQuery.isLoading}
+            dataSource={jdQuery.data?.items || []}
+            pagination={false}
+            scroll={{ y: 470 }}
+            onRow={(record) => ({
+              onClick: () => setPendingJdId(record.jd_id),
+            })}
+            rowSelection={{
+              type: 'radio',
+              selectedRowKeys: pendingJdId ? [pendingJdId] : [],
+              onChange: (keys) => setPendingJdId(String(keys[0] || '')),
+            }}
+            columns={[
+              { title: '标题', dataIndex: 'title' },
+              {
+                title: '公司',
+                dataIndex: 'company_name',
+                render: (value: string) => value || '-',
+              },
+              {
+                title: '来源',
+                dataIndex: 'source_type',
+                render: (value: string) => (value === 'SYSTEM_PRESET' ? '系统预置' : '我的上传'),
+              },
+              { title: '方向', dataIndex: 'job_role' },
+              {
+                title: '内容摘要',
+                dataIndex: 'content_text',
+                render: (value: string) => (
+                  <Typography.Paragraph style={{ marginBottom: 0 }} ellipsis={{ rows: 2, expandable: false }}>
+                    {value || '-'}
+                  </Typography.Paragraph>
+                ),
+              },
+              { title: '更新时间', dataIndex: 'updated_at' },
+            ]}
+            locale={{ emptyText: '暂无岗位描述，请先去岗位管理页维护。' }}
           />
         </Modal>
         <Modal

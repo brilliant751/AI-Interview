@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 
 
 class ResumeUploadResponse(BaseModel):
@@ -37,7 +37,7 @@ class InterviewCreateRequest(BaseModel):
     """创建面试会话请求。"""
 
     resume_id: str = Field(min_length=6)
-    job_role: Literal["java", "web"]
+    job_role: Optional[Literal["java", "web"]] = None
     difficulty: Literal["easy", "medium", "hard"] = "medium"
     input_mode: Literal["text", "voice"] = "text"
     output_mode: Literal["text", "voice"] = "text"
@@ -45,6 +45,14 @@ class InterviewCreateRequest(BaseModel):
     question_types: list[Literal["project", "technical", "scenario"]] = Field(
         default_factory=lambda: ["project", "technical", "scenario"]
     )
+    jd_id: str = ""
+
+    @model_validator(mode="after")
+    def validate_role_or_jd(self) -> "InterviewCreateRequest":
+        """校验岗位方向与岗位描述至少提供一个。"""
+        if self.job_role is None and not (self.jd_id or "").strip():
+            raise ValueError("job_role 与 jd_id 至少提供一个")
+        return self
 
 
 class InterviewCreateResponse(BaseModel):
@@ -153,6 +161,9 @@ class InterviewStatusResponse(BaseModel):
     difficulty: str = "medium"
     input_mode: str = "text"
     output_mode: str = "text"
+    jd_id: str = ""
+    jd_title: str = ""
+    jd_source_type: str = ""
     current_question: str = ""
     tts_audio_url: Optional[str] = None
     duration_seconds: int = 0
@@ -215,6 +226,9 @@ class HistoryItem(BaseModel):
     resume_id: str
     job_role: str
     status: str
+    jd_id: str = ""
+    jd_title: str = ""
+    jd_source_type: str = ""
     started_at: str
     finished_at: Optional[str] = None
     turn_count: int = 0
@@ -244,6 +258,9 @@ class InterviewPlaybackMeta(BaseModel):
     job_role: str
     difficulty: str
     status: str
+    jd_id: str = ""
+    jd_title: str = ""
+    jd_source_type: str = ""
     started_at: str
     finished_at: Optional[str] = None
     duration_seconds: int = 0
@@ -268,6 +285,56 @@ class InterviewPlaybackResponse(BaseModel):
     resume: InterviewPlaybackResume
     meta: InterviewPlaybackMeta
     turns: list[InterviewPlaybackTurn] = Field(default_factory=list)
+
+
+class JobDescriptionUploadResponse(BaseModel):
+    """JD 上传响应。"""
+
+    jd_id: str
+    source_type: str
+    company_id: str = ""
+    company_name: str = ""
+    title: str
+    job_role: str
+    status: str
+    created_at: str
+
+
+class JobDescriptionListItem(BaseModel):
+    """JD 列表条目。"""
+
+    jd_id: str
+    source_type: str
+    company_id: str = ""
+    company_name: str = ""
+    title: str
+    job_role: str
+    status: str
+    content_text: str = ""
+    created_at: str
+    updated_at: str
+
+
+class JobDescriptionListResponse(BaseModel):
+    """JD 列表响应。"""
+
+    items: list[JobDescriptionListItem] = Field(default_factory=list)
+
+
+class CompanyListItem(BaseModel):
+    """公司列表条目。"""
+
+    company_id: str
+    name: str
+    status: str
+    created_at: str
+    updated_at: str
+
+
+class CompanyListResponse(BaseModel):
+    """公司列表响应。"""
+
+    items: list[CompanyListItem] = Field(default_factory=list)
 
 
 class MaterialImportRequest(BaseModel):

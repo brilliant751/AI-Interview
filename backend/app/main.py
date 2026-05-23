@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.errors import ApiError, api_error_handler
+from app.core.logging_setup import setup_resume_context_logger
 from app.repositories.interview_repository import InterviewRepository
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
@@ -74,6 +75,8 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """创建并配置 FastAPI 应用。"""
     settings = get_settings()
+    resume_log_file = setup_resume_context_logger(REPO_ROOT)
+    logger.info("简历上下文日志已初始化: path=%s", resume_log_file)
     app = FastAPI(
         title=settings.app_name,
         version="v1",

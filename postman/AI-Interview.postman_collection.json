@@ -141,9 +141,41 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
             },
             "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "Upload JD",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "job_role", "value": "java", "type": "text" },
+                { "key": "title", "value": "后端开发工程师JD", "type": "text" }
+              ]
+            },
+            "url": "{{base_url}}/jds"
+          }
+        },
+        {
+          "name": "List JDs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/jds?job_role=java"
+          }
+        },
+        {
+          "name": "Delete JD",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/jds/{{jd_id}}"
           }
         },
         {
