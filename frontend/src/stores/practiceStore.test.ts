@@ -19,6 +19,7 @@ describe('practiceStore', () => {
         session_question_id: 'psq_001',
         question_order: 1,
         stem: '什么是 JVM？',
+        options: [],
       },
     })
 
@@ -43,6 +44,7 @@ describe('practiceStore', () => {
         session_question_id: 'psq_001',
         question_order: 1,
         stem: '第一题',
+        options: [],
       },
     })
 
@@ -56,6 +58,7 @@ describe('practiceStore', () => {
         session_question_id: 'psq_002',
         question_order: 2,
         stem: '第二题',
+        options: [],
       },
     })
 

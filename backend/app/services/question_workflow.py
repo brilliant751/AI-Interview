@@ -134,7 +134,7 @@ class QuestionWorkflow:
             prompts = [
                 f"结合你刚才提到的经历“{answer_hint}”，请说明你在协作中是如何推进结果的。",
                 f"请举例说明你在类似“{ref_hint}”的场景下，如何处理沟通、冲突或时间压力。",
-                f"回顾你刚才的回答，那个经历里你做得最关键的一步是什么，为什么？",
+                "回顾你刚才的回答，那个经历里你做得最关键的一步是什么，为什么？",
             ]
             return prompts[follow_up_count % len(prompts)]
 
