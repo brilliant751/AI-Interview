@@ -273,3 +273,43 @@ body,
     min-width: 100%;
   }
 }
+
+.overview-page .ant-card {
+  border-radius: 16px;
+  border: 1px solid #e6ecf8;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.overview-hero-card {
+  background: linear-gradient(120deg, #eef4ff 0%, #e8f0ff 58%, #dde9ff 100%);
+  border-color: #d8e4ff !important;
+}
+
+.overview-health-card {
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.overview-kpi-card .ant-typography h2 {
+  margin: 2px 0 4px 0 !important;
+  font-size: 40px;
+}
+
+.overview-kpi-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.overview-record-card .ant-table-thead > tr > th {
+  background: #f7faff;
+  color: #475569;
+}
+
+.overview-analysis-card .ant-progress .ant-progress-bg {
+  background: linear-gradient(90deg, #2d6bff, #6f8dff);
+}
