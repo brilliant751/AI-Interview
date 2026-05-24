@@ -186,6 +186,35 @@ class OpenAIProviderClient:
             raise ValueError("LLM 返回空问题")
         return question
 
+    def generate_report_json(
+        self,
+        prompt_messages: list[dict[str, str]],
+        schema: dict,
+        max_tokens: int = 2200,
+    ) -> dict:
+        """调用 LLM 按 JSON Schema 生成结构化面试报告。"""
+        result = self.client.chat.completions.create(
+            model=self.settings.llm_model,
+            messages=prompt_messages,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "interview_report_schema",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+            extra_body={"thinking": {"type": "disabled"}},
+            max_tokens=max_tokens,
+        )
+        message = result.choices[0].message
+        content = (message.content or "").strip()
+        if not content:
+            raise ValueError("LLM 未返回结构化报告内容")
+        import json
+
+        return json.loads(content)
+
     def health(self) -> str:
         """返回 provider 健康状态。"""
         if not self.settings.openai_api_key.strip():

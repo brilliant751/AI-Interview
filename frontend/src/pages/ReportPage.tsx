@@ -1,9 +1,67 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Card, List, Spin, Tag, Typography } from 'antd'
+import { Button, Card, List, Spin, Table, Tag, Typography } from 'antd'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { fetchReport, retryReport } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
+
+/** 六维雷达图。 */
+function RadarHexagon(props: { dimensions: Array<{ dimension: string; capability_score: number }> }) {
+  const dimensions = props.dimensions.slice(0, 6)
+  const size = 320
+  const center = size / 2
+  const maxRadius = 110
+  const levels = [1, 2, 3, 4, 5]
+  const angleStep = (Math.PI * 2) / Math.max(dimensions.length, 6)
+
+  const toPoint = (index: number, score: number) => {
+    const angle = -Math.PI / 2 + index * angleStep
+    const radius = (Math.max(1, Math.min(5, score)) / 5) * maxRadius
+    return {
+      x: center + Math.cos(angle) * radius,
+      y: center + Math.sin(angle) * radius,
+    }
+  }
+
+  const polygonPoints = dimensions
+    .map((item, index) => {
+      const point = toPoint(index, item.capability_score)
+      return `${point.x},${point.y}`
+    })
+    .join(' ')
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label="六维能力雷达图">
+      {levels.map((level) => {
+        const levelPoints = Array.from({ length: Math.max(dimensions.length, 6) }, (_, index) => {
+          const point = toPoint(index, level)
+          return `${point.x},${point.y}`
+        }).join(' ')
+        return <polygon key={level} points={levelPoints} fill="none" stroke="#d9d9d9" strokeWidth="1" />
+      })}
+
+      {Array.from({ length: Math.max(dimensions.length, 6) }, (_, index) => {
+        const edge = toPoint(index, 5)
+        return <line key={`axis-${index}`} x1={center} y1={center} x2={edge.x} y2={edge.y} stroke="#e5e7eb" />
+      })}
+
+      <polygon points={polygonPoints} fill="rgba(24, 144, 255, 0.25)" stroke="#1677ff" strokeWidth="2" />
+
+      {dimensions.map((item, index) => {
+        const labelPoint = toPoint(index, 5.6)
+        const valuePoint = toPoint(index, item.capability_score)
+        return (
+          <g key={item.dimension}>
+            <circle cx={valuePoint.x} cy={valuePoint.y} r="3" fill="#1677ff" />
+            <text x={labelPoint.x} y={labelPoint.y} fontSize="12" textAnchor="middle" fill="#1f2937">
+              {item.dimension}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
 
 /** 报告页面。 */
 export function ReportPage() {
@@ -87,6 +145,87 @@ export function ReportPage() {
         建议
       </Typography.Title>
       <List bordered dataSource={report.suggestions} renderItem={(item) => <List.Item>{item}</List.Item>} />
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        录用建议
+      </Typography.Title>
+      <Typography.Paragraph>{report.final_recommendation || '--'}</Typography.Paragraph>
+
+      <Typography.Title level={5}>维度评分（能力分 + 匹配分）</Typography.Title>
+      {report.dimension_scores.length >= 3 && (
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <RadarHexagon dimensions={report.dimension_scores} />
+        </div>
+      )}
+      <Table
+        size="small"
+        rowKey={(item) => item.dimension}
+        pagination={false}
+        dataSource={report.dimension_scores}
+        columns={[
+          { title: '维度', dataIndex: 'dimension' },
+          { title: '能力分', dataIndex: 'capability_score' },
+          { title: '匹配分', dataIndex: 'match_score' },
+          { title: '置信度', dataIndex: 'confidence' },
+          { title: '关键证据', dataIndex: 'evidence' },
+        ]}
+      />
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        JD-简历-回答对齐
+      </Typography.Title>
+      <Table
+        size="small"
+        rowKey={(item) => `${item.jd_skill}-${item.priority}`}
+        pagination={false}
+        dataSource={report.jd_resume_alignment}
+        columns={[
+          { title: 'JD能力项', dataIndex: 'jd_skill' },
+          { title: '优先级', dataIndex: 'priority' },
+          { title: '简历证据', dataIndex: 'resume_evidence' },
+          { title: '回答证据', dataIndex: 'answer_evidence' },
+          { title: '状态', dataIndex: 'status' },
+          { title: '备注', dataIndex: 'note' },
+        ]}
+      />
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        关键问题深度分析
+      </Typography.Title>
+      <List
+        bordered
+        dataSource={report.question_deep_dives}
+        renderItem={(item) => (
+          <List.Item>
+            <div style={{ width: '100%' }}>
+              <Typography.Text strong>
+                Q{item.question_no}：{item.question}
+              </Typography.Text>
+              <Typography.Paragraph style={{ marginTop: 8, marginBottom: 4 }}>
+                题目意图：{item.intent}
+              </Typography.Paragraph>
+              <Typography.Paragraph style={{ marginBottom: 4 }}>回答摘要：{item.answer_summary}</Typography.Paragraph>
+              <Typography.Paragraph style={{ marginBottom: 4 }}>
+                命中率：{item.hit_rate}% ｜ 深度层级：{item.depth_level} ｜ 简历关联：{item.resume_relevance} ｜ JD关联：
+                {item.jd_relevance}
+              </Typography.Paragraph>
+              <Typography.Paragraph style={{ marginBottom: 4 }}>表现亮点：{item.strengths}</Typography.Paragraph>
+              <Typography.Paragraph style={{ marginBottom: 8 }}>能力缺口：{item.gaps}</Typography.Paragraph>
+              <List
+                size="small"
+                bordered
+                dataSource={item.follow_up_questions}
+                renderItem={(question) => <List.Item>{question}</List.Item>}
+              />
+            </div>
+          </List.Item>
+        )}
+      />
+
+      <Typography.Title level={5} style={{ marginTop: 16 }}>
+        风险清单
+      </Typography.Title>
+      <List bordered dataSource={report.key_risks} renderItem={(item) => <List.Item>{item}</List.Item>} />
     </Card>
   )
 }

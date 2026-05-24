@@ -165,6 +165,19 @@ class InterviewRepository:
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
 
+                CREATE TABLE IF NOT EXISTS interview_turn_jobs (
+                  job_id TEXT PRIMARY KEY,
+                  interview_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  status TEXT NOT NULL,
+                  stage TEXT NOT NULL,
+                  payload_json TEXT NOT NULL DEFAULT '{{}}',
+                  result_json TEXT NOT NULL DEFAULT '{{}}',
+                  error_message TEXT NOT NULL DEFAULT '',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
                 CREATE TABLE IF NOT EXISTS interview_reports (
                   interview_id TEXT PRIMARY KEY,
                   status TEXT NOT NULL,
@@ -172,6 +185,11 @@ class InterviewRepository:
                   strengths TEXT NOT NULL DEFAULT '[]',
                   weaknesses TEXT NOT NULL DEFAULT '[]',
                   suggestions TEXT NOT NULL DEFAULT '[]',
+                  dimension_scores TEXT NOT NULL DEFAULT '[]',
+                  jd_resume_alignment TEXT NOT NULL DEFAULT '[]',
+                  question_deep_dives TEXT NOT NULL DEFAULT '[]',
+                  key_risks TEXT NOT NULL DEFAULT '[]',
+                  final_recommendation TEXT NOT NULL DEFAULT '',
                   error_message TEXT,
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
@@ -277,6 +295,11 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_sessions", "jd_id", "TEXT")
             self._ensure_column(conn, "interview_sessions", "jd_snapshot_title", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "jd_snapshot_content", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_reports", "dimension_scores", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(conn, "interview_reports", "jd_resume_alignment", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(conn, "interview_reports", "question_deep_dives", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(conn, "interview_reports", "key_risks", "TEXT NOT NULL DEFAULT '[]'")
+            self._ensure_column(conn, "interview_reports", "final_recommendation", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "job_descriptions", "company_id", "TEXT")
             self._ensure_column(conn, "interview_turns", "user_id", "TEXT")
             conn.execute(
@@ -337,6 +360,12 @@ class InterviewRepository:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_jd_id ON interview_sessions(jd_id)")
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_turns_user_interview_created ON interview_turns(user_id, interview_id, created_at ASC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_turn_jobs_user_created ON interview_turn_jobs(user_id, created_at DESC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_turn_jobs_interview_created ON interview_turn_jobs(interview_id, created_at DESC)"
             )
             conn.executescript(self._practice_indexes_sql())
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_user_created ON job_descriptions(user_id, created_at DESC)")
@@ -1540,14 +1569,22 @@ class InterviewRepository:
         with self._session() as conn:
             conn.execute(
                 """
-                INSERT INTO interview_reports(interview_id, status, overall_score, strengths, weaknesses, suggestions, error_message)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO interview_reports(
+                  interview_id, status, overall_score, strengths, weaknesses, suggestions,
+                  dimension_scores, jd_resume_alignment, question_deep_dives, key_risks, final_recommendation, error_message
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(interview_id) DO UPDATE SET
                   status = excluded.status,
                   overall_score = excluded.overall_score,
                   strengths = excluded.strengths,
                   weaknesses = excluded.weaknesses,
                   suggestions = excluded.suggestions,
+                  dimension_scores = excluded.dimension_scores,
+                  jd_resume_alignment = excluded.jd_resume_alignment,
+                  question_deep_dives = excluded.question_deep_dives,
+                  key_risks = excluded.key_risks,
+                  final_recommendation = excluded.final_recommendation,
                   error_message = excluded.error_message,
                   updated_at = datetime('now')
                 """,
@@ -1558,6 +1595,11 @@ class InterviewRepository:
                     report.get("strengths", "[]"),
                     report.get("weaknesses", "[]"),
                     report.get("suggestions", "[]"),
+                    report.get("dimension_scores", "[]"),
+                    report.get("jd_resume_alignment", "[]"),
+                    report.get("question_deep_dives", "[]"),
+                    report.get("key_risks", "[]"),
+                    report.get("final_recommendation", ""),
                     report.get("error_message"),
                 ),
             )
@@ -1591,6 +1633,54 @@ class InterviewRepository:
             row = conn.execute(
                 "SELECT * FROM interview_reports WHERE interview_id = ?",
                 (interview_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def create_turn_job(self, interview_id: str, user_id: str, stage: str, payload: dict) -> str:
+        """创建轮次异步任务并返回 job_id。"""
+        job_id = f"job_{uuid.uuid4().hex[:14]}"
+        payload_for_storage = dict(payload)
+        if "answer_audio_bytes" in payload_for_storage:
+            payload_for_storage["answer_audio_bytes"] = "<binary>"
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO interview_turn_jobs(job_id, interview_id, user_id, status, stage, payload_json)
+                VALUES (?, ?, ?, 'PROCESSING', ?, ?)
+                """,
+                (job_id, interview_id, user_id, stage, json.dumps(payload_for_storage, ensure_ascii=False)),
+            )
+        return job_id
+
+    def update_turn_job_status(
+        self,
+        job_id: str,
+        status: str,
+        result: dict | None = None,
+        error_message: str = "",
+    ) -> None:
+        """更新轮次异步任务状态。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE interview_turn_jobs
+                SET status = ?, result_json = ?, error_message = ?, updated_at = datetime('now')
+                WHERE job_id = ?
+                """,
+                (
+                    status,
+                    json.dumps(result or {}, ensure_ascii=False),
+                    error_message,
+                    job_id,
+                ),
+            )
+
+    def get_turn_job(self, job_id: str) -> dict | None:
+        """查询轮次异步任务。"""
+        with self._session() as conn:
+            row = conn.execute(
+                "SELECT * FROM interview_turn_jobs WHERE job_id = ?",
+                (job_id,),
             ).fetchone()
         return dict(row) if row else None
 

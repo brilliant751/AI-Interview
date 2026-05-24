@@ -46,6 +46,11 @@ async def get_report(
         strengths=json.loads(row.get("strengths") or "[]"),
         weaknesses=json.loads(row.get("weaknesses") or "[]"),
         suggestions=json.loads(row.get("suggestions") or "[]"),
+        dimension_scores=json.loads(row.get("dimension_scores") or "[]"),
+        jd_resume_alignment=json.loads(row.get("jd_resume_alignment") or "[]"),
+        question_deep_dives=json.loads(row.get("question_deep_dives") or "[]"),
+        key_risks=json.loads(row.get("key_risks") or "[]"),
+        final_recommendation=str(row.get("final_recommendation") or ""),
         error_message=row.get("error_message"),
     )
 
@@ -71,6 +76,11 @@ async def retry_report(
                 "strengths": "[]",
                 "weaknesses": "[]",
                 "suggestions": "[]",
+                "dimension_scores": "[]",
+                "jd_resume_alignment": "[]",
+                "question_deep_dives": "[]",
+                "key_risks": "[]",
+                "final_recommendation": "",
                 "error_message": None,
             },
         )
@@ -83,6 +93,11 @@ async def retry_report(
                 "strengths": row.get("strengths", "[]"),
                 "weaknesses": row.get("weaknesses", "[]"),
                 "suggestions": row.get("suggestions", "[]"),
+                "dimension_scores": row.get("dimension_scores", "[]"),
+                "jd_resume_alignment": row.get("jd_resume_alignment", "[]"),
+                "question_deep_dives": row.get("question_deep_dives", "[]"),
+                "key_risks": row.get("key_risks", "[]"),
+                "final_recommendation": row.get("final_recommendation", ""),
                 "error_message": None,
             },
         )

@@ -115,6 +115,24 @@ class InterviewTurnResponse(BaseModel):
     pipeline_meta: Optional[PipelineMeta] = None
 
 
+class InterviewTurnJobResponse(BaseModel):
+    """轮次异步任务响应。"""
+
+    interview_id: str
+    job_id: str
+    status: Literal["PROCESSING"]
+
+
+class InterviewTurnJobResultResponse(BaseModel):
+    """轮次异步任务结果响应。"""
+
+    interview_id: str
+    job_id: str
+    status: Literal["PROCESSING", "READY", "FAILED"]
+    result: Optional[InterviewTurnResponse] = None
+    error_message: str = ""
+
+
 class InterviewTurnItemResponse(BaseModel):
     """单轮面试记录响应。"""
 
@@ -215,6 +233,11 @@ class ReportResponse(BaseModel):
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
     suggestions: list[str] = Field(default_factory=list)
+    dimension_scores: list[dict] = Field(default_factory=list)
+    jd_resume_alignment: list[dict] = Field(default_factory=list)
+    question_deep_dives: list[dict] = Field(default_factory=list)
+    key_risks: list[str] = Field(default_factory=list)
+    final_recommendation: str = ""
     error_message: Optional[str] = None
 
 

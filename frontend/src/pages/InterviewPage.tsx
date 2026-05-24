@@ -12,7 +12,9 @@ import {
   fetchHistory,
   fetchInterviewPlayback,
   fetchJds,
+  fetchTurnJobResult,
   fetchInterviewStatus,
+  pauseInterview,
   fetchResumeFile,
   fetchResumes,
   finishInterview,
@@ -72,6 +74,7 @@ export function InterviewPage() {
   const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
   const [questionAudioEnded, setQuestionAudioEnded] = useState(false)
+  const [suspendPolling, setSuspendPolling] = useState(false)
   const [displayedQuestionText, setDisplayedQuestionText] = useState('')
   const questionStreamTimerRef = useRef<number | null>(null)
   const audioBarSeedsRef = useRef(
@@ -97,6 +100,14 @@ export function InterviewPage() {
       return null
     }
     return parsed
+  }
+  /** 判断请求是否属于主动取消。 */
+  const isCanceledRequestError = (error: unknown) => {
+    const axiosError = error as AxiosError
+    const code = String(axiosError?.code || '')
+    const name = String((axiosError as { name?: string })?.name || '')
+    const messageText = String((axiosError as { message?: string })?.message || '').toLowerCase()
+    return code === 'ERR_CANCELED' || name === 'CanceledError' || messageText.includes('canceled')
   }
   /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
   const buildQuestionKey = () => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
@@ -189,21 +200,22 @@ export function InterviewPage() {
   const healthQuery = useQuery({
     queryKey: ['provider-health', 'interview-page'],
     queryFn: fetchProviderHealth,
+    enabled: !suspendPolling,
     retry: false,
-    refetchInterval: 15000,
+    refetchInterval: suspendPolling ? false : 15000,
   })
   /** 会话页拉取状态，确保支持直接访问 /interview/{id}。 */
   const interviewStatusQuery = useQuery({
     queryKey: ['interview-status', interviewId],
     queryFn: () => fetchInterviewStatus(interviewId),
-    enabled: Boolean(interviewId),
-    refetchInterval: 15000,
+    enabled: Boolean(interviewId) && !suspendPolling,
+    refetchInterval: suspendPolling ? false : 15000,
   })
   /** 查询面试详情（用于左侧详情面板）。 */
   const playbackQuery = useQuery({
     queryKey: ['interview-playback', interviewId],
     queryFn: () => fetchInterviewPlayback(interviewId),
-    enabled: Boolean(interviewId),
+    enabled: Boolean(interviewId) && !suspendPolling,
   })
 
   useEffect(() => {
@@ -603,6 +615,9 @@ export function InterviewPage() {
 
   /** 提交轮次。 */
   const submitMutation = useMutation({
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
     mutationFn: async (payload?: { voiceFile?: File }) =>
       inputMode === 'voice'
         ? submitAudioTurn(interviewId, {
@@ -613,23 +628,59 @@ export function InterviewPage() {
             stage: currentStage,
             answer_text: answer,
           }),
-    onSuccess: (data) => {
-      updateTurnResult({
-        stage: data.stage,
-        question: data.next_question,
-        score: data.live_score,
-        followUpCount: data.follow_up_count,
-        ttsAudioUrl: data.tts_audio_url,
-        pipelineMeta: data.pipeline_meta,
-      })
-      void queryClient.invalidateQueries({ queryKey: ['interview-playback', interviewId] })
-      setAnswer('')
-      setAudioFile(null)
-      message.success('已生成下一题')
+    onSuccess: async (data) => {
+      const startedAt = Date.now()
+      while (Date.now() - startedAt < 120000) {
+        let job
+        try {
+          job = await fetchTurnJobResult(interviewId, data.job_id)
+        } catch (error) {
+          if (isCanceledRequestError(error)) {
+            try {
+              const sessionStatus = await fetchInterviewStatus(interviewId)
+              syncSessionStatus({
+                stage: sessionStatus.current_stage,
+                followUpCount: sessionStatus.follow_up_count,
+                currentQuestion: sessionStatus.current_question,
+                ttsAudioUrl: sessionStatus.tts_audio_url,
+              })
+              message.warning('请求被取消，已同步最新状态')
+            } catch {
+              message.warning('请求被取消，请刷新页面确认当前轮次')
+            }
+            return
+          }
+          message.error('任务状态查询失败，请重试')
+          return
+        }
+        if (job.status === 'READY' && job.result) {
+          updateTurnResult({
+            stage: job.result.stage,
+            question: job.result.next_question,
+            score: job.result.live_score,
+            followUpCount: job.result.follow_up_count,
+            ttsAudioUrl: job.result.tts_audio_url,
+            pipelineMeta: job.result.pipeline_meta,
+          })
+          void queryClient.invalidateQueries({ queryKey: ['interview-playback', interviewId] })
+          setAnswer('')
+          setAudioFile(null)
+          message.success('已生成下一题')
+          return
+        }
+        if (job.status === 'FAILED') {
+          message.error(job.error_message || '提交失败，请重试')
+          return
+        }
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 800)
+        })
+      }
+      message.warning('处理超时，请稍后重试或刷新页面查看最新状态')
     },
     onError: async (error) => {
       const axiosError = error as AxiosError<{ error?: { code?: string; message?: string } }>
-      if (axiosError.code === 'ERR_CANCELED') {
+      if (isCanceledRequestError(error)) {
         try {
           const sessionStatus = await fetchInterviewStatus(interviewId)
           syncSessionStatus({
@@ -672,21 +723,62 @@ export function InterviewPage() {
       }
       message.error(errorMessage)
     },
+    onSettled: () => {
+      setSuspendPolling(false)
+    },
   })
 
   /** 结束面试。 */
   const finishMutation = useMutation({
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
     mutationFn: () => finishInterview(interviewId),
     onSuccess: () => {
       message.success('面试已结束，正在生成报告')
       navigate(`/report/${interviewId}`)
     },
-    onError: () => message.error('结束面试失败'),
+    onError: async (error) => {
+      if (isCanceledRequestError(error)) {
+        try {
+          // 取消场景下自动补一次结束请求，避免用户停留在“无法结束”状态。
+          await finishInterview(interviewId)
+        } catch {
+          // ignore retry error
+        }
+        try {
+          const sessionStatus = await fetchInterviewStatus(interviewId)
+          if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
+            message.success('面试已结束，正在跳转报告页')
+            navigate(`/report/${interviewId}`)
+            return
+          }
+        } catch {
+          // ignore
+        }
+        message.warning('结束请求被取消，正在跳转报告页继续确认状态')
+        navigate(`/report/${interviewId}`)
+        return
+      }
+      const axiosError = error as AxiosError<{ error?: { message?: string } }>
+      if (axiosError.code === 'ECONNABORTED') {
+        message.warning('结束请求超时，正在跳转报告页继续确认状态')
+        navigate(`/report/${interviewId}`)
+        return
+      }
+      message.error(axiosError.response?.data?.error?.message || '结束面试失败')
+    },
+    onSettled: () => {
+      setSuspendPolling(false)
+    },
   })
 
   /** 暂停面试并保存进度。 */
   const pauseMutation = useMutation({
-    mutationFn: () => fetchInterviewStatus(interviewId, { status: 'PAUSED' }),
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
+    mutationFn: () => pauseInterview(interviewId),
     onSuccess: () => {
       message.success('面试已暂停，可在准备页继续')
       reset()
@@ -694,6 +786,9 @@ export function InterviewPage() {
     },
     onError: () => {
       message.error('暂停失败，请重试')
+    },
+    onSettled: () => {
+      setSuspendPolling(false)
     },
   })
 
