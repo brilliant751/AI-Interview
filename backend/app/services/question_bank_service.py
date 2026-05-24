@@ -76,14 +76,14 @@ class QuestionBankService:
         return {
             "items": [
                 {
-                    "record_id": str(item["record_id"]),
-                    "job_role": str(item["role"]),
-                    "question_no": int(item["question_no"]),
-                    "title": str(item["title"]),
-                    "category": item["category"],
-                    "question": str(item["question"]),
-                    "analysis": item["analysis"],
-                    "source_path": str(item["source_path"]),
+                    "record_id": str(item["question_id"]),
+                    "job_role": str(item["domain"]),
+                    "question_no": 0,
+                    "title": str(item["stem"])[:80],
+                    "category": "single_choice",
+                    "question": str(item["stem"]),
+                    "analysis": item["explanation"],
+                    "source_path": str(item["metadata"].get("source_key", "")),
                     "updated_at": str(item["updated_at"]),
                 }
                 for item in items

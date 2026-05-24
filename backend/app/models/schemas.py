@@ -424,6 +424,7 @@ class PracticeQuestionResponse(BaseModel):
     source_question_id: Optional[str] = None
     category: Optional[str] = None
     stem: str
+    options: list[dict[str, str]] = Field(default_factory=list)
     analysis: Optional[str] = None
 
 
@@ -486,6 +487,41 @@ class PracticeRecordsResponse(BaseModel):
 
     items: list[PracticeRecordItemResponse] = Field(default_factory=list)
     total: int
+
+
+class PracticeOverviewRoleStatsResponse(BaseModel):
+    """题库练习页岗位统计响应。"""
+
+    job_role: Literal["java", "web"]
+    total_questions: int
+    active_sessions: int = 0
+    finished_sessions: int = 0
+    answered_questions: int = 0
+    completion_rate: float = 0
+    latest_active_practice_id: Optional[str] = None
+
+
+class PracticeOverviewRecentRecordResponse(BaseModel):
+    """题库练习页最近记录响应。"""
+
+    practice_id: str
+    job_role: Literal["java", "web"]
+    mode: str
+    status: str
+    total_questions: int
+    answered_count: int
+    created_at: str
+
+
+class PracticeOverviewResponse(BaseModel):
+    """题库练习页概览响应。"""
+
+    total_questions: int
+    total_answered_questions: int
+    total_sessions: int
+    active_sessions: int
+    role_stats: list[PracticeOverviewRoleStatsResponse] = Field(default_factory=list)
+    recent_records: list[PracticeOverviewRecentRecordResponse] = Field(default_factory=list)
 
 
 class PracticeSessionRecordQuestionResponse(BaseModel):

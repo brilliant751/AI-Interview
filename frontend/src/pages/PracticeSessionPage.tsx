@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Button, Card, Input, Progress, Space, Tag, Typography, message } from 'antd'
+import { Button, Card, Input, Progress, Radio, Space, Tag, Typography, message } from 'antd'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -81,6 +81,8 @@ export function PracticeSessionPage() {
     return <Card title="题库练习">练习加载失败，请返回重试。</Card>
   }
 
+  const optionItems = Array.isArray(currentQuestion?.options) ? currentQuestion.options : []
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card title="练习进度">
@@ -115,12 +117,28 @@ export function PracticeSessionPage() {
               {currentQuestion.analysis ? <Tag color="cyan">含解析快照</Tag> : null}
             </Space>
             <Typography.Paragraph style={{ fontSize: 16, marginBottom: 0 }}>{currentQuestion.stem}</Typography.Paragraph>
-            <Input.TextArea
-              rows={8}
-              value={answerText}
-              onChange={(event) => setAnswerText(event.target.value)}
-              placeholder="输入你的回答"
-            />
+            {optionItems.length ? (
+              <Radio.Group
+                style={{ width: '100%' }}
+                value={answerText}
+                onChange={(event) => setAnswerText(String(event.target.value || ''))}
+              >
+                <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                  {optionItems.map((option) => (
+                    <Radio key={`${option.key}-${option.text}`} value={option.key}>
+                      {option.key}. {option.text}
+                    </Radio>
+                  ))}
+                </Space>
+              </Radio.Group>
+            ) : (
+              <Input.TextArea
+                rows={8}
+                value={answerText}
+                onChange={(event) => setAnswerText(event.target.value)}
+                placeholder="输入你的回答"
+              />
+            )}
             <Button
               type="primary"
               loading={answerMutation.isPending}

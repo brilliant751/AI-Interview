@@ -13,6 +13,7 @@ export interface PracticeQuestion {
   source_question_id?: string
   category?: string
   stem: string
+  options: Array<{ key: string; text: string }>
   analysis?: string
 }
 
@@ -69,6 +70,38 @@ export interface PracticeRecordItem {
 export interface PracticeRecordsResponse {
   items: PracticeRecordItem[]
   total: number
+}
+
+/** 题库概览岗位统计。 */
+export interface PracticeOverviewRoleStats {
+  job_role: 'java' | 'web'
+  total_questions: number
+  active_sessions: number
+  finished_sessions: number
+  answered_questions: number
+  completion_rate: number
+  latest_active_practice_id?: string | null
+}
+
+/** 题库概览最近记录。 */
+export interface PracticeOverviewRecentRecord {
+  practice_id: string
+  job_role: 'java' | 'web'
+  mode: PracticeMode
+  status: 'ACTIVE' | 'FINISHED'
+  total_questions: number
+  answered_count: number
+  created_at: string
+}
+
+/** 题库概览响应。 */
+export interface PracticeOverviewResponse {
+  total_questions: number
+  total_answered_questions: number
+  total_sessions: number
+  active_sessions: number
+  role_stats: PracticeOverviewRoleStats[]
+  recent_records: PracticeOverviewRecentRecord[]
 }
 
 /** 单场练习记录条目。 */
@@ -180,6 +213,12 @@ export async function finishPracticeSession(practiceId: string): Promise<Practic
 /** 获取当前用户练习记录摘要。 */
 export async function fetchPracticeRecords(): Promise<PracticeRecordsResponse> {
   const { data } = await apiClient.get<PracticeRecordsResponse>('/practice/records')
+  return data
+}
+
+/** 获取题库练习首页概览。 */
+export async function fetchPracticeOverview(): Promise<PracticeOverviewResponse> {
+  const { data } = await apiClient.get<PracticeOverviewResponse>('/practice/overview')
   return data
 }
 

@@ -170,6 +170,12 @@ class PracticeRepositoryTestCase(unittest.TestCase):
         with sqlite3.connect(self.db_path) as conn:
             conn.executescript(migration_sql)
 
+    def _run_practice_choice_migration(self) -> None:
+        """执行 practice 选择题迁移脚本。"""
+        migration_sql = Path("backend/migrations/0010_practice_choice_questions.sql").read_text(encoding="utf-8")
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(migration_sql)
+
     def _assert_practice_constraints_enforced(self, require_duplicate_answer_guard: bool = True) -> None:
         """断言迁移后的 practice 表结构已启用目标约束。"""
         with sqlite3.connect(self.db_path) as conn:
@@ -229,9 +235,33 @@ class PracticeRepositoryTestCase(unittest.TestCase):
         self.assertIn("practice_sessions", table_names)
         self.assertIn("practice_session_questions", table_names)
         self.assertIn("practice_answers", table_names)
+        self.assertIn("practice_choice_questions", table_names)
         self.assertIn("idx_practice_sessions_user_created", index_names)
         self.assertIn("idx_practice_questions_session_order", index_names)
         self.assertIn("idx_practice_answers_user_session", index_names)
+        self.assertIn("idx_practice_choice_domain_type", index_names)
+
+    def test_migration_0010_builds_practice_choice_schema(self) -> None:
+        """0010 迁移应创建练习选择题表并约束为 single_choice。"""
+        self._run_practice_choice_migration()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                ("q-ok", "java", "single_choice", "题干", "[]", "[]", "", "{}", "{}"),
+            )
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    """
+                    INSERT INTO practice_choice_questions(
+                      question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    ("q-bad", "java", "multiple_choice", "题干", "[]", "[]", "", "{}", "{}"),
+                )
 
     def test_create_session_and_list_question_snapshots_with_user_scope(self) -> None:
         """题目快照的创建与查询应遵循用户隔离。"""
@@ -414,7 +444,7 @@ class PracticeRepositoryTestCase(unittest.TestCase):
         self.assertEqual("FINISHED", refreshed["status"])
 
     def test_list_practice_records_and_question_bank_items(self) -> None:
-        """练习记录聚合与题库候选读取应由仓储提供。"""
+        """练习记录聚合与练习选择题候选读取应由仓储提供。"""
         self.repository.init_schema()
         session = self.repository.create_practice_session(
             user_id="user-a",
@@ -445,29 +475,29 @@ class PracticeRepositoryTestCase(unittest.TestCase):
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
-                CREATE TABLE question_bank (
-                  record_id TEXT PRIMARY KEY,
-                  role TEXT NOT NULL,
-                  question_no INTEGER NOT NULL,
-                  title TEXT NOT NULL,
-                  category TEXT,
-                  question TEXT NOT NULL,
-                  analysis TEXT,
-                  source_path TEXT NOT NULL,
-                  raw_markdown TEXT NOT NULL,
+                CREATE TABLE IF NOT EXISTS practice_choice_questions (
+                  question_id TEXT PRIMARY KEY,
+                  domain TEXT NOT NULL,
+                  question_type TEXT NOT NULL CHECK(question_type = 'single_choice'),
+                  stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
+                  answer_keys TEXT NOT NULL DEFAULT '[]',
+                  explanation TEXT NOT NULL DEFAULT '',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  metadata TEXT NOT NULL DEFAULT '{}',
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 )
                 """
             )
             conn.executemany(
                 """
-                INSERT INTO question_bank(
-                  record_id, role, question_no, title, category, question, analysis, source_path, raw_markdown
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
-                    ("qb-java-1", "java", 1, "JVM", "technical", "什么是 JVM？", "说明运行时职责。", "mock-a", "raw-a"),
-                    ("qb-java-2", "java", 2, "项目", "project", "你做过哪些性能优化？", "说明收益。", "mock-a", "raw-b"),
+                    ("qb-java-1", "java", "single_choice", "什么是 JVM？", "[]", "[\"A\"]", "说明运行时职责。", "{}", "{}"),
+                    ("qb-java-2", "java", "single_choice", "你做过哪些性能优化？", "[]", "[\"B\"]", "说明收益。", "{}", "{}"),
                 ],
             )
 
@@ -477,8 +507,26 @@ class PracticeRepositoryTestCase(unittest.TestCase):
         self.assertEqual([], self.repository.list_practice_records("user-b"))
 
         candidates = self.repository.list_question_bank_items("java", ["technical"])
-        self.assertEqual(1, len(candidates))
-        self.assertEqual("qb-java-1", candidates[0]["record_id"])
+        self.assertEqual(0, len(candidates))
+
+    def test_list_question_bank_items_tolerates_dirty_json_values(self) -> None:
+        """选择题 JSON 字段脏值不应导致查询异常。"""
+        self.repository.init_schema()
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                ("q-dirty", "java", "single_choice", "脏值题目", "{bad", "x", "oops", "{bad", "{bad"),
+            )
+        rows = self.repository.list_question_bank_items("java")
+        self.assertEqual(1, len(rows))
+        self.assertEqual([], rows[0]["options"])
+        self.assertEqual([], rows[0]["answer_keys"])
+        self.assertEqual({}, rows[0]["source"])
+        self.assertEqual({}, rows[0]["metadata"])
 
     def test_add_question_snapshot_raises_when_practice_not_owned(self) -> None:
         """无权访问练习会话时写入题目快照应显式失败。"""
@@ -681,63 +729,63 @@ class PracticeFlowTestCase(unittest.TestCase):
         os.environ.pop(key, None)
 
     def _seed_question_bank(self) -> None:
-        """为练习流程准备最小题库数据。"""
+        """为练习流程准备最小选择题数据。"""
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
                 """
-                CREATE TABLE IF NOT EXISTS question_bank (
-                  record_id TEXT PRIMARY KEY,
-                  role TEXT NOT NULL,
-                  question_no INTEGER NOT NULL,
-                  title TEXT NOT NULL,
-                  category TEXT,
-                  question TEXT NOT NULL,
-                  analysis TEXT,
-                  source_path TEXT NOT NULL,
-                  raw_markdown TEXT NOT NULL,
+                CREATE TABLE IF NOT EXISTS practice_choice_questions (
+                  question_id TEXT PRIMARY KEY,
+                  domain TEXT NOT NULL,
+                  question_type TEXT NOT NULL CHECK(question_type = 'single_choice'),
+                  stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
+                  answer_keys TEXT NOT NULL DEFAULT '[]',
+                  explanation TEXT NOT NULL DEFAULT '',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  metadata TEXT NOT NULL DEFAULT '{}',
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 )
                 """
             )
             conn.executemany(
                 """
-                INSERT INTO question_bank(
-                  record_id, role, question_no, title, category, question, analysis, source_path, raw_markdown
+                INSERT INTO practice_choice_questions(
+                  question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
                         "qb-java-1",
                         "java",
-                        1,
-                        "JVM",
-                        "technical",
+                        "single_choice",
                         "什么是 JVM 类加载机制？",
+                        "[]",
+                        "[\"A\"]",
                         "说明双亲委派与加载流程。",
-                        "backend/assets/material/java/java-interview/mock.md",
-                        "raw-1",
+                        "{}",
+                        "{\"source_key\": \"mock-1\", \"category\": \"technical\"}",
                     ),
                     (
                         "qb-java-2",
                         "java",
-                        2,
-                        "性能优化",
-                        "project",
+                        "single_choice",
                         "你做过哪些性能优化？",
+                        "[]",
+                        "[\"B\"]",
                         "说明定位手段与收益。",
-                        "backend/assets/material/java/java-interview/mock.md",
-                        "raw-2",
+                        "{}",
+                        "{\"source_key\": \"mock-2\", \"category\": \"project\"}",
                     ),
                     (
                         "qb-java-3",
                         "java",
-                        3,
-                        "并发",
-                        "technical",
+                        "single_choice",
                         "volatile 有什么作用？",
+                        "[]",
+                        "[\"C\"]",
                         "说明可见性与有序性。",
-                        "backend/assets/material/java/java-interview/mock.md",
-                        "raw-3",
+                        "{}",
+                        "{\"source_key\": \"mock-3\", \"category\": \"technical\"}",
                     ),
                 ],
             )
@@ -1000,6 +1048,32 @@ class PracticeFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(403, create_resp.status_code, msg=create_resp.text)
+
+    def test_category_filters_keep_compatible_behavior(self) -> None:
+        """带 category_filters 时应按 metadata.category 过滤。"""
+        created = self.client.post(
+            "/api/v1/practice/sessions",
+            json={
+                "job_role": "java",
+                "mode": "sequence",
+                "question_count": 1,
+                "category_filters": ["project"],
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, created.status_code, msg=created.text)
+
+        mismatch = self.client.post(
+            "/api/v1/practice/sessions",
+            json={
+                "job_role": "java",
+                "mode": "sequence",
+                "question_count": 1,
+                "category_filters": ["scenario"],
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(400, mismatch.status_code, msg=mismatch.text)
 
 
 if __name__ == "__main__":

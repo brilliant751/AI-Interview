@@ -14,6 +14,7 @@ from app.models.schemas import (
     PracticeAnswerRequest,
     PracticeAnswerResponse,
     PracticeCreateRequest,
+    PracticeOverviewResponse,
     PracticeRecordsResponse,
     PracticeSessionRecordsResponse,
     PracticeSessionResponse,
@@ -93,6 +94,16 @@ async def get_practice_records(
     """查询当前用户的题库练习记录。"""
     result = service.list_records(user_id=auth.user_id)
     return PracticeRecordsResponse(**result)
+
+
+@router.get("/overview", response_model=PracticeOverviewResponse)
+async def get_practice_overview(
+    auth: AuthContext = Depends(require_user),
+    service: PracticeService = Depends(get_service),
+) -> PracticeOverviewResponse:
+    """查询题库练习首页概览。"""
+    result = service.get_overview(user_id=auth.user_id)
+    return PracticeOverviewResponse(**result)
 
 
 @router.get("/sessions/{practice_id}/records", response_model=PracticeSessionRecordsResponse)

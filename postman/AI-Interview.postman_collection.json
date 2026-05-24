@@ -11,7 +11,12 @@
           "name": "Register",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Passw0rd123\",\n  \"display_name\": \"Demo User\"\n}"
@@ -23,7 +28,12 @@
           "name": "Login",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Passw0rd123\"\n}"
@@ -47,7 +57,12 @@
           "name": "Refresh",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
@@ -72,8 +87,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -86,7 +107,12 @@
           "name": "Me",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/auth/me"
           }
         }
@@ -99,10 +125,21 @@
           "name": "Upload Resume",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
-              "formdata": [{ "key": "file", "type": "file", "src": "" }]
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
             },
             "url": "{{base_url}}/resumes"
           }
@@ -111,7 +148,12 @@
           "name": "List Resumes",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/resumes?page=1&page_size=10"
           }
         },
@@ -119,7 +161,12 @@
           "name": "Delete Resume",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/resumes/{{resume_id}}"
           }
         },
@@ -127,7 +174,12 @@
           "name": "Get Resume File",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/resumes/{{resume_id}}/file"
           }
         },
@@ -136,8 +188,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -150,13 +208,30 @@
           "name": "Upload JD",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "file", "type": "file", "src": "" },
-                { "key": "job_role", "value": "java", "type": "text" },
-                { "key": "title", "value": "后端开发工程师JD", "type": "text" }
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "job_role",
+                  "value": "java",
+                  "type": "text"
+                },
+                {
+                  "key": "title",
+                  "value": "后端开发工程师JD",
+                  "type": "text"
+                }
               ]
             },
             "url": "{{base_url}}/jds"
@@ -166,7 +241,12 @@
           "name": "List JDs",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/jds?job_role=java"
           }
         },
@@ -174,7 +254,12 @@
           "name": "Delete JD",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/jds/{{jd_id}}"
           }
         },
@@ -183,8 +268,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -197,12 +288,25 @@
           "name": "Submit Audio Turn",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "stage", "value": "SELF_INTRO", "type": "text" },
-                { "key": "file", "type": "file", "src": "" }
+                {
+                  "key": "stage",
+                  "value": "SELF_INTRO",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
               ]
             },
             "url": "{{base_url}}/interviews/{{interview_id}}/turns/audio"
@@ -212,7 +316,12 @@
           "name": "Get Turns",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/turns"
           }
         },
@@ -220,7 +329,12 @@
           "name": "Get Status",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/status"
           }
         },
@@ -228,7 +342,12 @@
           "name": "Finish Interview",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/finish"
           }
         },
@@ -236,7 +355,12 @@
           "name": "Pause Interview",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/pause"
           }
         },
@@ -244,7 +368,12 @@
           "name": "List Paused Interviews",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/paused"
           }
         },
@@ -252,7 +381,12 @@
           "name": "Resume Interview",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/resume"
           }
         },
@@ -260,7 +394,12 @@
           "name": "Get Report",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/report/{{interview_id}}"
           }
         },
@@ -268,7 +407,12 @@
           "name": "Retry Report",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/report/{{interview_id}}/retry"
           }
         },
@@ -276,7 +420,12 @@
           "name": "History",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/history?page=1&page_size=10"
           }
         },
@@ -284,7 +433,12 @@
           "name": "Delete History Interview",
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/history/{{interview_id}}"
           }
         },
@@ -292,7 +446,12 @@
           "name": "Playback",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/playback"
           }
         }
@@ -306,8 +465,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -320,7 +485,12 @@
           "name": "Get Material Import Task",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/admin/imports/materials/{{task_id}}"
           }
         },
@@ -328,7 +498,12 @@
           "name": "Provider Health",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/admin/providers/health"
           }
         }
@@ -342,8 +517,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -356,7 +537,12 @@
           "name": "Get Practice Session",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/sessions/{{practice_id}}"
           }
         },
@@ -365,8 +551,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -379,7 +571,12 @@
           "name": "Finish Practice Session",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/sessions/{{practice_id}}/finish"
           }
         },
@@ -387,7 +584,12 @@
           "name": "List Practice Records",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/records"
           }
         },
@@ -395,7 +597,12 @@
           "name": "Get Practice Session Records",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/sessions/{{practice_id}}/records"
           }
         },
@@ -403,7 +610,12 @@
           "name": "Admin List Question Bank",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/questions?job_role=java&page=1&page_size=10"
           }
         },
@@ -411,12 +623,25 @@
           "name": "Admin Upload Question Bank Markdown",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "job_role", "value": "java", "type": "text" },
-                { "key": "file", "type": "file", "src": "" }
+                {
+                  "key": "job_role",
+                  "value": "java",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
               ]
             },
             "url": "{{base_url}}/practice/questions/upload"
@@ -427,8 +652,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -441,21 +672,63 @@
           "name": "Admin Get Practice Import Task",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/practice/questions/import-tasks/{{task_id}}"
+          }
+        },
+        {
+          "name": "Get Practice Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/practice/overview"
           }
         }
       ]
     }
   ],
   "variable": [
-    { "key": "base_url", "value": "http://localhost:8000/api/v1" },
-    { "key": "access_token", "value": "" },
-    { "key": "refresh_token", "value": "" },
-    { "key": "resume_id", "value": "" },
-    { "key": "interview_id", "value": "" },
-    { "key": "practice_id", "value": "" },
-    { "key": "session_question_id", "value": "" },
-    { "key": "task_id", "value": "" }
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "refresh_token",
+      "value": ""
+    },
+    {
+      "key": "resume_id",
+      "value": ""
+    },
+    {
+      "key": "interview_id",
+      "value": ""
+    },
+    {
+      "key": "practice_id",
+      "value": ""
+    },
+    {
+      "key": "session_question_id",
+      "value": ""
+    },
+    {
+      "key": "task_id",
+      "value": ""
+    }
   ]
 }

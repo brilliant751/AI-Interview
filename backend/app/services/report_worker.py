@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable, Callable
 
 from app.repositories.interview_repository import InterviewRepository
 from app.services.report_service import ReportService

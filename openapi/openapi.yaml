@@ -651,6 +651,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PracticeRecordsResponse'
+  /api/v1/practice/overview:
+    get:
+      summary: 查询题库练习首页概览
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeOverviewResponse'
   /api/v1/practice/questions:
     get:
       summary: 管理端分页查询题库
@@ -1000,6 +1010,41 @@ components:
           items:
             $ref: '#/components/schemas/PracticeRecordItemResponse'
         total: { type: integer }
+    PracticeOverviewRoleStatsResponse:
+      type: object
+      properties:
+        job_role: { type: string, enum: [java, web] }
+        total_questions: { type: integer }
+        active_sessions: { type: integer }
+        finished_sessions: { type: integer }
+        answered_questions: { type: integer }
+        completion_rate: { type: number }
+        latest_active_practice_id: { type: string, nullable: true }
+    PracticeOverviewRecentRecordResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        answered_count: { type: integer }
+        created_at: { type: string }
+    PracticeOverviewResponse:
+      type: object
+      properties:
+        total_questions: { type: integer }
+        total_answered_questions: { type: integer }
+        total_sessions: { type: integer }
+        active_sessions: { type: integer }
+        role_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeOverviewRoleStatsResponse'
+        recent_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeOverviewRecentRecordResponse'
     PracticeSessionRecordQuestionResponse:
       type: object
       properties:

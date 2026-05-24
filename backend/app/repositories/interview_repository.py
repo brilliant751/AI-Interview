@@ -39,6 +39,20 @@ class InterviewRepository:
     def _practice_tables_sql(self) -> str:
         """返回题库练习域的表结构 DDL。"""
         return """
+                CREATE TABLE IF NOT EXISTS practice_choice_questions (
+                  question_id TEXT PRIMARY KEY,
+                  domain TEXT NOT NULL,
+                  question_type TEXT NOT NULL CHECK(question_type = 'single_choice'),
+                  stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
+                  answer_keys TEXT NOT NULL DEFAULT '[]',
+                  explanation TEXT NOT NULL DEFAULT '',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  metadata TEXT NOT NULL DEFAULT '{}',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
                 CREATE TABLE IF NOT EXISTS practice_sessions (
                   practice_id TEXT PRIMARY KEY,
                   user_id TEXT NOT NULL,
@@ -57,6 +71,7 @@ class InterviewRepository:
                   source_question_id TEXT,
                   category TEXT,
                   stem TEXT NOT NULL,
+                  options TEXT NOT NULL DEFAULT '[]',
                   analysis TEXT,
                   created_at TEXT NOT NULL DEFAULT (datetime('now')),
                   UNIQUE(practice_id, question_order),
@@ -80,6 +95,7 @@ class InterviewRepository:
     def _practice_indexes_sql(self) -> str:
         """返回题库练习域的索引 DDL。"""
         return """
+                CREATE INDEX IF NOT EXISTS idx_practice_choice_domain_type ON practice_choice_questions(domain, question_type);
                 CREATE INDEX IF NOT EXISTS idx_practice_sessions_user_created ON practice_sessions(user_id, created_at DESC);
                 CREATE INDEX IF NOT EXISTS idx_practice_questions_session_order ON practice_session_questions(practice_id, question_order ASC);
                 CREATE INDEX IF NOT EXISTS idx_practice_answers_user_session ON practice_answers(user_id, practice_id, created_at ASC);
@@ -315,6 +331,7 @@ class InterviewRepository:
                 """
             )
             self._upgrade_practice_schema(conn)
+            self._ensure_column(conn, "practice_session_questions", "options", "TEXT NOT NULL DEFAULT '[]'")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_created ON interview_sessions(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_jd_id ON interview_sessions(jd_id)")
@@ -334,6 +351,28 @@ class InterviewRepository:
         exists = any(str(row["name"]) == column for row in rows)
         if not exists:
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+
+    def _safe_json_loads(self, value: object, default: object) -> object:
+        """容错解析 JSON 字符串，异常时返回默认值。"""
+        if value is None:
+            return default
+        if isinstance(value, (dict, list)):
+            return value
+        try:
+            parsed = json.loads(str(value))
+        except Exception:
+            return default
+        if isinstance(parsed, str):
+            # 兼容历史脏数据：字段被重复 JSON 编码（例如 "\"[{...}]\""）。
+            try:
+                parsed = json.loads(parsed)
+            except Exception:
+                return default
+        if isinstance(default, list) and not isinstance(parsed, list):
+            return default
+        if isinstance(default, dict) and not isinstance(parsed, dict):
+            return default
+        return parsed
 
     def _practice_schema_needs_upgrade(self, conn: sqlite3.Connection) -> bool:
         """检查 practice 表是否仍是缺少约束的旧结构。"""
@@ -756,9 +795,9 @@ class InterviewRepository:
                 conn.execute(
                     """
                     INSERT INTO practice_session_questions(
-                      session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, analysis
+                      session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, options, analysis
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         f"psq_{uuid.uuid4().hex[:12]}",
@@ -768,6 +807,7 @@ class InterviewRepository:
                         question_data.get("source_question_id"),
                         question_data.get("category"),
                         question_data["stem"],
+                        json.dumps(question_data.get("options") or [], ensure_ascii=False),
                         question_data.get("analysis"),
                     ),
                 )
@@ -811,9 +851,9 @@ class InterviewRepository:
             conn.execute(
                 """
                 INSERT INTO practice_session_questions(
-                  session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, analysis
+                  session_question_id, practice_id, user_id, question_order, source_question_id, category, stem, options, analysis
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_question_id,
@@ -823,6 +863,7 @@ class InterviewRepository:
                     question_data.get("source_question_id"),
                     question_data.get("category"),
                     question_data["stem"],
+                    json.dumps(question_data.get("options") or [], ensure_ascii=False),
                     question_data.get("analysis"),
                 ),
             )
@@ -833,14 +874,19 @@ class InterviewRepository:
         with self._session() as conn:
             rows = conn.execute(
                 """
-                SELECT session_question_id, practice_id, question_order, source_question_id, category, stem, analysis, created_at
+                SELECT session_question_id, practice_id, question_order, source_question_id, category, stem, options, analysis, created_at
                 FROM practice_session_questions
                 WHERE practice_id = ? AND user_id = ?
                 ORDER BY question_order ASC, created_at ASC
                 """,
                 (practice_id, user_id),
             ).fetchall()
-        return [dict(row) for row in rows]
+        items: list[dict] = []
+        for row in rows:
+            item = dict(row)
+            item["options"] = self._safe_json_loads(item.get("options"), [])
+            items.append(item)
+        return items
 
     def update_practice_session_status(self, user_id: str, practice_id: str, status: str) -> bool:
         """更新当前用户题库练习会话状态。"""
@@ -959,22 +1005,128 @@ class InterviewRepository:
         }
 
     def list_question_bank_items(self, job_role: str, categories: list[str] | None = None) -> list[dict]:
-        """按岗位和类别查询题库候选题。"""
+        """按岗位读取练习专用选择题候选题（仅 single_choice）。"""
         sql = """
-            SELECT record_id, category, question, analysis
-            FROM question_bank
-            WHERE role = ?
+            SELECT question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata
+            FROM practice_choice_questions
+            WHERE domain = ? AND question_type = 'single_choice'
         """
         params: list[object] = [job_role]
-        normalized_categories = [item for item in (categories or []) if item]
-        if normalized_categories:
-            placeholders = ", ".join("?" for _ in normalized_categories)
-            sql += f" AND category IN ({placeholders})"
-            params.extend(normalized_categories)
-        sql += " ORDER BY question_no ASC, record_id ASC"
+        sql += " ORDER BY question_id ASC"
         with self._session() as conn:
             rows = conn.execute(sql, tuple(params)).fetchall()
-        return [dict(row) for row in rows]
+        normalized_categories = {str(item).strip().lower() for item in (categories or []) if str(item).strip()}
+        items: list[dict] = []
+        for row in rows:
+            item = dict(row)
+            item["options"] = self._safe_json_loads(item.get("options"), [])
+            item["answer_keys"] = self._safe_json_loads(item.get("answer_keys"), [])
+            item["source"] = self._safe_json_loads(item.get("source"), {})
+            item["metadata"] = self._safe_json_loads(item.get("metadata"), {})
+            if normalized_categories:
+                metadata_category = str((item["metadata"] or {}).get("category", "")).strip().lower()
+                if metadata_category not in normalized_categories:
+                    continue
+            items.append(item)
+        return items
+
+    def get_practice_choice_question(self, question_id: str) -> dict | None:
+        """按题目 ID 查询练习题库选择题。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata, updated_at
+                FROM practice_choice_questions
+                WHERE question_id = ?
+                LIMIT 1
+                """,
+                (question_id,),
+            ).fetchone()
+        if not row:
+            return None
+        item = dict(row)
+        item["options"] = self._safe_json_loads(item.get("options"), [])
+        item["answer_keys"] = self._safe_json_loads(item.get("answer_keys"), [])
+        item["source"] = self._safe_json_loads(item.get("source"), {})
+        item["metadata"] = self._safe_json_loads(item.get("metadata"), {})
+        return item
+
+    def get_practice_overview(self, user_id: str, recent_limit: int = 8) -> dict:
+        """聚合题库练习首页所需的岗位统计与最近记录。"""
+        with self._session() as conn:
+            role_rows = conn.execute(
+                """
+                WITH role_base AS (
+                  SELECT
+                    role.job_role AS job_role,
+                    COALESCE(q.total_questions, 0) AS total_questions
+                  FROM (SELECT 'java' AS job_role UNION ALL SELECT 'web' AS job_role) role
+                  LEFT JOIN (
+                    SELECT domain AS job_role, COUNT(1) AS total_questions
+                    FROM practice_choice_questions
+                    WHERE question_type = 'single_choice'
+                    GROUP BY domain
+                  ) q ON q.job_role = role.job_role
+                ),
+                session_stats AS (
+                  SELECT
+                    s.job_role,
+                    COUNT(1) AS total_sessions,
+                    SUM(CASE WHEN s.status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_sessions,
+                    SUM(CASE WHEN s.status = 'FINISHED' THEN 1 ELSE 0 END) AS finished_sessions,
+                    COUNT(a.answer_id) AS answered_questions
+                  FROM practice_sessions s
+                  LEFT JOIN practice_answers a
+                    ON a.practice_id = s.practice_id
+                   AND a.user_id = s.user_id
+                  WHERE s.user_id = ?
+                  GROUP BY s.job_role
+                )
+                SELECT
+                  b.job_role,
+                  b.total_questions,
+                  COALESCE(st.total_sessions, 0) AS total_sessions,
+                  COALESCE(st.active_sessions, 0) AS active_sessions,
+                  COALESCE(st.finished_sessions, 0) AS finished_sessions,
+                  COALESCE(st.answered_questions, 0) AS answered_questions,
+                  (
+                    SELECT s2.practice_id
+                    FROM practice_sessions s2
+                    WHERE s2.user_id = ? AND s2.job_role = b.job_role AND s2.status = 'ACTIVE'
+                    ORDER BY s2.created_at DESC, s2.practice_id DESC
+                    LIMIT 1
+                  ) AS latest_active_practice_id
+                FROM role_base b
+                LEFT JOIN session_stats st ON st.job_role = b.job_role
+                ORDER BY b.job_role ASC
+                """,
+                (user_id, user_id),
+            ).fetchall()
+            recent_rows = conn.execute(
+                """
+                SELECT
+                  s.practice_id,
+                  s.job_role,
+                  s.mode,
+                  s.status,
+                  s.question_count,
+                  s.created_at,
+                  COUNT(a.answer_id) AS answered_count
+                FROM practice_sessions s
+                LEFT JOIN practice_answers a
+                  ON a.practice_id = s.practice_id
+                 AND a.user_id = s.user_id
+                WHERE s.user_id = ?
+                GROUP BY s.practice_id, s.job_role, s.mode, s.status, s.question_count, s.created_at
+                ORDER BY s.created_at DESC, s.practice_id DESC
+                LIMIT ?
+                """,
+                (user_id, recent_limit),
+            ).fetchall()
+        return {
+            "role_stats": [dict(row) for row in role_rows],
+            "recent_records": [dict(row) for row in recent_rows],
+        }
 
     def list_admin_question_bank_items(
         self,
@@ -984,35 +1136,77 @@ class InterviewRepository:
         offset: int,
         limit: int,
     ) -> tuple[list[dict], int]:
-        """按岗位、类别和关键词分页读取管理端题库列表。"""
-        where = ["role = ?"]
+        """按岗位和关键词分页读取练习专用选择题库列表。"""
+        where = ["domain = ?", "question_type = 'single_choice'"]
         params: list[object] = [job_role]
-        if category:
-            where.append("category = ?")
-            params.append(category)
+        normalized_category = str(category or "").strip().lower()
         if keyword:
-            where.append("(title LIKE ? OR question LIKE ? OR COALESCE(analysis, '') LIKE ?)")
+            where.append("(stem LIKE ? OR COALESCE(explanation, '') LIKE ?)")
             keyword_like = f"%{keyword}%"
-            params.extend([keyword_like, keyword_like, keyword_like])
+            params.extend([keyword_like, keyword_like])
         where_clause = " AND ".join(where)
+        json_category_clause = "LOWER(COALESCE(json_extract(metadata, '$.category'), '')) = ?"
         with self._session() as conn:
-            total = int(
-                conn.execute(
-                    f"SELECT COUNT(*) FROM question_bank WHERE {where_clause}",
+            use_json1 = True
+            try:
+                conn.execute("SELECT json_extract('{\"category\":\"x\"}', '$.category')").fetchone()
+            except sqlite3.OperationalError:
+                use_json1 = False
+
+            if use_json1:
+                where_with_category = where_clause
+                params_with_category = [*params]
+                if normalized_category:
+                    where_with_category = f"{where_with_category} AND {json_category_clause}"
+                    params_with_category.append(normalized_category)
+                total = int(
+                    conn.execute(
+                        f"SELECT COUNT(*) FROM practice_choice_questions WHERE {where_with_category}",
+                        tuple(params_with_category),
+                    ).fetchone()[0]
+                )
+                rows = conn.execute(
+                    f"""
+                    SELECT question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata, updated_at
+                    FROM practice_choice_questions
+                    WHERE {where_with_category}
+                    ORDER BY question_id ASC
+                    LIMIT ? OFFSET ?
+                    """,
+                    tuple([*params_with_category, limit, offset]),
+                ).fetchall()
+            else:
+                # JSON1 不可用时，先按基础条件拉全量，再以内存按 metadata.category 过滤并分页，保证 total/分页一致。
+                all_rows = conn.execute(
+                    f"""
+                    SELECT question_id, domain, question_type, stem, options, answer_keys, explanation, source, metadata, updated_at
+                    FROM practice_choice_questions
+                    WHERE {where_clause}
+                    ORDER BY question_id ASC
+                    """,
                     tuple(params),
-                ).fetchone()[0]
-            )
-            rows = conn.execute(
-                f"""
-                SELECT record_id, role, question_no, title, category, question, analysis, source_path, updated_at
-                FROM question_bank
-                WHERE {where_clause}
-                ORDER BY question_no ASC, record_id ASC
-                LIMIT ? OFFSET ?
-                """,
-                tuple([*params, limit, offset]),
-            ).fetchall()
-        return [dict(row) for row in rows], total
+                ).fetchall()
+                if normalized_category:
+                    filtered_rows = []
+                    for row in all_rows:
+                        parsed_metadata = self._safe_json_loads(dict(row).get("metadata"), {})
+                        row_category = str((parsed_metadata or {}).get("category", "")).strip().lower()
+                        if row_category == normalized_category:
+                            filtered_rows.append(row)
+                else:
+                    filtered_rows = list(all_rows)
+                total = len(filtered_rows)
+                rows = filtered_rows[offset : offset + limit]
+
+        items: list[dict] = []
+        for row in rows:
+            item = dict(row)
+            item["options"] = self._safe_json_loads(item.get("options"), [])
+            item["answer_keys"] = self._safe_json_loads(item.get("answer_keys"), [])
+            item["source"] = self._safe_json_loads(item.get("source"), {})
+            item["metadata"] = self._safe_json_loads(item.get("metadata"), {})
+            items.append(item)
+        return items, total
 
     def create_jd(
         self,

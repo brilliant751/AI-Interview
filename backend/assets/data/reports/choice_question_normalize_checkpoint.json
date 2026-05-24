@@ -1,0 +1,40 @@
+{
+  "completed": {
+    "learning-zone/java-basics::README.md": {
+      "count": 0,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "learning-zone/java-basics::java-multiple-choice-questions-answers.md": {
+      "count": 13,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "mertsaner/java-interview-questions::README.md": {
+      "count": 0,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "mertsaner/java-interview-questions::java-multiple-choice-questions-answers.md": {
+      "count": 14,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "lydiahallie/javascript-questions::README.md": {
+      "count": 155,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "lydiahallie/javascript-questions::zh-CN/README-zh_CN.md": {
+      "count": 150,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    },
+    "freeCodeCamp/Developer_Quiz_Site::README.md": {
+      "count": 0,
+      "updated_at": 1779534009,
+      "commit_or_tag": "HEAD"
+    }
+  },
+  "errors": {}
+}
