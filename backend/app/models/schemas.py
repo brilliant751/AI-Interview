@@ -241,12 +241,36 @@ class ReportResponse(BaseModel):
     error_message: Optional[str] = None
 
 
+class ReportListItem(BaseModel):
+    """报告列表条目。"""
+
+    interview_id: str
+    session_name: str = ""
+    job_role: str
+    difficulty: str = "medium"
+    status: str
+    overall_score: Optional[int] = None
+    updated_at: str
+    started_at: str
+    finished_at: Optional[str] = None
+
+
+class ReportListResponse(BaseModel):
+    """报告列表响应。"""
+
+    items: list[ReportListItem] = Field(default_factory=list)
+    total: int
+    page: int
+    page_size: int
+
+
 class HistoryItem(BaseModel):
     """历史记录条目。"""
 
     interview_id: str
     session_name: str = ""
     resume_id: str
+    resume_file_name: str = ""
     job_role: str
     difficulty: str = "medium"
     status: str

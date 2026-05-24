@@ -111,6 +111,34 @@ paths:
               schema:
                 type: object
                 properties:
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        interview_id: { type: string }
+                        session_name: { type: string }
+                        resume_id: { type: string }
+                        resume_file_name: { type: string }
+                        job_role: { type: string }
+                        difficulty: { type: string }
+                        status: { type: string }
+                        jd_id: { type: string }
+                        jd_title: { type: string }
+                        jd_source_type: { type: string }
+                        started_at: { type: string }
+                        finished_at: { type: string, nullable: true }
+                        turn_count: { type: integer }
+                        overall_score: { type: integer, nullable: true }
+                        created_at: { type: string }
+                        duration_seconds: { type: integer }
+                        duration_updated_at: { type: string, nullable: true }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   interview_id: { type: string }
                   current_stage: { type: string }
                   first_question: { type: string }
@@ -441,6 +469,26 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/report:
+    get:
+      summary: 查询我的报告列表
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [GENERATING, READY, FAILED] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportListResponse'
   /api/v1/report/{interview_id}:
     get:
       summary: 查询面试报告
@@ -988,6 +1036,28 @@ components:
           items: { type: string }
         final_recommendation: { type: string }
         error_message: { type: string, nullable: true }
+    ReportListItem:
+      type: object
+      properties:
+        interview_id: { type: string }
+        session_name: { type: string }
+        job_role: { type: string }
+        difficulty: { type: string }
+        status: { type: string, enum: [GENERATING, READY, FAILED] }
+        overall_score: { type: integer, nullable: true }
+        updated_at: { type: string }
+        started_at: { type: string }
+        finished_at: { type: string, nullable: true }
+    ReportListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportListItem'
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
     ReportRetryResponse:
       type: object
       properties:

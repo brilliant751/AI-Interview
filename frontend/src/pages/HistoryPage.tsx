@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Card, Popconfirm, Select, Space, Table, Typography, message } from 'antd'
-import { useState } from 'react'
+import { Button, Card, Modal, Popconfirm, Select, Space, Table, Typography, message } from 'antd'
+import { AxiosError } from 'axios'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { deleteInterviewHistory, fetchHistory } from '../api/interview'
+import { deleteInterviewHistory, fetchHistory, fetchResumeFile } from '../api/interview'
 
 /** 历史记录页面。 */
 export function HistoryPage() {
@@ -11,6 +12,18 @@ export function HistoryPage() {
   const queryClient = useQueryClient()
   const [jobRole, setJobRole] = useState<string | undefined>(undefined)
   const [page, setPage] = useState(1)
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewTitle, setPreviewTitle] = useState('')
+  const [previewType, setPreviewType] = useState('')
+  const [previewUrl, setPreviewUrl] = useState('')
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    }
+  }, [previewUrl])
 
   /** 获取分页历史记录。 */
   const historyQuery = useQuery({
@@ -27,6 +40,29 @@ export function HistoryPage() {
     },
     onError: () => {
       message.error('删除失败，请重试')
+    },
+  })
+
+  /** 预览简历。 */
+  const previewMutation = useMutation({
+    mutationFn: async (payload: { resumeId: string; fileName: string }) => {
+      const blob = await fetchResumeFile(payload.resumeId)
+      return { blob, fileName: payload.fileName }
+    },
+    onSuccess: ({ blob, fileName }) => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+      const objectUrl = URL.createObjectURL(blob)
+      const ext = fileName.split('.').pop()?.toLowerCase() || ''
+      setPreviewType(ext)
+      setPreviewTitle(fileName)
+      setPreviewUrl(objectUrl)
+      setPreviewOpen(true)
+    },
+    onError: (error) => {
+      const axiosError = error as AxiosError<{ error?: { message?: string } }>
+      message.error(axiosError.response?.data?.error?.message || '加载简历失败')
     },
   })
 
@@ -63,7 +99,16 @@ export function HistoryPage() {
             render: (value?: string) => value || '-',
           },
           { title: '会话 ID', dataIndex: 'interview_id' },
-          { title: '简历 ID', dataIndex: 'resume_id' },
+          {
+            title: '简历',
+            key: 'resume',
+            render: (_, row: { resume_id: string; resume_file_name?: string }) => (
+              <Space direction="vertical" size={2}>
+                <Typography.Text>{row.resume_file_name || '简历文件名缺失'}</Typography.Text>
+                <Typography.Text type="secondary">{row.resume_id}</Typography.Text>
+              </Space>
+            ),
+          },
           { title: '岗位', dataIndex: 'job_role' },
           { title: '状态', dataIndex: 'status' },
           { title: '轮次数', dataIndex: 'turn_count' },
@@ -71,8 +116,20 @@ export function HistoryPage() {
           {
             title: '操作',
             key: 'actions',
-            render: (_, row: { interview_id: string }) => (
+            render: (_, row: { interview_id: string; resume_id: string; resume_file_name?: string }) => (
               <Space>
+                <Button
+                  size="small"
+                  loading={previewMutation.isPending}
+                  onClick={() =>
+                    previewMutation.mutate({
+                      resumeId: row.resume_id,
+                      fileName: row.resume_file_name || `${row.resume_id}.pdf`,
+                    })
+                  }
+                >
+                  预览简历
+                </Button>
                 <Button size="small" onClick={() => navigate(`/history/${row.interview_id}`)}>
                   回放
                 </Button>
@@ -95,6 +152,25 @@ export function HistoryPage() {
         ]}
       />
       {historyQuery.isError && <Typography.Text type="danger">历史记录加载失败</Typography.Text>}
+      <Modal
+        title={`简历预览 - ${previewTitle}`}
+        open={previewOpen}
+        onCancel={() => setPreviewOpen(false)}
+        footer={null}
+        width={900}
+        destroyOnClose
+      >
+        {previewType === 'pdf' ? (
+          <iframe title="resume-preview" src={previewUrl} style={{ width: '100%', height: 600, border: 0 }} />
+        ) : (
+          <Space direction="vertical">
+            <Typography.Text>当前文件类型暂不支持在线渲染，可下载后查看。</Typography.Text>
+            <a href={previewUrl} download={previewTitle}>
+              下载简历文件
+            </a>
+          </Space>
+        )}
+      </Modal>
     </Card>
   )
 }

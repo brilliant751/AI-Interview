@@ -399,6 +399,14 @@
           }
         },
         {
+          "name": "List Reports",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report?page=1&page_size=10"
+          }
+        },
+        {
           "name": "Get Report",
           "request": {
             "method": "GET",

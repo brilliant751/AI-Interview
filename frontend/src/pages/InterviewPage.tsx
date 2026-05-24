@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Radio, Select, Space, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Col, Dropdown, Form, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
+import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -87,6 +88,7 @@ export function InterviewPage() {
   )
   const endRedirectedRef = useRef(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
+  const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
   const [createForm] = Form.useForm()
   const parseBackendDate = (value?: string) => {
@@ -1075,52 +1077,232 @@ export function InterviewPage() {
   )
 
   if (!routeInterviewId) {
+    const pausedItems = pausedQuery.data?.items ?? []
+    const pausedCount = pausedItems.length
+    const resumedAtText = pausedItems[0]?.started_at ? formatDateTime(pausedItems[0].started_at) : '--'
+    const quickStartRoles: Array<{ key: string; title: string; subtitle: string; icon: LucideIcon }> = [
+      { key: 'web', title: 'Web 前端工程师', subtitle: '项目表达 / 性能优化 / 工程化', icon: Code2 },
+      { key: 'java', title: 'Java 后端工程师', subtitle: '并发 / 系统设计 / 数据库', icon: Database },
+      { key: 'pm', title: '产品经理', subtitle: '需求分析 / 指标拆解 / 场景沟通', icon: BriefcaseBusiness },
+      { key: 'test', title: '测试工程师', subtitle: '测试策略 / 缺陷追踪 / 质量门禁', icon: ShieldCheck },
+    ]
+    const roleColorMap: Record<string, string> = {
+      web: 'blue',
+      java: 'cyan',
+    }
+    const difficultyColorMap: Record<string, string> = {
+      easy: 'green',
+      medium: 'gold',
+      hard: 'red',
+    }
+    const statusColorMap: Record<string, string> = {
+      PAUSED: 'processing',
+      ACTIVE: 'green',
+      FINISHED: 'default',
+    }
     return (
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <ProviderHealthBanner health={providerHealth} />
-        <Card title="面试大厅">
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
-            <Space wrap>
-              <Button type="primary" onClick={() => setCreateModalOpen(true)}>
-                创建面试
-              </Button>
-              <Button onClick={() => navigate('/resumes')}>去上传/管理简历</Button>
-            </Space>
-            <Table
-              rowKey="interview_id"
-              loading={pausedQuery.isLoading}
-              dataSource={pausedQuery.data?.items ?? []}
-              pagination={false}
-              columns={[
-                {
-                  title: '面试名称',
-                  dataIndex: 'session_name',
-                  render: (value?: string) => value || '-',
-                },
-                { title: '会话ID', dataIndex: 'interview_id' },
-                { title: '简历', dataIndex: 'resume_id' },
-                { title: '岗位', dataIndex: 'job_role' },
-                { title: '难度', dataIndex: 'difficulty' },
-                { title: '状态', dataIndex: 'status' },
-                {
-                  title: '操作',
-                  key: 'actions',
-                  render: (_, row: { interview_id: string }) => (
-                    <Button
-                      size="small"
-                      type="primary"
-                      loading={resumePausedMutation.isPending && resumingInterviewId === row.interview_id}
-                      onClick={() => resumePausedMutation.mutate(row.interview_id)}
-                    >
-                      继续面试
-                    </Button>
-                  ),
-                },
-              ]}
-              locale={{ emptyText: '暂无暂停中的面试，可点击“创建面试”开始。' }}
-            />
-          </Space>
+      <Space className="interview-lobby" direction="vertical" size={16} style={{ width: '100%' }}>
+        <Card
+          className="interview-lobby-hero"
+          style={{
+            background: 'linear-gradient(120deg, #e8f0ff 0%, #dbe8ff 62%, #f1f5ff 100%)',
+            border: '1px solid #d3e3ff',
+          }}
+        >
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} xl={16}>
+              <Typography.Title level={3} style={{ marginTop: 0 }}>
+                面试大厅
+              </Typography.Title>
+              <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+                开始新的模拟面试，或继续上次未完成会话。建议优先练习项目表达和技术方案讲解。
+              </Typography.Paragraph>
+              <Space wrap className="interview-lobby-actions">
+                <Button className="interview-lobby-btn-primary" type="primary" size="large" icon={<Play size={16} />} onClick={() => setCreateModalOpen(true)}>
+                  开始新面试
+                </Button>
+                <Button className="interview-lobby-btn-secondary" size="large" icon={<Upload size={16} />} onClick={() => navigate('/resumes')}>
+                  上传/管理简历
+                </Button>
+                <Button className="interview-lobby-btn-secondary" size="large" icon={<FileText size={16} />} onClick={() => navigate('/report')}>
+                  查看我的报告
+                </Button>
+              </Space>
+            </Col>
+            <Col xs={24} xl={8}>
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <Card className="interview-lobby-mini-card" size="small">
+                  <Space align="start" size={10}>
+                    <div className="interview-lobby-icon-wrap purple"><CirclePause size={18} /></div>
+                    <Statistic title="待继续会话" value={pausedCount} suffix="个" />
+                  </Space>
+                </Card>
+                <Card className="interview-lobby-mini-card" size="small">
+                  <Space align="start" size={10}>
+                    <div className="interview-lobby-icon-wrap green"><CalendarClock size={18} /></div>
+                    <div>
+                      <Typography.Text type="secondary">最近保存时间</Typography.Text>
+                      <Typography.Paragraph style={{ marginBottom: 0 }}>{resumedAtText}</Typography.Paragraph>
+                    </div>
+                  </Space>
+                </Card>
+              </Space>
+            </Col>
+          </Row>
         </Card>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space align="start" size={10}>
+                <div className="interview-lobby-icon-wrap blue"><CirclePause size={18} /></div>
+                <Statistic title="暂停中的面试" value={pausedCount} suffix="场" />
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space align="start" size={10}>
+                <div className="interview-lobby-icon-wrap violet"><Mic size={18} /></div>
+                <Statistic title="语音答题时长上限" value={MAX_RECORDING_SECONDS} suffix="秒/题" />
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap green"><FileText size={18} /></div>
+                  <Typography.Text type="secondary">文本答题剩余建议</Typography.Text>
+                </Space>
+                <Progress percent={Math.round((textAnswerRemainingSeconds / MAX_TEXT_ANSWER_SECONDS) * 100)} />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card
+          className="interview-lobby-section-card"
+          title="快速开始"
+          extra={
+            <Button type="link" onClick={() => setCreateModalOpen(true)}>
+              自定义配置创建
+            </Button>
+          }
+        >
+          <Row gutter={[12, 12]}>
+            {quickStartRoles.map((item) => (
+              <Col xs={24} md={12} xl={6} key={item.key}>
+                <Card className="interview-lobby-role-card" size="small">
+                  <Space direction="vertical" size={8}>
+                    <Space size={8}>
+                      <div className="interview-lobby-icon-wrap soft"><item.icon size={16} /></div>
+                      <Typography.Text strong>{item.title}</Typography.Text>
+                    </Space>
+                    <Typography.Text type="secondary">{item.subtitle}</Typography.Text>
+                    <Button
+                      className="interview-lobby-role-btn"
+                      type="primary"
+                      ghost
+                      icon={<ArrowRight size={15} />}
+                      onClick={() => {
+                        setCreateModalOpen(true)
+                        createForm.setFieldValue('job_role', item.key === 'java' ? 'java' : 'web')
+                      }}
+                    >
+                      开始练习
+                    </Button>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+
+        <Card className="interview-lobby-section-card" title="继续上次面试">
+          {pausedQuery.isLoading ? (
+            <Typography.Text type="secondary">正在加载暂停中的会话...</Typography.Text>
+          ) : pausedItems.length === 0 ? (
+            <Typography.Text type="secondary">暂无暂停中的面试，可点击“开始新面试”创建。</Typography.Text>
+          ) : (
+            <Row gutter={[12, 12]}>
+              {pausedItems.map((row) => (
+                <Col xs={24} lg={12} key={row.interview_id}>
+                  <Card className="interview-lobby-resume-card" size="small">
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Typography.Text strong>{row.session_name || '未命名面试'}</Typography.Text>
+                        <Tag color="blue">{row.status}</Tag>
+                      </Space>
+                      <Space wrap size={8}>
+                        <Tag color={roleColorMap[row.job_role] || 'blue'}>{`岗位：${row.job_role}`}</Tag>
+                        <Tag color={difficultyColorMap[row.difficulty] || 'gold'}>{`难度：${row.difficulty}`}</Tag>
+                        <Tooltip title="预览">
+                          <Tag
+                            color="purple"
+                            className="interview-lobby-resume-preview-tag"
+                            onClick={() =>
+                              previewMutation.mutate({
+                                resumeId: row.resume_id,
+                                fileName: row.resume_file_name || `${row.resume_id}.pdf`,
+                              })
+                            }
+                          >
+                            {`简历：${row.resume_file_name || row.resume_id}`}
+                          </Tag>
+                        </Tooltip>
+                      </Space>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Tag color={statusColorMap[row.status] || 'processing'}>{`状态：${row.status}`}</Tag>
+                        <Typography.Text type="secondary">{`会话ID：${row.interview_id}`}</Typography.Text>
+                      </Space>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Typography.Text type="secondary">{`开始时间：${formatDateTime(row.started_at)}`}</Typography.Text>
+                      </Space>
+                      <div className="interview-lobby-resume-action-row">
+                        <Button
+                          className="interview-lobby-resume-action-btn"
+                          size="middle"
+                          type="primary"
+                          loading={resumePausedMutation.isPending && resumingInterviewId === row.interview_id}
+                          onClick={() => resumePausedMutation.mutate(row.interview_id)}
+                        >
+                          继续面试
+                        </Button>
+                      </div>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Card>
+
+        <Card className="interview-lobby-health-summary">
+          <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+            <Space size={10}>
+              <div className="interview-lobby-icon-wrap green">
+                <Activity size={16} />
+              </div>
+              <Typography.Text strong>
+                系统状态：{providerHealth?.overall === 'UP' ? '正常' : providerHealth?.overall === 'DEGRADED' ? '降级运行' : '异常'}
+              </Typography.Text>
+            </Space>
+            <Button
+              type="link"
+              onClick={() => setHealthDetailsOpen((previous) => !previous)}
+              icon={healthDetailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            >
+              {healthDetailsOpen ? '隐藏详情' : '展开详情'}
+            </Button>
+          </Space>
+          {healthDetailsOpen ? (
+            <div style={{ marginTop: 12 }}>
+              <ProviderHealthBanner health={providerHealth} />
+            </div>
+          ) : null}
+        </Card>
+
         <Modal
           title="创建面试"
           open={createModalOpen}
@@ -1191,7 +1373,7 @@ export function InterviewPage() {
                     checked={createPositionMode === 'jd'}
                     checkedChildren="JD"
                     unCheckedChildren="方向"
-                    onChange={(checked) => {
+                    onChange={(checked: boolean) => {
                       const mode: 'role' | 'jd' = checked ? 'jd' : 'role'
                       setCreatePositionMode(mode)
                       if (mode === 'role') {

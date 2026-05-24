@@ -1636,6 +1636,51 @@ class InterviewRepository:
             ).fetchone()
         return dict(row) if row else None
 
+    def list_reports(
+        self,
+        user_id: str,
+        status: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[dict], int]:
+        """分页查询用户报告列表。"""
+        where = "WHERE s.user_id = ?"
+        params: list[object] = [user_id]
+        if status:
+            where += " AND r.status = ?"
+            params.append(status)
+        with self._session() as conn:
+            total = conn.execute(
+                f"""
+                SELECT COUNT(1) AS cnt
+                FROM interview_reports r
+                JOIN interview_sessions s ON s.interview_id = r.interview_id
+                {where}
+                """,
+                params,
+            ).fetchone()["cnt"]
+            rows = conn.execute(
+                f"""
+                SELECT
+                  r.interview_id,
+                  r.status,
+                  r.overall_score,
+                  r.updated_at,
+                  s.session_name,
+                  s.job_role,
+                  s.difficulty,
+                  s.started_at,
+                  s.finished_at
+                FROM interview_reports r
+                JOIN interview_sessions s ON s.interview_id = r.interview_id
+                {where}
+                ORDER BY datetime(r.updated_at) DESC, datetime(s.started_at) DESC
+                LIMIT ? OFFSET ?
+                """,
+                [*params, limit, offset],
+            ).fetchall()
+        return [dict(row) for row in rows], int(total)
+
     def create_turn_job(self, interview_id: str, user_id: str, stage: str, payload: dict) -> str:
         """创建轮次异步任务并返回 job_id。"""
         job_id = f"job_{uuid.uuid4().hex[:14]}"
@@ -1712,6 +1757,7 @@ class InterviewRepository:
                   s.interview_id,
                   s.session_name,
                   s.resume_id,
+                  COALESCE(rv.filename, '') AS resume_file_name,
                   s.jd_id,
                   s.jd_snapshot_title,
                   COALESCE(j.source_type, '') AS jd_source_type,
@@ -1730,6 +1776,7 @@ class InterviewRepository:
                 FROM interview_sessions s
                 LEFT JOIN interview_reports r ON r.interview_id = s.interview_id
                 LEFT JOIN job_descriptions j ON j.jd_id = s.jd_id
+                LEFT JOIN resumes rv ON rv.resume_id = s.resume_id AND rv.user_id = s.user_id
                 {where}
                 ORDER BY s.created_at DESC
                 LIMIT ? OFFSET ?

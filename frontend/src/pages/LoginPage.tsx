@@ -21,7 +21,7 @@ export function LoginPage() {
         refreshToken: data.refresh_token,
         user: data.user,
       })
-      const fallback = '/prepare'
+      const fallback = '/overview'
       const from = (location.state as { from?: string } | undefined)?.from ?? fallback
       message.success('登录成功')
       navigate(from, { replace: true })

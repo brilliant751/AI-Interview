@@ -1,11 +1,24 @@
-import { Button, Layout, Typography } from 'antd'
+import {
+  BellOutlined,
+  BookOutlined,
+  FileTextOutlined,
+  FormOutlined,
+  HomeOutlined,
+  LogoutOutlined,
+  ReadOutlined,
+  ScheduleOutlined,
+  TeamOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
+import { Badge, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
 import type { ReactNode } from 'react'
+import type { MenuProps } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
 
-const { Header, Content } = Layout
+const { Header, Content, Sider } = Layout
 
 /** 应用布局组件。 */
 export function AppLayout(props: { children: ReactNode }) {
@@ -16,22 +29,26 @@ export function AppLayout(props: { children: ReactNode }) {
   const refreshToken = useAuthStore((state) => state.refreshToken)
   const clearSession = useAuthStore((state) => state.clearSession)
 
-  const links = isAuthenticated
-    ? [
-        { to: '/interview', label: '模拟面试' },
-        { to: '/practice', label: '题库练习' },
-        { to: '/resumes', label: '简历管理' },
-        { to: '/jobs', label: '岗位管理' },
-        { to: '/history', label: '历史记录' },
-      ]
-    : [
-        { to: '/login', label: '登录' },
-        { to: '/register', label: '注册' },
-      ]
-
+  const sideMenuItems: MenuProps['items'] = [
+    { key: '/overview', icon: <HomeOutlined />, label: <Link to="/overview">首页概览</Link> },
+    { key: '/interview', icon: <FormOutlined />, label: <Link to="/interview">AI 面试</Link> },
+    { key: '/practice', icon: <ReadOutlined />, label: <Link to="/practice">题库练习</Link> },
+    { key: '/history', icon: <ScheduleOutlined />, label: <Link to="/history">面试记录</Link> },
+    { key: '/report', icon: <FileTextOutlined />, label: <Link to="/report">我的报告</Link> },
+    { key: '/jobs', icon: <BookOutlined />, label: <Link to="/jobs">岗位库</Link> },
+    { key: '/resumes', icon: <TeamOutlined />, label: <Link to="/resumes">简历管理</Link> },
+  ]
   if (user?.role === 'admin') {
-    links.push({ to: '/admin/imports', label: '知识库重建' })
-    links.push({ to: '/admin/questions', label: '题库管理' })
+    sideMenuItems.push({ key: '/admin/imports', icon: <UserOutlined />, label: <Link to="/admin/imports">知识库重建</Link> })
+    sideMenuItems.push({ key: '/admin/questions', icon: <UserOutlined />, label: <Link to="/admin/questions">题库管理</Link> })
+  }
+
+  /** 根据当前路径选中侧边栏菜单。 */
+  const selectedMenuKey = () => {
+    const pathName = location.pathname
+    const allKeys = sideMenuItems?.map((item) => String(item?.key || '')) || []
+    const matched = allKeys.find((key) => pathName.startsWith(key))
+    return matched ? [matched] : ['/overview']
   }
 
   /** 执行退出登录。 */
@@ -46,6 +63,19 @@ export function AppLayout(props: { children: ReactNode }) {
     }
   }
 
+  const userMenuItems: MenuProps['items'] = [
+    { key: 'email', label: <Typography.Text type="secondary">{user?.email || '未登录'}</Typography.Text>, disabled: true },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      label: '退出登录',
+      icon: <LogoutOutlined />,
+      onClick: () => {
+        void handleLogout()
+      },
+    },
+  ]
+
   return (
     <Layout style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)' }}>
       <Header
@@ -55,35 +85,52 @@ export function AppLayout(props: { children: ReactNode }) {
           justifyContent: 'space-between',
           background: '#10243f',
           color: '#fff',
-          gap: 16,
+          gap: 12,
+          paddingInline: 20,
         }}
       >
-        <Typography.Title level={4} style={{ margin: 0, color: '#fff' }}>
-          AI Interview
-        </Typography.Title>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {links.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              style={{
-                color: location.pathname.startsWith(item.to) ? '#ffd666' : '#d6e4ff',
-                textDecoration: 'none',
-              }}
-            >
-              {item.label}
-            </Link>
-          ))}
-          {isAuthenticated ? (
-            <Button size="small" onClick={handleLogout}>
-              退出登录
+        <Space size={10}>
+          <Typography.Title level={4} style={{ margin: 0, color: '#fff' }}>
+            AI Interview
+          </Typography.Title>
+          {isAuthenticated ? <Typography.Text style={{ color: '#9ec5ff' }}>面试训练工作台</Typography.Text> : null}
+        </Space>
+        {isAuthenticated ? (
+          <Space size={14}>
+            <Badge count={2} size="small">
+              <Button shape="circle" icon={<BellOutlined />} />
+            </Badge>
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <Button icon={<UserOutlined />}>{user?.display_name || user?.email?.split('@')[0] || '用户'}</Button>
+            </Dropdown>
+          </Space>
+        ) : (
+          <Space size={10}>
+            <Button type="link">
+              <Link to="/login">登录</Link>
             </Button>
-          ) : null}
-        </div>
+            <Button>
+              <Link to="/register">注册</Link>
+            </Button>
+          </Space>
+        )}
       </Header>
-      <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>
-        {props.children}
-      </Content>
+      <Layout>
+        {isAuthenticated ? (
+          <Sider
+            width={220}
+            theme="light"
+            style={{
+              borderRight: '1px solid #e5e7eb',
+              background: '#f7faff',
+              paddingTop: 8,
+            }}
+          >
+            <Menu mode="inline" selectedKeys={selectedMenuKey()} items={sideMenuItems} style={{ borderInlineEnd: 0, background: '#f7faff' }} />
+          </Sider>
+        ) : null}
+        <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>{props.children}</Content>
+      </Layout>
     </Layout>
   )
 }

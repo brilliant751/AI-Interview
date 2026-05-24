@@ -190,6 +190,27 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertTrue(all(item["status"] == "FINISHED" for item in paused_history.json()["items"]))
         self.assertTrue(all("difficulty" in item for item in paused_history.json()["items"]))
 
+    def test_report_list_endpoint(self) -> None:
+        """验证报告列表接口返回当前用户报告数据。"""
+        interview_id = self._create_interview()
+        finish_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/finish",
+            headers=self.user_headers,
+        )
+        self.assertEqual(202, finish_resp.status_code)
+
+        list_resp = self.client.get(
+            "/api/v1/report",
+            params={"status": "GENERATING", "page": 1, "page_size": 10},
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, list_resp.status_code)
+        payload = list_resp.json()
+        self.assertGreaterEqual(payload["total"], 1)
+        self.assertGreaterEqual(len(payload["items"]), 1)
+        self.assertEqual(interview_id, payload["items"][0]["interview_id"])
+        self.assertIn(payload["items"][0]["status"], ["GENERATING", "READY", "FAILED"])
+
     def test_update_interview_status_by_query(self) -> None:
         """验证可通过查询参数更新会话状态。"""
         interview_id = self._create_interview()

@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Button, Card, List, Spin, Table, Tag, Typography } from 'antd'
+import { Button, Card, List, Select, Space, Spin, Table, Tag, Typography } from 'antd'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { fetchReport, retryReport } from '../api/interview'
+import { fetchReport, fetchReportList, retryReport } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
 /** 六维雷达图。 */
@@ -70,6 +71,8 @@ export function ReportPage() {
   const queryClient = useQueryClient()
   const storeInterviewId = useInterviewStore((state) => state.interviewId)
   const interviewId = params.interviewId || storeInterviewId
+  const [statusFilter, setStatusFilter] = useState<'GENERATING' | 'READY' | 'FAILED' | undefined>(undefined)
+  const [listPage, setListPage] = useState(1)
 
   /** 轮询查询报告状态。 */
   const reportQuery = useQuery({
@@ -87,15 +90,70 @@ export function ReportPage() {
     },
   })
 
+  /** 查询我的报告列表。 */
+  const reportListQuery = useQuery({
+    queryKey: ['report-list', listPage, statusFilter],
+    queryFn: () => fetchReportList({ page: listPage, page_size: 10, status: statusFilter }),
+    enabled: !interviewId,
+  })
+
   if (!interviewId) {
     return (
-      <Card>
-        <Typography.Text>暂无报告，请先完成一次面试。</Typography.Text>
-        <div style={{ marginTop: 12 }}>
+      <Card title="我的报告">
+        <Space style={{ marginBottom: 16 }}>
+          <Select
+            allowClear
+            placeholder="按状态筛选"
+            style={{ width: 180 }}
+            options={[
+              { label: '生成中', value: 'GENERATING' },
+              { label: '已完成', value: 'READY' },
+              { label: '生成失败', value: 'FAILED' },
+            ]}
+            onChange={(value) => {
+              setListPage(1)
+              setStatusFilter(value)
+            }}
+          />
           <Button type="primary" onClick={() => navigate('/upload')}>
-            开始面试
+            开始新面试
           </Button>
-        </div>
+        </Space>
+        <Table
+          rowKey="interview_id"
+          loading={reportListQuery.isLoading}
+          dataSource={reportListQuery.data?.items ?? []}
+          pagination={{
+            current: listPage,
+            pageSize: 10,
+            total: reportListQuery.data?.total ?? 0,
+            onChange: (page) => setListPage(page),
+          }}
+          columns={[
+            { title: '面试名称', dataIndex: 'session_name', render: (value?: string) => value || '-' },
+            { title: '岗位', dataIndex: 'job_role' },
+            { title: '难度', dataIndex: 'difficulty' },
+            {
+              title: '状态',
+              dataIndex: 'status',
+              render: (value: 'GENERATING' | 'READY' | 'FAILED') => (
+                <Tag color={value === 'READY' ? 'green' : value === 'FAILED' ? 'red' : 'blue'}>{value}</Tag>
+              ),
+            },
+            { title: '总分', dataIndex: 'overall_score', render: (value?: number) => value ?? '--' },
+            { title: '更新时间', dataIndex: 'updated_at' },
+            {
+              title: '操作',
+              key: 'actions',
+              render: (_, row: { interview_id: string }) => (
+                <Button size="small" type="link" onClick={() => navigate(`/report/${row.interview_id}`)}>
+                  查看详情
+                </Button>
+              ),
+            },
+          ]}
+        />
+        {reportListQuery.isError && <Typography.Text type="danger">报告列表加载失败，请稍后重试。</Typography.Text>}
       </Card>
     )
   }

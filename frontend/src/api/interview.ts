@@ -126,6 +126,27 @@ export interface ReportResponse {
   error_message?: string
 }
 
+/** 报告列表条目。 */
+export interface ReportListItem {
+  interview_id: string
+  session_name?: string
+  job_role: string
+  difficulty: string
+  status: 'GENERATING' | 'READY' | 'FAILED'
+  overall_score?: number
+  updated_at: string
+  started_at: string
+  finished_at?: string
+}
+
+/** 报告列表响应。 */
+export interface ReportListResponse {
+  items: ReportListItem[]
+  total: number
+  page: number
+  page_size: number
+}
+
 /** 历史记录响应。 */
 export interface HistoryResponse {
   total: number
@@ -133,6 +154,7 @@ export interface HistoryResponse {
     interview_id: string
     session_name?: string
     resume_id: string
+    resume_file_name?: string
     job_role: string
     difficulty: string
     status: string
@@ -317,6 +339,16 @@ export async function pauseInterview(interviewId: string): Promise<{ interview_i
 /** 查询面试报告。 */
 export async function fetchReport(interviewId: string): Promise<ReportResponse> {
   const { data } = await apiClient.get(`/report/${interviewId}`)
+  return data
+}
+
+/** 查询我的报告列表。 */
+export async function fetchReportList(params: {
+  page: number
+  page_size: number
+  status?: 'GENERATING' | 'READY' | 'FAILED'
+}): Promise<ReportListResponse> {
+  const { data } = await apiClient.get<ReportListResponse>('/report', { params })
   return data
 }
 
