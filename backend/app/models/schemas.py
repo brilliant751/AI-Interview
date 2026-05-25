@@ -47,6 +47,7 @@ class InterviewCreateRequest(BaseModel):
     )
     jd_id: str = ""
     scheduled_start_at: str = ""
+    voice_tone_id: str = ""
 
     @model_validator(mode="after")
     def validate_role_or_jd(self) -> "InterviewCreateRequest":
@@ -65,6 +66,24 @@ class InterviewCreateResponse(BaseModel):
     first_question: str
     scheduled_start_at: Optional[str] = None
     tts_audio_url: Optional[str] = None
+    voice_tone_id: str = ""
+    voice_tone_name: str = ""
+
+
+class VoiceToneProfileItem(BaseModel):
+    """语气配置条目。"""
+
+    tone_id: str
+    tone_name: str
+    description: str = ""
+    base_instructions: str = ""
+    speed: float = 1.0
+
+
+class VoiceToneProfileListResponse(BaseModel):
+    """语气配置列表响应。"""
+
+    items: list[VoiceToneProfileItem] = Field(default_factory=list)
 
 
 class InterviewTurnRequest(BaseModel):

@@ -199,9 +199,22 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"scheduled_start_at\": \"2026-06-06T10:30:00.000Z\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"voice_tone_id\": \"tone_default\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"scheduled_start_at\": \"2026-06-06T10:30:00.000Z\"\n}"
             },
             "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "List Voice Tones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interviews/voice-tones"
           }
         },
         {

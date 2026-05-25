@@ -31,6 +31,8 @@ from app.models.schemas import (
     InterviewTurnJobResultResponse,
     InterviewTurnResponse,
     InterviewTurnsResponse,
+    VoiceToneProfileListResponse,
+    VoiceToneProfileItem,
 )
 from app.services.interview_service import InterviewService
 from app.repositories.interview_repository import InterviewRepository
@@ -66,6 +68,26 @@ async def create_interview(
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, json.dumps(result, ensure_ascii=False))
     return InterviewCreateResponse(**result)
+
+
+@router.get("/voice-tones", response_model=VoiceToneProfileListResponse)
+async def list_voice_tones(
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> VoiceToneProfileListResponse:
+    """查询可选语气配置。"""
+    _ = auth
+    items = [
+        VoiceToneProfileItem(
+            tone_id=str(row.get("tone_id") or ""),
+            tone_name=str(row.get("tone_name") or ""),
+            description=str(row.get("description") or ""),
+            base_instructions=str(row.get("base_instructions") or ""),
+            speed=float(row.get("speed") or 1.0),
+        )
+        for row in service.list_voice_tones()
+    ]
+    return VoiceToneProfileListResponse(items=items)
 
 
 @router.post("/{interview_id}/turns", response_model=InterviewTurnJobResponse)
@@ -346,7 +368,16 @@ async def get_interview_status(
     start_available = service._get_start_available(session)
     if str(session.get("output_mode") or "") == "voice" and status_value != "SCHEDULED":
         try:
-            tts_audio_url = service.voice_service.tts(current_question)
+            tts_style = service._build_tts_style(
+                stage=str(session.get("current_stage") or "SELF_INTRO"),
+                question=current_question,
+                session=session,
+            )
+            tts_audio_url = service.voice_service.tts(
+                current_question,
+                instructions=tts_style["instructions"],
+                speed=tts_style["speed"],
+            )
         except ApiError:
             tts_audio_url = None
     jd_source_type = ""

@@ -11,6 +11,7 @@ export interface CreateInterviewPayload {
   question_types?: Array<'project' | 'technical' | 'scenario'>
   jd_id?: string
   scheduled_start_at?: string
+  voice_tone_id?: string
 }
 
 /** 会话创建响应。 */
@@ -21,6 +22,22 @@ export interface CreateInterviewResponse {
   first_question: string
   scheduled_start_at?: string
   tts_audio_url?: string
+  voice_tone_id?: string
+  voice_tone_name?: string
+}
+
+/** 语气配置条目。 */
+export interface VoiceToneProfileItem {
+  tone_id: string
+  tone_name: string
+  description: string
+  base_instructions: string
+  speed: number
+}
+
+/** 语气配置列表响应。 */
+export interface VoiceToneProfileListResponse {
+  items: VoiceToneProfileItem[]
 }
 
 /** 轮次提交请求体。 */
@@ -328,6 +345,12 @@ export async function fetchResumeFile(resumeId: string): Promise<Blob> {
 /** 创建面试会话。 */
 export async function createInterview(payload: CreateInterviewPayload): Promise<CreateInterviewResponse> {
   const { data } = await apiClient.post('/interviews', payload)
+  return data
+}
+
+/** 查询可选语气配置。 */
+export async function fetchVoiceToneProfiles(): Promise<VoiceToneProfileListResponse> {
+  const { data } = await apiClient.get<VoiceToneProfileListResponse>('/interviews/voice-tones')
   return data
 }
 

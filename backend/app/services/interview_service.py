@@ -160,13 +160,40 @@ class InterviewService:
         else:
             payload["scheduled_start_at"] = ""
         payload["status"] = status
+        requested_tone_id = str(payload.get("voice_tone_id") or "").strip()
+        tone = None
+        if requested_tone_id:
+            tone = self.repo.get_voice_tone(requested_tone_id)
+            if not tone:
+                raise ApiError(code="VOICE_TONE_404_NOT_FOUND", message="语气配置不存在", status_code=404)
+            if int(tone.get("is_active") or 0) != 1:
+                raise ApiError(code="VOICE_TONE_409_INACTIVE", message="语气配置已停用", status_code=409)
+        else:
+            tone_list = self.repo.list_active_voice_tones()
+            tone = tone_list[0] if tone_list else None
+        payload["voice_tone_id"] = str((tone or {}).get("tone_id") or "")
+        payload["voice_tone_name"] = str((tone or {}).get("tone_name") or "")
+        payload["voice_tone_instructions"] = str((tone or {}).get("base_instructions") or "")
+        payload["voice_tone_speed"] = float((tone or {}).get("speed") or 1.0)
         session = self.repo.create_session(user_id=user_id, payload=payload, jd_snapshot=jd_snapshot)
         first_question = INTERVIEW_FIRST_QUESTION
         output_mode = str(payload.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
         if output_mode == "voice" and status == "ACTIVE":
             try:
-                tts_audio_url = self.voice_service.tts(first_question)
+                tts_style = self._build_tts_style(
+                    stage=InterviewStage.SELF_INTRO.value,
+                    question=first_question,
+                    session={
+                        "voice_tone_instructions": payload.get("voice_tone_instructions"),
+                        "voice_tone_speed": payload.get("voice_tone_speed"),
+                    },
+                )
+                tts_audio_url = self.voice_service.tts(
+                    first_question,
+                    instructions=tts_style["instructions"],
+                    speed=tts_style["speed"],
+                )
             except ApiError as exc:
                 logger.warning("首题语音合成失败，降级为文本输出：%s", exc.message)
         return {
@@ -176,7 +203,55 @@ class InterviewService:
             "first_question": first_question,
             "scheduled_start_at": payload["scheduled_start_at"] or None,
             "tts_audio_url": tts_audio_url,
+            "voice_tone_id": str(payload.get("voice_tone_id") or ""),
+            "voice_tone_name": str(payload.get("voice_tone_name") or ""),
         }
+
+    def _build_tts_style(self, stage: str, question: str, session: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """根据阶段生成语气指令与语速。"""
+        normalized_stage = str(stage or "").strip().upper()
+        concise_hint = "使用简洁口语化表达，句间有自然停顿，避免播报腔。"
+        tone_instructions = str((session or {}).get("voice_tone_instructions") or "").strip()
+        tone_speed = float((session or {}).get("voice_tone_speed") or 1.0)
+
+        def _merge_instructions(stage_instructions: str) -> str:
+            if tone_instructions:
+                return f"{tone_instructions} {stage_instructions}".strip()
+            return stage_instructions
+
+        if normalized_stage == InterviewStage.SELF_INTRO.value:
+            return {
+                "instructions": _merge_instructions(f"语气友好且专业，先鼓励再提问，语速略慢，语调自然。{concise_hint}"),
+                "speed": round(tone_speed * 0.95, 2),
+            }
+        if normalized_stage == InterviewStage.PROJECT_DEEP_DIVE.value:
+            return {
+                "instructions": _merge_instructions(f"语气专注且有探究感，重点词汇轻微重读，保持清晰节奏。{concise_hint}"),
+                "speed": round(tone_speed * 1.0, 2),
+            }
+        if normalized_stage == InterviewStage.TECHNICAL.value:
+            return {
+                "instructions": _merge_instructions(f"语气冷静客观，提问明确，停顿干净，不要过度情绪化。{concise_hint}"),
+                "speed": round(tone_speed * 1.02, 2),
+            }
+        if normalized_stage == InterviewStage.BEHAVIORAL.value:
+            return {
+                "instructions": _merge_instructions(f"语气共情且有引导感，听起来耐心、温和、不过分热情。{concise_hint}"),
+                "speed": round(tone_speed * 0.96, 2),
+            }
+        if normalized_stage == InterviewStage.END.value or "结束" in question:
+            return {
+                "instructions": _merge_instructions(f"语气肯定且收束，简短有礼貌，留有结束停顿。{concise_hint}"),
+                "speed": round(tone_speed * 0.94, 2),
+            }
+        return {
+            "instructions": _merge_instructions(f"语气自然专业，发音清晰，保留正常停顿。{concise_hint}"),
+            "speed": round(tone_speed, 2),
+        }
+
+    def list_voice_tones(self) -> list[dict[str, Any]]:
+        """查询可用语气配置列表。"""
+        return self.repo.list_active_voice_tones()
 
     def list_paused_interviews(self, user_id: str) -> list[dict]:
         """查询用户暂停中的面试会话。"""
@@ -269,7 +344,16 @@ class InterviewService:
         tts_audio_url: Optional[str] = None
         if output_mode == "voice":
             try:
-                tts_audio_url = self.voice_service.tts(question)
+                tts_style = self._build_tts_style(
+                    stage=str(session.get("current_stage") or "SELF_INTRO"),
+                    question=question,
+                    session=session,
+                )
+                tts_audio_url = self.voice_service.tts(
+                    question,
+                    instructions=tts_style["instructions"],
+                    speed=tts_style["speed"],
+                )
             except ApiError:
                 tts_audio_url = None
         return {
@@ -551,7 +635,12 @@ class InterviewService:
         tts_audio_url = None
         if output_mode == "voice" and next_stage != InterviewStage.END.value:
             try:
-                tts_audio_url = self.voice_service.tts(next_question)
+                tts_style = self._build_tts_style(stage=next_stage, question=next_question, session=session)
+                tts_audio_url = self.voice_service.tts(
+                    next_question,
+                    instructions=tts_style["instructions"],
+                    speed=tts_style["speed"],
+                )
                 providers["tts"] = self.voice_service.tts_provider
                 provider_status["tts"] = self.voice_service.health().get("tts", "UNKNOWN")
             except ApiError:

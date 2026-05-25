@@ -20,6 +20,7 @@ import {
   pauseInterview,
   fetchResumeFile,
   fetchResumes,
+  fetchVoiceToneProfiles,
   finishInterview,
   startScheduledInterview,
   submitAudioTurn,
@@ -573,6 +574,10 @@ export function InterviewPage() {
         statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],
       }),
     enabled: !interviewId,
+  })
+  const toneQuery = useQuery({
+    queryKey: ['voice-tone-profiles', 'interview-page-modal'],
+    queryFn: fetchVoiceToneProfiles,
   })
 
   /** 查询创建面试弹窗中的 JD 列表。 */
@@ -1548,6 +1553,7 @@ export function InterviewPage() {
                 output_mode: 'voice',
                 schedule_mode: 'now',
                 scheduled_start_at: '',
+                voice_tone_id: '',
                 session_name: '',
                 question_types: ['project', 'technical', 'scenario'],
               }}
@@ -1572,7 +1578,8 @@ export function InterviewPage() {
                   jd_id: createPositionMode === 'jd' ? values.jd_id : undefined,
                   difficulty: values.difficulty,
                   input_mode: values.input_mode,
-                  output_mode: 'voice',
+                  output_mode: values.output_mode,
+                  voice_tone_id: values.voice_tone_id || undefined,
                   session_name: values.session_name,
                   question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
                   scheduled_start_at: scheduledStartAt || undefined,
@@ -1678,6 +1685,31 @@ export function InterviewPage() {
                       extra="仅支持预约未来时间，到点后才可开始面试。"
                     >
                       <Input type="datetime-local" min={dayjs().format('YYYY-MM-DDTHH:mm')} />
+                    </Form.Item>
+                  ) : null
+                }
+              </Form.Item>
+              <Form.Item name="output_mode" label="输出模式">
+                <Radio.Group
+                  options={[
+                    { label: '文本', value: 'text' },
+                    { label: '语音', value: 'voice' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item shouldUpdate={(prev, next) => prev.output_mode !== next.output_mode} noStyle>
+                {({ getFieldValue }) =>
+                  getFieldValue('output_mode') === 'voice' ? (
+                    <Form.Item name="voice_tone_id" label="面试官语气">
+                      <Select
+                        loading={toneQuery.isLoading}
+                        allowClear
+                        placeholder="请选择语气（不选则使用默认）"
+                        options={(toneQuery.data?.items || []).map((item) => ({
+                          label: `${item.tone_name}（x${item.speed.toFixed(2)}）`,
+                          value: item.tone_id,
+                        }))}
+                      />
                     </Form.Item>
                   ) : null
                 }

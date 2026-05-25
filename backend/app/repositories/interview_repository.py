@@ -205,6 +205,10 @@ class InterviewRepository:
                   user_id TEXT,
                   resume_id TEXT NOT NULL,
                   jd_id TEXT,
+                  voice_tone_id TEXT NOT NULL DEFAULT '',
+                  voice_tone_name TEXT NOT NULL DEFAULT '',
+                  voice_tone_instructions TEXT NOT NULL DEFAULT '',
+                  voice_tone_speed REAL NOT NULL DEFAULT 1.0,
                   jd_snapshot_title TEXT NOT NULL DEFAULT '',
                   jd_snapshot_content TEXT NOT NULL DEFAULT '',
                   session_name TEXT NOT NULL DEFAULT '',
@@ -297,6 +301,18 @@ class InterviewRepository:
                   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
 
+                CREATE TABLE IF NOT EXISTS voice_tone_profiles (
+                  tone_id TEXT PRIMARY KEY,
+                  tone_name TEXT NOT NULL,
+                  description TEXT NOT NULL DEFAULT '',
+                  base_instructions TEXT NOT NULL DEFAULT '',
+                  speed REAL NOT NULL DEFAULT 1.0,
+                  is_active INTEGER NOT NULL DEFAULT 1,
+                  sort_order INTEGER NOT NULL DEFAULT 100,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
                 CREATE TABLE IF NOT EXISTS request_idempotency (
                   endpoint TEXT NOT NULL,
                   idempotency_key TEXT NOT NULL,
@@ -382,6 +398,10 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_reports", "question_deep_dives", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_reports", "key_risks", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_reports", "final_recommendation", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "voice_tone_id", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "voice_tone_name", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "voice_tone_instructions", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "voice_tone_speed", "REAL NOT NULL DEFAULT 1.0")
             self._ensure_column(conn, "job_descriptions", "company_id", "TEXT")
             self._ensure_column(conn, "interview_turns", "user_id", "TEXT")
             conn.execute(
@@ -440,6 +460,58 @@ class InterviewRepository:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_created ON interview_sessions(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_jd_id ON interview_sessions(jd_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_voice_tone_profiles_active_sort ON voice_tone_profiles(is_active, sort_order)")
+            self._seed_voice_tone_profiles(conn)
+
+    def _seed_voice_tone_profiles(self, conn: sqlite3.Connection) -> None:
+        """初始化内置语气配置。"""
+        tones = [
+            (
+                "tone_default",
+                "标准面试官",
+                "语气专业平衡，适合作为默认配置",
+                "语气自然专业，表达清晰，句间停顿自然，避免播报腔。",
+                1.0,
+                1,
+                10,
+            ),
+            (
+                "tone_encouraging",
+                "鼓励引导型",
+                "更温和、更具鼓励感，适合新手候选人",
+                "语气友好、耐心、积极，先认可再追问，保持清晰自然。",
+                0.96,
+                1,
+                20,
+            ),
+            (
+                "tone_challenging",
+                "高压追问型",
+                "更偏技术压测，语速略快，追问更直接",
+                "语气冷静客观，提问直接明确，重点词轻微重读，保持礼貌。",
+                1.04,
+                1,
+                30,
+            ),
+        ]
+        for tone in tones:
+            conn.execute(
+                """
+                INSERT INTO voice_tone_profiles(
+                  tone_id, tone_name, description, base_instructions, speed, is_active, sort_order
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(tone_id) DO UPDATE SET
+                  tone_name = excluded.tone_name,
+                  description = excluded.description,
+                  base_instructions = excluded.base_instructions,
+                  speed = excluded.speed,
+                  is_active = excluded.is_active,
+                  sort_order = excluded.sort_order,
+                  updated_at = datetime('now')
+                """,
+                tone,
+            )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_turns_user_interview_created ON interview_turns(user_id, interview_id, created_at ASC)"
             )
@@ -866,14 +938,18 @@ class InterviewRepository:
             conn.execute(
                 """
                 INSERT INTO interview_sessions(
-                  interview_id, user_id, resume_id, jd_id, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, scheduled_start_at, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SELF_INTRO', 0, 0, 0, ?, ?)
+                  interview_id, user_id, resume_id, jd_id, voice_tone_id, voice_tone_name, voice_tone_instructions, voice_tone_speed, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, scheduled_start_at, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SELF_INTRO', 0, 0, 0, ?, ?)
                 """,
                 (
                     interview_id,
                     user_id,
                     payload["resume_id"],
                     snapshot.get("jd_id"),
+                    str(payload.get("voice_tone_id") or ""),
+                    str(payload.get("voice_tone_name") or ""),
+                    str(payload.get("voice_tone_instructions") or ""),
+                    float(payload.get("voice_tone_speed") or 1.0),
                     str(snapshot.get("jd_snapshot_title") or ""),
                     str(snapshot.get("jd_snapshot_content") or ""),
                     str(payload.get("session_name") or ""),
@@ -889,6 +965,32 @@ class InterviewRepository:
                 ),
             )
         return {"interview_id": interview_id, "current_stage": "SELF_INTRO", "status": status}
+
+    def list_active_voice_tones(self) -> list[dict]:
+        """查询启用的语气配置列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT tone_id, tone_name, description, base_instructions, speed
+                FROM voice_tone_profiles
+                WHERE is_active = 1
+                ORDER BY sort_order ASC, tone_id ASC
+                """
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def get_voice_tone(self, tone_id: str) -> dict | None:
+        """按标识查询单个语气配置。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT tone_id, tone_name, description, base_instructions, speed, is_active
+                FROM voice_tone_profiles
+                WHERE tone_id = ?
+                """,
+                (tone_id,),
+            ).fetchone()
+        return dict(row) if row else None
 
     def create_practice_session(self, user_id: str, payload: dict) -> dict:
         """创建题库练习会话记录。"""
