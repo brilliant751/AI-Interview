@@ -32,9 +32,9 @@ describe('AppLayout', () => {
 
     expect(screen.getByText('AI Interview')).toBeInTheDocument()
     expect(screen.getByText('简历管理')).toBeInTheDocument()
-    expect(screen.getByText('岗位管理')).toBeInTheDocument()
-    expect(screen.getByText('模拟面试')).toBeInTheDocument()
-    expect(screen.getByText('历史记录')).toBeInTheDocument()
+    expect(screen.getByText('岗位库')).toBeInTheDocument()
+    expect(screen.getByText('AI 面试')).toBeInTheDocument()
+    expect(screen.getByText('面试记录')).toBeInTheDocument()
     act(() => {
       useAuthStore.getState().clearSession()
     })
