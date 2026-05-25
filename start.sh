@@ -111,7 +111,6 @@ ensure_backend_dependencies() {
   fi
   "$BACKEND_PYTHON" -m pip install --upgrade pip >/dev/null
   "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
-  "$BACKEND_PYTHON" -m pip install pytest ruff
 }
 
 prepare_model_cache_dirs() {

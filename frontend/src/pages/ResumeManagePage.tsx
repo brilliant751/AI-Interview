@@ -112,6 +112,7 @@ export function ResumeManagePage() {
         rowKey="resume_id"
         loading={resumeQuery.isLoading}
         dataSource={resumeQuery.data?.items ?? []}
+        scroll={{ x: 980 }}
         pagination={{
           current: page,
           pageSize: 10,
@@ -159,11 +160,11 @@ export function ResumeManagePage() {
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}
-        width={900}
+        width="min(900px, 92vw)"
         destroyOnClose
       >
         {previewType === 'pdf' ? (
-          <iframe title="resume-preview" src={previewUrl} style={{ width: '100%', height: 600, border: 0 }} />
+          <iframe title="resume-preview" src={previewUrl} style={{ width: '100%', height: '70vh', minHeight: 320, border: 0 }} />
         ) : (
           <Space direction="vertical">
             <Typography.Text>当前文件类型暂不支持在线渲染，可下载后查看。</Typography.Text>

@@ -26,11 +26,12 @@ bash ./start.sh
 - 创建后端虚拟环境并安装依赖
 - 安装前端依赖
 - 在数据库不存在时初始化数据
+- 检查本地模型服务可达性（Ollama/FunASR/PaddleSpeech）
 - 同时启动后端和前端
 
 启动后访问：
 
-- 后端：`http://localhost:8000`
+- 后端：`http://localhost:18500`
 - 前端：`http://localhost:5173`
 
 按 `Ctrl+C` 可同时停止两个服务。
@@ -74,6 +75,7 @@ PYTHONPATH=backend python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 后端默认地址：`http://localhost:8000`
+通过根目录 `start.sh` 一键启动时，后端默认地址：`http://localhost:18500`
 
 常用环境变量：
 
@@ -102,9 +104,23 @@ npm run dev
 VITE_API_BASE=http://localhost:8000/api/v1 npm run dev
 ```
 
+若使用一键启动脚本，默认前端会自动注入：
+
+```bash
+VITE_API_BASE=http://localhost:18500/api/v1
+```
+
+## 启动脚本环境变量
+
+- `BACKEND_PORT`：后端端口（`start.sh` 默认 `18500`，`backend-start.sh` 默认 `8000`）
+- `FRONTEND_PORT`：前端端口，默认 `5173`
+- `START_FRONTEND`：是否启动前端，默认 `1`（可设为 `0` 只启动后端）
+- `BACKEND_RELOAD`：是否开启后端自动重载，默认 `0`
+- `BACKEND_VENV`：后端虚拟环境路径，默认仓库根目录下 `.venv`
+
 ## 常用检查
 
-- 后端接口文档：`http://localhost:8000/docs`
+- 后端接口文档：`http://localhost:18500/docs`（使用 `start.sh`）
 - 前端页面：`http://localhost:5173`
 - OpenAPI 文件：`openapi/openapi.yaml`
 - Postman 集合：`postman/AI-Interview.postman_collection.json`

@@ -24,6 +24,9 @@ venv/
 # Local env files
 .env
 .env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 backend/.env
 frontend/.env
 frontend/.env.*
@@ -34,6 +37,7 @@ node_modules/
 dist/
 build/
 *.log
+logs/
 coverage/
 .vite/
 playwright-report/
@@ -43,6 +47,7 @@ test-results/
 
 # Backend runtime data
 backend/.venv/
+backend/.cache/
 backend/.coverage
 backend/assets/data/sqlite/*.db
 backend/assets/data/sqlite/*.db-shm

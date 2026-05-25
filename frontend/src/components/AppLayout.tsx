@@ -10,7 +10,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Badge, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
+import { Badge, Button, Dropdown, Grid, Layout, Menu, Space, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import type { MenuProps } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -22,12 +22,15 @@ const { Header, Content, Sider } = Layout
 
 /** 应用布局组件。 */
 export function AppLayout(props: { children: ReactNode }) {
+  const screens = Grid.useBreakpoint()
+  const isMobile = !screens.md
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
   const refreshToken = useAuthStore((state) => state.refreshToken)
   const clearSession = useAuthStore((state) => state.clearSession)
+  const isInterviewSessionPage = /^\/interview\/[^/]+/.test(location.pathname)
 
   const sideMenuItems: MenuProps['items'] = [
     { key: '/overview', icon: <HomeOutlined />, label: <Link to="/overview">首页概览</Link> },
@@ -77,7 +80,14 @@ export function AppLayout(props: { children: ReactNode }) {
   ]
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)' }}>
+    <Layout
+      style={{
+        minHeight: '100dvh',
+        height: '100dvh',
+        overflow: 'hidden',
+        background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)',
+      }}
+    >
       <Header
         style={{
           display: 'flex',
@@ -86,7 +96,7 @@ export function AppLayout(props: { children: ReactNode }) {
           background: '#10243f',
           color: '#fff',
           gap: 12,
-          paddingInline: 20,
+          paddingInline: isMobile ? 12 : 20,
         }}
       >
         <Space size={10}>
@@ -115,10 +125,12 @@ export function AppLayout(props: { children: ReactNode }) {
           </Space>
         )}
       </Header>
-      <Layout>
+      <Layout style={{ minHeight: 0, overflow: 'hidden' }}>
         {isAuthenticated ? (
           <Sider
             width={220}
+            collapsedWidth={0}
+            breakpoint="lg"
             theme="light"
             style={{
               borderRight: '1px solid #e5e7eb',
@@ -129,7 +141,19 @@ export function AppLayout(props: { children: ReactNode }) {
             <Menu mode="inline" selectedKeys={selectedMenuKey()} items={sideMenuItems} style={{ borderInlineEnd: 0, background: '#f7faff' }} />
           </Sider>
         ) : null}
-        <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>{props.children}</Content>
+        <Content
+          style={{
+            padding: isMobile ? '14px 10px' : '24px 16px',
+            maxWidth: 1380,
+            margin: '0 auto',
+            width: '100%',
+            minHeight: 0,
+            height: '100%',
+            overflow: isInterviewSessionPage ? 'hidden' : 'auto',
+          }}
+        >
+          {props.children}
+        </Content>
       </Layout>
     </Layout>
   )

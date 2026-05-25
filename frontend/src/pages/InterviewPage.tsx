@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Col, Dropdown, Form, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -26,6 +26,9 @@ import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试答题页面。 */
 export function InterviewPage() {
+  const screens = Grid.useBreakpoint()
+  const isTabletUp = Boolean(screens.lg)
+  const isDesktopWide = Boolean(screens.xl)
   const AUTO_RECORD_COUNTDOWN_SECONDS = 10
   const MAX_RECORDING_SECONDS = 180
   const MAX_TEXT_ANSWER_SECONDS = 180
@@ -378,6 +381,7 @@ export function InterviewPage() {
     setAnswer('')
     submitAfterStopRef.current = false
     lastQuestionKeyRef.current = ''
+    lastTextQuestionKeyRef.current = ''
     pendingCountdownQuestionKeyRef.current = ''
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       suppressRecorderStopRef.current = true
@@ -1511,7 +1515,7 @@ export function InterviewPage() {
           }}
           okText="确认绑定"
           cancelText="取消"
-          width={1100}
+          width="min(1100px, 92vw)"
           styles={{ body: { height: 640, overflow: 'hidden' } }}
           zIndex={1100}
         >
@@ -1584,7 +1588,7 @@ export function InterviewPage() {
           open={previewOpen}
           onCancel={() => setPreviewOpen(false)}
           footer={null}
-          width={900}
+          width="min(900px, 92vw)"
           destroyOnClose
         >
           {previewType === 'pdf' ? (
@@ -1606,17 +1610,23 @@ export function InterviewPage() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: historyCollapsed
-          ? 'minmax(0, 1fr) minmax(0, 3fr)'
-          : 'minmax(0, 2fr) minmax(0, 4fr) minmax(0, 2fr)',
+        gridTemplateColumns: isDesktopWide
+          ? historyCollapsed
+            ? 'minmax(220px, 1fr) minmax(0, 3fr)'
+            : 'minmax(220px, 2fr) minmax(0, 4fr) minmax(220px, 2fr)'
+          : isTabletUp
+            ? 'minmax(220px, 1fr) minmax(0, 2fr)'
+            : 'minmax(0, 1fr)',
         gap: 16,
         width: '100%',
+        height: '100%',
+        minHeight: 0,
         transition: 'grid-template-columns 0.2s ease',
         boxSizing: 'border-box',
-        overflowX: 'hidden',
+        overflow: 'hidden',
       }}
     >
-      <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0 }}>
+      <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
         {/* <Card title="会话信息">
           <Space wrap>
             <Tag color="volcano">轮次：第 {followUpCount + 1} 轮</Tag>
@@ -1727,9 +1737,23 @@ export function InterviewPage() {
         <ProviderHealthBanner health={providerHealth} />
       </Space>
 
-      <div style={{ display: 'grid', gridTemplateRows: '1fr 2fr', gap: 16, minHeight: 560, minWidth: 0 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: isTabletUp ? 'minmax(0, 3fr) minmax(0, 2fr)' : 'auto auto',
+          gap: 16,
+          minHeight: isTabletUp ? 560 : undefined,
+          height: '100%',
+          minWidth: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingRight: 4,
+        }}
+      >
         <Card
           title="问题区"
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           extra={
             <Space size={8}>
               <Typography.Text strong>
@@ -1860,7 +1884,7 @@ export function InterviewPage() {
           )}
         </Card>
 
-        <Card title="回答区">
+        <Card title="回答区" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {inputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Text>本题目语音作答</Typography.Text>
@@ -1949,7 +1973,7 @@ export function InterviewPage() {
         </Card>
       </div>
       {!historyCollapsed ? (
-        <div style={{ minWidth: 0, height: 720, maxHeight: 720 }}>
+        <div style={{ minWidth: 0, height: '100%', minHeight: 0, overflow: 'hidden' }}>
           <Card
             title="历史记录"
             style={{ height: '100%' }}
@@ -2051,7 +2075,7 @@ export function InterviewPage() {
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}
-        width={900}
+        width="min(900px, 92vw)"
         destroyOnClose
       >
         {previewType === 'pdf' ? (
