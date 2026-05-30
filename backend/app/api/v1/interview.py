@@ -19,8 +19,13 @@ from app.models.schemas import (
     InterviewPlaybackResume,
     InterviewPlaybackTurn,
     InterviewStatusResponse,
+    PausedInterviewItemResponse,
+    PausedInterviewListResponse,
+    ResumeInterviewResponse,
     InterviewTurnRequest,
     InterviewTurnItemResponse,
+    InterviewTurnJobResponse,
+    InterviewTurnJobResultResponse,
     InterviewTurnResponse,
     InterviewTurnsResponse,
 )
@@ -60,7 +65,7 @@ async def create_interview(
     return InterviewCreateResponse(**result)
 
 
-@router.post("/{interview_id}/turns", response_model=InterviewTurnResponse)
+@router.post("/{interview_id}/turns", response_model=InterviewTurnJobResponse)
 async def submit_turn(
     interview_id: str,
     payload: InterviewTurnRequest,
@@ -68,17 +73,18 @@ async def submit_turn(
     auth: AuthContext = Depends(require_user),
     service: InterviewService = Depends(get_service),
     repo: InterviewRepository = Depends(get_repo),
-) -> InterviewTurnResponse:
+) -> InterviewTurnJobResponse:
     """提交单轮回答并获取下一题。"""
     endpoint = f"POST:/interviews/{interview_id}/turns"
     if idempotency_key:
         cached = repo.get_idempotent_response(endpoint, idempotency_key)
         if cached:
-            return InterviewTurnResponse(**json.loads(cached))
-    result = service.submit_turn(interview_id, payload.model_dump(), user_id=auth.user_id)
+            return InterviewTurnJobResponse(**json.loads(cached))
+    job_id = await service.enqueue_turn_submission(interview_id, payload.model_dump(), user_id=auth.user_id)
+    result = {"interview_id": interview_id, "job_id": job_id, "status": "PROCESSING"}
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, json.dumps(result, ensure_ascii=False))
-    return InterviewTurnResponse(**result)
+    return InterviewTurnJobResponse(**result)
 
 
 @router.get("/{interview_id}/turns", response_model=InterviewTurnsResponse)
@@ -129,7 +135,7 @@ async def list_turns(
     return InterviewTurnsResponse(interview_id=interview_id, items=items)
 
 
-@router.post("/{interview_id}/turns/audio", response_model=InterviewTurnResponse)
+@router.post("/{interview_id}/turns/audio", response_model=InterviewTurnJobResponse)
 async def submit_turn_audio(
     interview_id: str,
     stage: str = Form(...),
@@ -138,24 +144,53 @@ async def submit_turn_audio(
     auth: AuthContext = Depends(require_user),
     service: InterviewService = Depends(get_service),
     repo: InterviewRepository = Depends(get_repo),
-) -> InterviewTurnResponse:
+) -> InterviewTurnJobResponse:
     """上传音频并提交轮次。"""
     endpoint = f"POST:/interviews/{interview_id}/turns/audio"
     if idempotency_key:
         cached = repo.get_idempotent_response(endpoint, idempotency_key)
         if cached:
-            return InterviewTurnResponse(**json.loads(cached))
+            return InterviewTurnJobResponse(**json.loads(cached))
     content = await file.read()
-    result = service.submit_turn_with_audio(
-        interview_id,
-        stage=stage,
-        audio_bytes=content,
-        filename=file.filename or "answer.wav",
-        user_id=auth.user_id,
-    )
+    payload = {
+        "stage": stage,
+        "answer_audio_bytes": content,
+        "answer_audio_filename": file.filename or "answer.wav",
+        "answer_audio_format": (file.filename or "answer.wav").split(".")[-1],
+    }
+    job_id = await service.enqueue_turn_submission(interview_id, payload, user_id=auth.user_id)
+    result = {"interview_id": interview_id, "job_id": job_id, "status": "PROCESSING"}
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, json.dumps(result, ensure_ascii=False))
-    return InterviewTurnResponse(**result)
+    return InterviewTurnJobResponse(**result)
+
+
+@router.get("/{interview_id}/turn-jobs/{job_id}", response_model=InterviewTurnJobResultResponse)
+async def get_turn_job_result(
+    interview_id: str,
+    job_id: str,
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> InterviewTurnJobResultResponse:
+    """查询轮次异步任务状态与结果。"""
+    result = service.get_turn_job_result(job_id=job_id, user_id=auth.user_id)
+    if str(result.get("interview_id") or "") != interview_id:
+        raise ApiError(code="TURN_JOB_404_NOT_FOUND", message="轮次任务不存在", status_code=404)
+    if result["status"] != "READY":
+        return InterviewTurnJobResultResponse(
+            interview_id=interview_id,
+            job_id=job_id,
+            status=result["status"],
+            error_message=result.get("error_message") or "",
+            result=None,
+        )
+    return InterviewTurnJobResultResponse(
+        interview_id=interview_id,
+        job_id=job_id,
+        status="READY",
+        error_message=result.get("error_message") or "",
+        result=InterviewTurnResponse(**(result.get("result") or {})),
+    )
 
 
 @router.post("/{interview_id}/finish", response_model=InterviewFinishResponse, status_code=202)
@@ -176,6 +211,55 @@ async def finish_interview(
     if idempotency_key:
         repo.save_idempotent_response(endpoint, idempotency_key, json.dumps(result, ensure_ascii=False))
     return InterviewFinishResponse(**result)
+
+
+@router.post("/{interview_id}/pause")
+async def pause_interview(
+    interview_id: str,
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> dict:
+    """暂停进行中的面试会话。"""
+    return service.pause_interview(interview_id=interview_id, user_id=auth.user_id)
+
+
+@router.post("/{interview_id}/resume", response_model=ResumeInterviewResponse)
+async def resume_interview(
+    interview_id: str,
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> ResumeInterviewResponse:
+    """恢复暂停中的面试会话并返回当前题目。"""
+    result = service.resume_interview(interview_id=interview_id, user_id=auth.user_id)
+    return ResumeInterviewResponse(**result)
+
+
+@router.get("/paused", response_model=PausedInterviewListResponse)
+async def list_paused_interviews(
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> PausedInterviewListResponse:
+    """查询当前用户暂停中的面试列表。"""
+    rows = service.list_paused_interviews(user_id=auth.user_id)
+    return PausedInterviewListResponse(
+        items=[
+            PausedInterviewItemResponse(
+                interview_id=str(row.get("interview_id") or ""),
+                session_name=str(row.get("session_name") or ""),
+                job_role=str(row.get("job_role") or ""),
+                difficulty=str(row.get("difficulty") or ""),
+                current_stage=str(row.get("current_stage") or ""),
+                follow_up_count=int(row.get("follow_up_count") or 0),
+                technical_count=int(row.get("technical_count") or 0),
+                input_mode=str(row.get("input_mode") or "text"),
+                output_mode=str(row.get("output_mode") or "text"),
+                started_at=str(row.get("started_at") or ""),
+                updated_at=row.get("updated_at"),
+                resume_file_name=str(row.get("resume_file_name") or ""),
+            )
+            for row in rows
+        ]
+    )
 
 
 @router.get("/{interview_id}/status", response_model=InterviewStatusResponse)

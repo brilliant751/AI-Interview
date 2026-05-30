@@ -326,6 +326,14 @@
           }
         },
         {
+          "name": "Get Turn Job Result",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/interviews/{{interview_id}}/turn-jobs/{{job_id}}"
+          }
+        },
+        {
           "name": "Get Status",
           "request": {
             "method": "GET",
@@ -388,6 +396,14 @@
               }
             ],
             "url": "{{base_url}}/interviews/{{interview_id}}/resume"
+          }
+        },
+        {
+          "name": "List Reports",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": "{{base_url}}/report?page=1&page_size=10"
           }
         },
         {

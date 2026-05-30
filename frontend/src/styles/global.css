@@ -1,6 +1,15 @@
 :root {
   font-family: "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
   color: #1f2937;
+  --ai-primary: #2d6bff;
+  --ai-primary-deep: #1d4fd8;
+  --ai-bg-soft: #f4f7ff;
+  --ai-card-border: #e4eaf5;
+  --ai-text-main: #0f172a;
+  --ai-text-sub: #64748b;
+  --ai-shadow-sm: 0 6px 16px rgba(16, 36, 63, 0.06);
+  --ai-shadow-md: 0 14px 32px rgba(29, 79, 216, 0.12);
+  --ai-radius-lg: 16px;
 }
 
 * {
@@ -15,3 +24,292 @@ body,
   min-height: 100%;
 }
 
+.interview-lobby .ant-card {
+  border-radius: var(--ai-radius-lg);
+  border-color: var(--ai-card-border);
+  box-shadow: var(--ai-shadow-sm);
+}
+
+.interview-lobby-hero {
+  overflow: hidden;
+  position: relative;
+}
+
+.interview-lobby-hero::after {
+  content: "";
+  position: absolute;
+  right: -120px;
+  top: -120px;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(45, 107, 255, 0.2) 0%, rgba(45, 107, 255, 0) 72%);
+  pointer-events: none;
+}
+
+.interview-lobby-hero .ant-typography h3 {
+  color: var(--ai-text-main);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.interview-lobby-hero .ant-typography.ant-typography-secondary {
+  color: #475569;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.interview-lobby-actions .ant-btn {
+  min-width: 148px;
+  height: 46px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.interview-lobby-btn-primary {
+  background: linear-gradient(120deg, var(--ai-primary), #4e87ff) !important;
+  border: none !important;
+  box-shadow: 0 10px 22px rgba(45, 107, 255, 0.28);
+}
+
+.interview-lobby-btn-primary:hover {
+  background: linear-gradient(120deg, var(--ai-primary-deep), #3c74f1) !important;
+}
+
+.interview-lobby-btn-secondary {
+  border-color: #cfdbf9 !important;
+  color: #1e3a8a !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+}
+
+.interview-lobby-mini-card {
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.interview-lobby-mini-card .ant-statistic-title {
+  color: var(--ai-text-sub);
+  font-size: 14px;
+}
+
+.interview-lobby-mini-card .ant-statistic-content {
+  color: #111827;
+  font-size: 42px;
+  font-weight: 700;
+}
+
+.interview-lobby-kpi-card .ant-statistic-title,
+.interview-lobby-kpi-card .ant-typography.ant-typography-secondary {
+  color: var(--ai-text-sub);
+}
+
+.interview-lobby-kpi-card .ant-statistic-content {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.interview-lobby-kpi-card .ant-progress .ant-progress-bg {
+  background: linear-gradient(90deg, #2dbb4f, #4bcf68);
+}
+
+.interview-lobby-health-summary {
+  border: 1px solid #dce7fb !important;
+  background: #f8fbff;
+}
+
+.interview-lobby-health-summary .ant-btn-link {
+  padding-inline: 0;
+}
+
+.interview-lobby-section-card > .ant-card-head {
+  border-bottom: 1px solid #edf1f9;
+}
+
+.interview-lobby-section-card .ant-card-head-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.interview-lobby-role-card {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  border: 1px solid #e6ecf9;
+}
+
+.interview-lobby-role-card:hover {
+  transform: translateY(-4px);
+  border-color: #bfd3ff;
+  box-shadow: var(--ai-shadow-md);
+}
+
+.interview-lobby-role-card .ant-typography {
+  color: #1e293b;
+}
+
+.interview-lobby-role-card .ant-typography.ant-typography-secondary {
+  color: #64748b;
+}
+
+.interview-lobby-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #2f5fd8;
+  background: #eaf1ff;
+}
+
+.interview-lobby-icon-wrap svg {
+  stroke-width: 2.2;
+}
+
+.interview-lobby-icon-wrap.blue {
+  color: #2563eb;
+  background: #eaf2ff;
+}
+
+.interview-lobby-icon-wrap.green {
+  color: #16a34a;
+  background: #ebf9ef;
+}
+
+.interview-lobby-icon-wrap.violet,
+.interview-lobby-icon-wrap.purple {
+  color: #7c3aed;
+  background: #f2ebff;
+}
+
+.interview-lobby-icon-wrap.soft {
+  color: #3b6ae4;
+  background: #eef3ff;
+}
+
+.interview-lobby-role-btn {
+  width: 132px;
+  border-radius: 10px !important;
+  border-color: #9dbaf8 !important;
+  color: var(--ai-primary) !important;
+}
+
+.interview-lobby-role-btn:hover {
+  background: #eff5ff !important;
+}
+
+.interview-lobby-resume-card {
+  border: 1px solid #e8eefb !important;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.interview-lobby-resume-card:hover {
+  border-color: #c8d9ff !important;
+  box-shadow: 0 10px 24px rgba(45, 107, 255, 0.14);
+  transform: translateY(-2px);
+}
+
+.interview-lobby-resume-card .ant-tag {
+  border-radius: 999px;
+}
+
+.interview-lobby-resume-preview-tag {
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.interview-lobby-resume-preview-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(124, 58, 237, 0.22);
+}
+
+.interview-lobby-resume-action-row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 2px;
+}
+
+.interview-lobby-resume-action-btn {
+  min-width: 136px;
+  border-radius: 10px !important;
+  font-weight: 600;
+  background: linear-gradient(120deg, #2d6bff, #4d88ff) !important;
+  border: none !important;
+  box-shadow: 0 10px 20px rgba(45, 107, 255, 0.24);
+}
+
+.interview-lobby-resume-action-btn:hover {
+  background: linear-gradient(120deg, #1f58da, #3f78ef) !important;
+}
+
+.interview-lobby-table .ant-table {
+  border: 1px solid #edf1f8;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.interview-lobby-table .ant-table-thead > tr > th {
+  background: #f8faff;
+  color: #334155;
+  font-weight: 600;
+}
+
+.interview-lobby-table .ant-table-tbody > tr > td {
+  color: #0f172a;
+}
+
+.interview-lobby-table .ant-table-tbody > tr:hover > td {
+  background: #f5f9ff !important;
+}
+
+@media (max-width: 1200px) {
+  .interview-lobby-section-card .ant-card-head-title {
+    font-size: 21px;
+  }
+}
+
+@media (max-width: 768px) {
+  .interview-lobby-actions .ant-btn {
+    min-width: 100%;
+  }
+}
+
+.overview-page .ant-card {
+  border-radius: 16px;
+  border: 1px solid #e6ecf8;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+}
+
+.overview-hero-card {
+  background: linear-gradient(120deg, #eef4ff 0%, #e8f0ff 58%, #dde9ff 100%);
+  border-color: #d8e4ff !important;
+}
+
+.overview-health-card {
+  border-radius: 14px !important;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.overview-kpi-card .ant-typography h2 {
+  margin: 2px 0 4px 0 !important;
+  font-size: 40px;
+}
+
+.overview-kpi-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.overview-record-card .ant-table-thead > tr > th {
+  background: #f7faff;
+  color: #475569;
+}
+
+.overview-analysis-card .ant-progress .ant-progress-bg {
+  background: linear-gradient(90deg, #2d6bff, #6f8dff);
+}

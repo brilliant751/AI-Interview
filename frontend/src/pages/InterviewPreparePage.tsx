@@ -165,6 +165,7 @@ export function InterviewPreparePage() {
                     loading={resumeQuery.isLoading}
                     dataSource={resumeQuery.data?.items ?? []}
                     pagination={false}
+                    scroll={{ x: 860 }}
                     columns={[
                       { title: '文件名', dataIndex: 'file_name' },
                       { title: '状态', dataIndex: 'parse_status' },
@@ -220,6 +221,7 @@ export function InterviewPreparePage() {
                     loading={jdQuery.isLoading}
                     dataSource={jdQuery.data?.items ?? []}
                     pagination={false}
+                    scroll={{ x: 900 }}
                     columns={[
                       { title: '标题', dataIndex: 'title' },
                       {
@@ -260,6 +262,7 @@ export function InterviewPreparePage() {
           loading={pausedQuery.isLoading}
           dataSource={pausedQuery.data?.items ?? []}
           pagination={false}
+          scroll={{ x: 1000 }}
           columns={[
             {
               title: '面试名称',
@@ -310,7 +313,7 @@ export function InterviewPreparePage() {
             job_role: positionMode === 'role' ? values.job_role : undefined,
             difficulty: values.difficulty,
             input_mode: values.input_mode,
-            output_mode: values.output_mode,
+            output_mode: 'voice',
             session_name: values.session_name,
             question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
             jd_id: positionMode === 'jd' ? values.jd_id : undefined,
@@ -397,14 +400,6 @@ export function InterviewPreparePage() {
             ]}
           />
         </Form.Item>
-        <Form.Item name="output_mode" label="输出模式">
-          <Radio.Group
-            options={[
-              { label: '文本', value: 'text' },
-              { label: '语音', value: 'voice' },
-            ]}
-          />
-        </Form.Item>
         <Button type="primary" htmlType="submit" loading={createMutation.isPending}>
           创建会话
         </Button>
@@ -430,6 +425,7 @@ export function InterviewPreparePage() {
           loading={resumeQuery.isLoading}
           dataSource={resumeQuery.data?.items ?? []}
           pagination={false}
+          scroll={{ x: 860 }}
           onRow={(record) => ({
             onClick: () => setPendingResumeId(record.resume_id),
           })}
@@ -461,7 +457,7 @@ export function InterviewPreparePage() {
         }}
         okText="确认绑定"
         cancelText="取消"
-        width={1100}
+        width="min(1100px, 92vw)"
         styles={{ body: { height: 640, overflow: 'hidden' } }}
       >
         <Space direction="vertical" style={{ width: '100%', height: '100%' }}>
@@ -470,13 +466,13 @@ export function InterviewPreparePage() {
               placeholder="按 job_role 搜索，例如：java / web / 后端开发"
               value={jdFilterRole}
               onChange={(event) => setJdFilterRole(event.target.value)}
-              style={{ width: 320 }}
+              style={{ width: 'min(320px, 100%)' }}
             />
             <Input
               placeholder="按标题关键词搜索"
               value={jdFilterTitle}
               onChange={(event) => setJdFilterTitle(event.target.value)}
-              style={{ width: 320 }}
+              style={{ width: 'min(320px, 100%)' }}
             />
             <Button onClick={() => void jdQuery.refetch()}>搜索</Button>
             <Button
@@ -517,7 +513,7 @@ export function InterviewPreparePage() {
           loading={jdQuery.isLoading}
           dataSource={jdQuery.data?.items || []}
           pagination={false}
-          scroll={{ y: 420 }}
+          scroll={{ x: 1000, y: 420 }}
           onRow={(record) => ({
             onClick: () => setPendingJdId(record.jd_id),
           })}

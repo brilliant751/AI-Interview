@@ -95,7 +95,6 @@ ensure_backend_dependencies() {
   fi
   "$BACKEND_PYTHON" -m pip install --upgrade pip >/dev/null
   "$BACKEND_PYTHON" -m pip install -r "$BACKEND_DIR/requirements.txt"
-  "$BACKEND_PYTHON" -m pip install pytest ruff
 }
 
 prepare_model_cache_dirs() {
@@ -204,4 +203,3 @@ echo "后端：http://localhost:${BACKEND_PORT}"
 echo "按 Ctrl+C 可停止后端服务。"
 
 wait "$BACKEND_PID"
-

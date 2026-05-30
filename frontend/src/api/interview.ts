@@ -69,6 +69,22 @@ export interface SubmitTurnResponse {
   pipeline_meta?: PipelineMeta
 }
 
+/** 轮次异步任务响应。 */
+export interface SubmitTurnJobResponse {
+  interview_id: string
+  job_id: string
+  status: 'PROCESSING'
+}
+
+/** 轮次异步任务查询响应。 */
+export interface SubmitTurnJobResultResponse {
+  interview_id: string
+  job_id: string
+  status: 'PROCESSING' | 'READY' | 'FAILED'
+  result?: SubmitTurnResponse
+  error_message?: string
+}
+
 /** 报告响应。 */
 export interface ReportResponse {
   interview_id: string
@@ -77,7 +93,58 @@ export interface ReportResponse {
   strengths: string[]
   weaknesses: string[]
   suggestions: string[]
+  dimension_scores: Array<{
+    dimension: string
+    capability_score: number
+    match_score: number
+    confidence: string
+    evidence: string
+  }>
+  jd_resume_alignment: Array<{
+    jd_skill: string
+    priority: string
+    resume_evidence: string
+    answer_evidence: string
+    status: string
+    note: string
+  }>
+  question_deep_dives: Array<{
+    question_no: number
+    question: string
+    intent: string
+    answer_summary: string
+    hit_rate: number
+    depth_level: string
+    resume_relevance: string
+    jd_relevance: string
+    strengths: string
+    gaps: string
+    follow_up_questions: string[]
+  }>
+  key_risks: string[]
+  final_recommendation: string
   error_message?: string
+}
+
+/** 报告列表条目。 */
+export interface ReportListItem {
+  interview_id: string
+  session_name?: string
+  job_role: string
+  difficulty: string
+  status: 'GENERATING' | 'READY' | 'FAILED'
+  overall_score?: number
+  updated_at: string
+  started_at: string
+  finished_at?: string
+}
+
+/** 报告列表响应。 */
+export interface ReportListResponse {
+  items: ReportListItem[]
+  total: number
+  page: number
+  page_size: number
 }
 
 /** 历史记录响应。 */
@@ -87,7 +154,9 @@ export interface HistoryResponse {
     interview_id: string
     session_name?: string
     resume_id: string
+    resume_file_name?: string
     job_role: string
+    difficulty: string
     status: string
     jd_id?: string
     jd_title?: string
@@ -227,7 +296,7 @@ export async function createInterview(payload: CreateInterviewPayload): Promise<
 export async function submitTurn(
   interviewId: string,
   payload: SubmitTurnPayload,
-): Promise<SubmitTurnResponse> {
+): Promise<SubmitTurnJobResponse> {
   const { data } = await apiClient.post(`/interviews/${interviewId}/turns`, payload)
   return data
 }
@@ -236,7 +305,7 @@ export async function submitTurn(
 export async function submitAudioTurn(
   interviewId: string,
   payload: SubmitAudioTurnPayload,
-): Promise<SubmitTurnResponse> {
+): Promise<SubmitTurnJobResponse> {
   const formData = new FormData()
   formData.append('stage', payload.stage)
   formData.append('file', payload.file)
@@ -246,15 +315,40 @@ export async function submitAudioTurn(
   return data
 }
 
+/** 查询轮次异步任务结果。 */
+export async function fetchTurnJobResult(
+  interviewId: string,
+  jobId: string,
+): Promise<SubmitTurnJobResultResponse> {
+  const { data } = await apiClient.get(`/interviews/${interviewId}/turn-jobs/${jobId}`)
+  return data
+}
+
 /** 结束面试并触发报告。 */
 export async function finishInterview(interviewId: string): Promise<{ report_status: string }> {
-  const { data } = await apiClient.post(`/interviews/${interviewId}/finish`)
+  const { data } = await apiClient.post(`/interviews/${interviewId}/finish`, undefined, { timeout: 30000 })
+  return data
+}
+
+/** 暂停面试。 */
+export async function pauseInterview(interviewId: string): Promise<{ interview_id: string; status: string }> {
+  const { data } = await apiClient.post(`/interviews/${interviewId}/pause`)
   return data
 }
 
 /** 查询面试报告。 */
 export async function fetchReport(interviewId: string): Promise<ReportResponse> {
   const { data } = await apiClient.get(`/report/${interviewId}`)
+  return data
+}
+
+/** 查询我的报告列表。 */
+export async function fetchReportList(params: {
+  page: number
+  page_size: number
+  status?: 'GENERATING' | 'READY' | 'FAILED'
+}): Promise<ReportListResponse> {
+  const { data } = await apiClient.get<ReportListResponse>('/report', { params })
   return data
 }
 

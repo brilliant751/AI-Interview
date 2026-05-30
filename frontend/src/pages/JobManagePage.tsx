@@ -44,7 +44,7 @@ export function JobManagePage() {
       if (a.source_type === b.source_type) return 0
       return a.source_type === 'SYSTEM_PRESET' ? -1 : 1
     })
-  }, [jdQuery.data?.items])
+  }, [jdQuery.data?.items, searchCompanyId])
 
   /** 文本上传 JD。 */
   const uploadTextMutation = useMutation({
@@ -97,7 +97,7 @@ export function JobManagePage() {
             <Space wrap>
               <Select
                 showSearch
-                style={{ width: 220 }}
+                style={{ width: 'min(220px, 100%)' }}
                 value={jobRole}
                 onChange={(value) => setJobRole(value)}
                 options={[
@@ -115,14 +115,14 @@ export function JobManagePage() {
                 ]}
               />
               <Input
-                style={{ width: 200 }}
+                style={{ width: 'min(220px, 100%)' }}
                 placeholder="自定义岗位方向"
                 value={jobRole}
                 onChange={(event) => setJobRole(event.target.value)}
               />
               <Input.Search
                 allowClear
-                style={{ width: 320 }}
+                style={{ width: 'min(320px, 100%)' }}
                 placeholder="搜索岗位名称"
                 value={searchTitle}
                 onChange={(event) => setSearchTitle(event.target.value)}
@@ -130,7 +130,7 @@ export function JobManagePage() {
               />
               <Select
                 allowClear
-                style={{ width: 220 }}
+                style={{ width: 'min(220px, 100%)' }}
                 placeholder="按公司筛选"
                 value={searchCompanyId || undefined}
                 onChange={(value) => setSearchCompanyId(value || '')}
@@ -230,7 +230,7 @@ export function JobManagePage() {
         cancelText="取消"
         confirmLoading={uploadTextMutation.isPending}
         okButtonProps={{ disabled: !textInput.trim() || !jobRole.trim() }}
-        width={760}
+        width="min(760px, 92vw)"
       >
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
           <Typography.Text type="secondary">当前方向：{jobRole}</Typography.Text>
@@ -263,7 +263,7 @@ export function JobManagePage() {
         open={detailOpen}
         onCancel={() => setDetailOpen(false)}
         footer={null}
-        width={760}
+        width="min(760px, 92vw)"
       >
         <Space direction="vertical" size={12} style={{ width: '100%' }}>
           <Space>

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Alert, Button, Card, Checkbox, Col, Radio, Row, Space, Statistic, Tag, Typography, message } from 'antd'
+import { Alert, Button, Card, Checkbox, Col, Grid, Radio, Row, Space, Statistic, Tag, Typography, message } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -40,6 +40,8 @@ function formatDateTime(value: string): string {
 
 /** 题库练习准备页。 */
 export function PracticePreparePage() {
+  const screens = Grid.useBreakpoint()
+  const isWide = Boolean(screens.xl)
   const navigate = useNavigate()
   const setSession = usePracticeStore((state) => state.setSession)
   const [selectedRole, setSelectedRole] = useState<'java' | 'web' | 'all'>('all')
@@ -103,7 +105,14 @@ export function PracticePreparePage() {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 14, width: '100%' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: isWide ? 'minmax(0, 3fr) minmax(280px, 1fr)' : 'minmax(0, 1fr)',
+        gap: 14,
+        width: '100%',
+      }}
+    >
       <Space direction="vertical" size={14} style={{ width: '100%' }}>
         <Card styles={{ body: { padding: 22 } }}>
           <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 8 }}>
@@ -112,17 +121,17 @@ export function PracticePreparePage() {
           <Typography.Paragraph style={{ marginBottom: 0, color: '#5e697a' }}>
             直接从真实题库抽题做练习，支持岗位筛选、固定题单和后续追问式模式扩展。
           </Typography.Paragraph>
-          <Row gutter={12} style={{ marginTop: 18 }}>
-            <Col span={6}>
+          <Row gutter={[12, 12]} style={{ marginTop: 18 }}>
+            <Col xs={12} md={6}>
               <Statistic title="题库总题量" value={overviewQuery.data?.total_questions || 0} />
             </Col>
-            <Col span={6}>
+            <Col xs={12} md={6}>
               <Statistic title="累计作答" value={overviewQuery.data?.total_answered_questions || 0} />
             </Col>
-            <Col span={6}>
+            <Col xs={12} md={6}>
               <Statistic title="练习会话" value={overviewQuery.data?.total_sessions || 0} />
             </Col>
-            <Col span={6}>
+            <Col xs={12} md={6}>
               <Statistic title="进行中" value={overviewQuery.data?.active_sessions || 0} />
             </Col>
           </Row>
@@ -193,7 +202,7 @@ export function PracticePreparePage() {
         <Card styles={{ body: { padding: 16 } }} loading={overviewQuery.isLoading}>
           <Row gutter={[12, 12]}>
             {roleCards.map((roleItem) => (
-              <Col span={12} key={roleItem.job_role}>
+              <Col xs={24} md={12} key={roleItem.job_role}>
                 <Card
                   size="small"
                   title={`${JOB_ROLE_LABELS[roleItem.job_role]} 题库练习`}

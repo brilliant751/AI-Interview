@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
+import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
+import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -12,7 +13,9 @@ import {
   fetchHistory,
   fetchInterviewPlayback,
   fetchJds,
+  fetchTurnJobResult,
   fetchInterviewStatus,
+  pauseInterview,
   fetchResumeFile,
   fetchResumes,
   finishInterview,
@@ -23,6 +26,9 @@ import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试答题页面。 */
 export function InterviewPage() {
+  const screens = Grid.useBreakpoint()
+  const isTabletUp = Boolean(screens.lg)
+  const isDesktopWide = Boolean(screens.xl)
   const AUTO_RECORD_COUNTDOWN_SECONDS = 10
   const MAX_RECORDING_SECONDS = 180
   const MAX_TEXT_ANSWER_SECONDS = 180
@@ -71,8 +77,21 @@ export function InterviewPage() {
   const [jdFilterRole, setJdFilterRole] = useState('')
   const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
+  const [questionAudioEnded, setQuestionAudioEnded] = useState(false)
+  const [suspendPolling, setSuspendPolling] = useState(false)
+  const [displayedQuestionText, setDisplayedQuestionText] = useState('')
+  const questionStreamTimerRef = useRef<number | null>(null)
+  const audioBarSeedsRef = useRef(
+    Array.from({ length: 14 }, () => ({
+      base: Math.floor(24 + Math.random() * 42),
+      duration: Math.floor(720 + Math.random() * 760),
+      delay: Math.floor(Math.random() * 480),
+      animationType: Math.floor(Math.random() * 4),
+    })),
+  )
   const endRedirectedRef = useRef(false)
   const [historyCollapsed, setHistoryCollapsed] = useState(false)
+  const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
   const [createForm] = Form.useForm()
   const parseBackendDate = (value?: string) => {
@@ -86,6 +105,14 @@ export function InterviewPage() {
       return null
     }
     return parsed
+  }
+  /** 判断请求是否属于主动取消。 */
+  const isCanceledRequestError = (error: unknown) => {
+    const axiosError = error as AxiosError
+    const code = String(axiosError?.code || '')
+    const name = String((axiosError as { name?: string })?.name || '')
+    const messageText = String((axiosError as { message?: string })?.message || '').toLowerCase()
+    return code === 'ERR_CANCELED' || name === 'CanceledError' || messageText.includes('canceled')
   }
   /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
   const buildQuestionKey = () => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
@@ -178,21 +205,22 @@ export function InterviewPage() {
   const healthQuery = useQuery({
     queryKey: ['provider-health', 'interview-page'],
     queryFn: fetchProviderHealth,
+    enabled: !suspendPolling,
     retry: false,
-    refetchInterval: 15000,
+    refetchInterval: suspendPolling ? false : 15000,
   })
   /** 会话页拉取状态，确保支持直接访问 /interview/{id}。 */
   const interviewStatusQuery = useQuery({
     queryKey: ['interview-status', interviewId],
     queryFn: () => fetchInterviewStatus(interviewId),
-    enabled: Boolean(interviewId),
-    refetchInterval: 15000,
+    enabled: Boolean(interviewId) && !suspendPolling,
+    refetchInterval: suspendPolling ? false : 15000,
   })
   /** 查询面试详情（用于左侧详情面板）。 */
   const playbackQuery = useQuery({
     queryKey: ['interview-playback', interviewId],
     queryFn: () => fetchInterviewPlayback(interviewId),
-    enabled: Boolean(interviewId),
+    enabled: Boolean(interviewId) && !suspendPolling,
   })
 
   useEffect(() => {
@@ -276,6 +304,9 @@ export function InterviewPage() {
   /** 组件卸载时，清理录音与计时器资源。 */
   useEffect(() => {
     return () => {
+      if (questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+      }
       if (countdownTimerRef.current !== null) {
         window.clearInterval(countdownTimerRef.current)
       }
@@ -296,6 +327,34 @@ export function InterviewPage() {
       }
     }
   }, [])
+
+  /** 新题目出现时按字符流式显示文本，便于边听边看。 */
+  useEffect(() => {
+    if (questionStreamTimerRef.current !== null) {
+      window.clearInterval(questionStreamTimerRef.current)
+      questionStreamTimerRef.current = null
+    }
+    setDisplayedQuestionText('')
+    const text = (currentQuestion || '').trim()
+    if (!text) {
+      return
+    }
+    let cursor = 0
+    questionStreamTimerRef.current = window.setInterval(() => {
+      cursor += 1
+      setDisplayedQuestionText(text.slice(0, cursor))
+      if (cursor >= text.length && questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+        questionStreamTimerRef.current = null
+      }
+    }, 80)
+    return () => {
+      if (questionStreamTimerRef.current !== null) {
+        window.clearInterval(questionStreamTimerRef.current)
+        questionStreamTimerRef.current = null
+      }
+    }
+  }, [currentQuestion, pipelineMeta?.trace_id, currentStage])
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
   const resetRoundRuntimeState = () => {
@@ -322,6 +381,7 @@ export function InterviewPage() {
     setAnswer('')
     submitAfterStopRef.current = false
     lastQuestionKeyRef.current = ''
+    lastTextQuestionKeyRef.current = ''
     pendingCountdownQuestionKeyRef.current = ''
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       suppressRecorderStopRef.current = true
@@ -401,6 +461,11 @@ export function InterviewPage() {
     })
   }, [outputMode, ttsAudioUrl, resumeReplayTick])
 
+  /** 题目更新后重置重播状态。 */
+  useEffect(() => {
+    setQuestionAudioEnded(false)
+  }, [ttsAudioUrl, pipelineMeta?.trace_id, currentQuestion, currentStage])
+
   /** 切换会话时重置录音与倒计时状态，避免继承上一次轮次。 */
   useEffect(() => {
     if (!interviewId) {
@@ -432,6 +497,7 @@ export function InterviewPage() {
   /** 题目语音播放结束后触发倒计时。 */
   const handleQuestionAudioEnded = () => {
     setQuestionAudioPlaying(false)
+    setQuestionAudioEnded(true)
     if (inputMode !== 'voice' || !interviewId || !currentQuestion || currentStage === 'END') {
       return
     }
@@ -555,6 +621,9 @@ export function InterviewPage() {
 
   /** 提交轮次。 */
   const submitMutation = useMutation({
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
     mutationFn: async (payload?: { voiceFile?: File }) =>
       inputMode === 'voice'
         ? submitAudioTurn(interviewId, {
@@ -565,23 +634,59 @@ export function InterviewPage() {
             stage: currentStage,
             answer_text: answer,
           }),
-    onSuccess: (data) => {
-      updateTurnResult({
-        stage: data.stage,
-        question: data.next_question,
-        score: data.live_score,
-        followUpCount: data.follow_up_count,
-        ttsAudioUrl: data.tts_audio_url,
-        pipelineMeta: data.pipeline_meta,
-      })
-      void queryClient.invalidateQueries({ queryKey: ['interview-playback', interviewId] })
-      setAnswer('')
-      setAudioFile(null)
-      message.success('已生成下一题')
+    onSuccess: async (data) => {
+      const startedAt = Date.now()
+      while (Date.now() - startedAt < 120000) {
+        let job
+        try {
+          job = await fetchTurnJobResult(interviewId, data.job_id)
+        } catch (error) {
+          if (isCanceledRequestError(error)) {
+            try {
+              const sessionStatus = await fetchInterviewStatus(interviewId)
+              syncSessionStatus({
+                stage: sessionStatus.current_stage,
+                followUpCount: sessionStatus.follow_up_count,
+                currentQuestion: sessionStatus.current_question,
+                ttsAudioUrl: sessionStatus.tts_audio_url,
+              })
+              message.warning('请求被取消，已同步最新状态')
+            } catch {
+              message.warning('请求被取消，请刷新页面确认当前轮次')
+            }
+            return
+          }
+          message.error('任务状态查询失败，请重试')
+          return
+        }
+        if (job.status === 'READY' && job.result) {
+          updateTurnResult({
+            stage: job.result.stage,
+            question: job.result.next_question,
+            score: job.result.live_score,
+            followUpCount: job.result.follow_up_count,
+            ttsAudioUrl: job.result.tts_audio_url,
+            pipelineMeta: job.result.pipeline_meta,
+          })
+          void queryClient.invalidateQueries({ queryKey: ['interview-playback', interviewId] })
+          setAnswer('')
+          setAudioFile(null)
+          message.success('已生成下一题')
+          return
+        }
+        if (job.status === 'FAILED') {
+          message.error(job.error_message || '提交失败，请重试')
+          return
+        }
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 800)
+        })
+      }
+      message.warning('处理超时，请稍后重试或刷新页面查看最新状态')
     },
     onError: async (error) => {
       const axiosError = error as AxiosError<{ error?: { code?: string; message?: string } }>
-      if (axiosError.code === 'ERR_CANCELED') {
+      if (isCanceledRequestError(error)) {
         try {
           const sessionStatus = await fetchInterviewStatus(interviewId)
           syncSessionStatus({
@@ -624,21 +729,62 @@ export function InterviewPage() {
       }
       message.error(errorMessage)
     },
+    onSettled: () => {
+      setSuspendPolling(false)
+    },
   })
 
   /** 结束面试。 */
   const finishMutation = useMutation({
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
     mutationFn: () => finishInterview(interviewId),
     onSuccess: () => {
       message.success('面试已结束，正在生成报告')
       navigate(`/report/${interviewId}`)
     },
-    onError: () => message.error('结束面试失败'),
+    onError: async (error) => {
+      if (isCanceledRequestError(error)) {
+        try {
+          // 取消场景下自动补一次结束请求，避免用户停留在“无法结束”状态。
+          await finishInterview(interviewId)
+        } catch {
+          // ignore retry error
+        }
+        try {
+          const sessionStatus = await fetchInterviewStatus(interviewId)
+          if (sessionStatus.status === 'FINISHED' || sessionStatus.current_stage === 'END') {
+            message.success('面试已结束，正在跳转报告页')
+            navigate(`/report/${interviewId}`)
+            return
+          }
+        } catch {
+          // ignore
+        }
+        message.warning('结束请求被取消，正在跳转报告页继续确认状态')
+        navigate(`/report/${interviewId}`)
+        return
+      }
+      const axiosError = error as AxiosError<{ error?: { message?: string } }>
+      if (axiosError.code === 'ECONNABORTED') {
+        message.warning('结束请求超时，正在跳转报告页继续确认状态')
+        navigate(`/report/${interviewId}`)
+        return
+      }
+      message.error(axiosError.response?.data?.error?.message || '结束面试失败')
+    },
+    onSettled: () => {
+      setSuspendPolling(false)
+    },
   })
 
   /** 暂停面试并保存进度。 */
   const pauseMutation = useMutation({
-    mutationFn: () => fetchInterviewStatus(interviewId, { status: 'PAUSED' }),
+    onMutate: () => {
+      setSuspendPolling(true)
+    },
+    mutationFn: () => pauseInterview(interviewId),
     onSuccess: () => {
       message.success('面试已暂停，可在准备页继续')
       reset()
@@ -646,6 +792,9 @@ export function InterviewPage() {
     },
     onError: () => {
       message.error('暂停失败，请重试')
+    },
+    onSettled: () => {
+      setSuspendPolling(false)
     },
   })
 
@@ -932,52 +1081,232 @@ export function InterviewPage() {
   )
 
   if (!routeInterviewId) {
+    const pausedItems = pausedQuery.data?.items ?? []
+    const pausedCount = pausedItems.length
+    const resumedAtText = pausedItems[0]?.started_at ? formatDateTime(pausedItems[0].started_at) : '--'
+    const quickStartRoles: Array<{ key: string; title: string; subtitle: string; icon: LucideIcon }> = [
+      { key: 'web', title: 'Web 前端工程师', subtitle: '项目表达 / 性能优化 / 工程化', icon: Code2 },
+      { key: 'java', title: 'Java 后端工程师', subtitle: '并发 / 系统设计 / 数据库', icon: Database },
+      { key: 'pm', title: '产品经理', subtitle: '需求分析 / 指标拆解 / 场景沟通', icon: BriefcaseBusiness },
+      { key: 'test', title: '测试工程师', subtitle: '测试策略 / 缺陷追踪 / 质量门禁', icon: ShieldCheck },
+    ]
+    const roleColorMap: Record<string, string> = {
+      web: 'blue',
+      java: 'cyan',
+    }
+    const difficultyColorMap: Record<string, string> = {
+      easy: 'green',
+      medium: 'gold',
+      hard: 'red',
+    }
+    const statusColorMap: Record<string, string> = {
+      PAUSED: 'processing',
+      ACTIVE: 'green',
+      FINISHED: 'default',
+    }
     return (
-      <Space direction="vertical" size={16} style={{ width: '100%' }}>
-        <ProviderHealthBanner health={providerHealth} />
-        <Card title="面试大厅">
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
-            <Space wrap>
-              <Button type="primary" onClick={() => setCreateModalOpen(true)}>
-                创建面试
-              </Button>
-              <Button onClick={() => navigate('/resumes')}>去上传/管理简历</Button>
-            </Space>
-            <Table
-              rowKey="interview_id"
-              loading={pausedQuery.isLoading}
-              dataSource={pausedQuery.data?.items ?? []}
-              pagination={false}
-              columns={[
-                {
-                  title: '面试名称',
-                  dataIndex: 'session_name',
-                  render: (value?: string) => value || '-',
-                },
-                { title: '会话ID', dataIndex: 'interview_id' },
-                { title: '简历', dataIndex: 'resume_id' },
-                { title: '岗位', dataIndex: 'job_role' },
-                { title: '难度', dataIndex: 'difficulty' },
-                { title: '状态', dataIndex: 'status' },
-                {
-                  title: '操作',
-                  key: 'actions',
-                  render: (_, row: { interview_id: string }) => (
-                    <Button
-                      size="small"
-                      type="primary"
-                      loading={resumePausedMutation.isPending && resumingInterviewId === row.interview_id}
-                      onClick={() => resumePausedMutation.mutate(row.interview_id)}
-                    >
-                      继续面试
-                    </Button>
-                  ),
-                },
-              ]}
-              locale={{ emptyText: '暂无暂停中的面试，可点击“创建面试”开始。' }}
-            />
-          </Space>
+      <Space className="interview-lobby" direction="vertical" size={16} style={{ width: '100%' }}>
+        <Card
+          className="interview-lobby-hero"
+          style={{
+            background: 'linear-gradient(120deg, #e8f0ff 0%, #dbe8ff 62%, #f1f5ff 100%)',
+            border: '1px solid #d3e3ff',
+          }}
+        >
+          <Row gutter={[16, 16]} align="middle">
+            <Col xs={24} xl={16}>
+              <Typography.Title level={3} style={{ marginTop: 0 }}>
+                面试大厅
+              </Typography.Title>
+              <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+                开始新的模拟面试，或继续上次未完成会话。建议优先练习项目表达和技术方案讲解。
+              </Typography.Paragraph>
+              <Space wrap className="interview-lobby-actions">
+                <Button className="interview-lobby-btn-primary" type="primary" size="large" icon={<Play size={16} />} onClick={() => setCreateModalOpen(true)}>
+                  开始新面试
+                </Button>
+                <Button className="interview-lobby-btn-secondary" size="large" icon={<Upload size={16} />} onClick={() => navigate('/resumes')}>
+                  上传/管理简历
+                </Button>
+                <Button className="interview-lobby-btn-secondary" size="large" icon={<FileText size={16} />} onClick={() => navigate('/report')}>
+                  查看我的报告
+                </Button>
+              </Space>
+            </Col>
+            <Col xs={24} xl={8}>
+              <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                <Card className="interview-lobby-mini-card" size="small">
+                  <Space align="start" size={10}>
+                    <div className="interview-lobby-icon-wrap purple"><CirclePause size={18} /></div>
+                    <Statistic title="待继续会话" value={pausedCount} suffix="个" />
+                  </Space>
+                </Card>
+                <Card className="interview-lobby-mini-card" size="small">
+                  <Space align="start" size={10}>
+                    <div className="interview-lobby-icon-wrap green"><CalendarClock size={18} /></div>
+                    <div>
+                      <Typography.Text type="secondary">最近保存时间</Typography.Text>
+                      <Typography.Paragraph style={{ marginBottom: 0 }}>{resumedAtText}</Typography.Paragraph>
+                    </div>
+                  </Space>
+                </Card>
+              </Space>
+            </Col>
+          </Row>
         </Card>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space align="start" size={10}>
+                <div className="interview-lobby-icon-wrap blue"><CirclePause size={18} /></div>
+                <Statistic title="暂停中的面试" value={pausedCount} suffix="场" />
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space align="start" size={10}>
+                <div className="interview-lobby-icon-wrap violet"><Mic size={18} /></div>
+                <Statistic title="语音答题时长上限" value={MAX_RECORDING_SECONDS} suffix="秒/题" />
+              </Space>
+            </Card>
+          </Col>
+          <Col xs={24} xl={8}>
+            <Card className="interview-lobby-kpi-card">
+              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap green"><FileText size={18} /></div>
+                  <Typography.Text type="secondary">文本答题剩余建议</Typography.Text>
+                </Space>
+                <Progress percent={Math.round((textAnswerRemainingSeconds / MAX_TEXT_ANSWER_SECONDS) * 100)} />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+
+        <Card
+          className="interview-lobby-section-card"
+          title="快速开始"
+          extra={
+            <Button type="link" onClick={() => setCreateModalOpen(true)}>
+              自定义配置创建
+            </Button>
+          }
+        >
+          <Row gutter={[12, 12]}>
+            {quickStartRoles.map((item) => (
+              <Col xs={24} md={12} xl={6} key={item.key}>
+                <Card className="interview-lobby-role-card" size="small">
+                  <Space direction="vertical" size={8}>
+                    <Space size={8}>
+                      <div className="interview-lobby-icon-wrap soft"><item.icon size={16} /></div>
+                      <Typography.Text strong>{item.title}</Typography.Text>
+                    </Space>
+                    <Typography.Text type="secondary">{item.subtitle}</Typography.Text>
+                    <Button
+                      className="interview-lobby-role-btn"
+                      type="primary"
+                      ghost
+                      icon={<ArrowRight size={15} />}
+                      onClick={() => {
+                        setCreateModalOpen(true)
+                        createForm.setFieldValue('job_role', item.key === 'java' ? 'java' : 'web')
+                      }}
+                    >
+                      开始练习
+                    </Button>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </Card>
+
+        <Card className="interview-lobby-section-card" title="继续上次面试">
+          {pausedQuery.isLoading ? (
+            <Typography.Text type="secondary">正在加载暂停中的会话...</Typography.Text>
+          ) : pausedItems.length === 0 ? (
+            <Typography.Text type="secondary">暂无暂停中的面试，可点击“开始新面试”创建。</Typography.Text>
+          ) : (
+            <Row gutter={[12, 12]}>
+              {pausedItems.map((row) => (
+                <Col xs={24} lg={12} key={row.interview_id}>
+                  <Card className="interview-lobby-resume-card" size="small">
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Typography.Text strong>{row.session_name || '未命名面试'}</Typography.Text>
+                        <Tag color="blue">{row.status}</Tag>
+                      </Space>
+                      <Space wrap size={8}>
+                        <Tag color={roleColorMap[row.job_role] || 'blue'}>{`岗位：${row.job_role}`}</Tag>
+                        <Tag color={difficultyColorMap[row.difficulty] || 'gold'}>{`难度：${row.difficulty}`}</Tag>
+                        <Tooltip title="预览">
+                          <Tag
+                            color="purple"
+                            className="interview-lobby-resume-preview-tag"
+                            onClick={() =>
+                              previewMutation.mutate({
+                                resumeId: row.resume_id,
+                                fileName: row.resume_file_name || `${row.resume_id}.pdf`,
+                              })
+                            }
+                          >
+                            {`简历：${row.resume_file_name || row.resume_id}`}
+                          </Tag>
+                        </Tooltip>
+                      </Space>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Tag color={statusColorMap[row.status] || 'processing'}>{`状态：${row.status}`}</Tag>
+                        <Typography.Text type="secondary">{`会话ID：${row.interview_id}`}</Typography.Text>
+                      </Space>
+                      <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                        <Typography.Text type="secondary">{`开始时间：${formatDateTime(row.started_at)}`}</Typography.Text>
+                      </Space>
+                      <div className="interview-lobby-resume-action-row">
+                        <Button
+                          className="interview-lobby-resume-action-btn"
+                          size="middle"
+                          type="primary"
+                          loading={resumePausedMutation.isPending && resumingInterviewId === row.interview_id}
+                          onClick={() => resumePausedMutation.mutate(row.interview_id)}
+                        >
+                          继续面试
+                        </Button>
+                      </div>
+                    </Space>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          )}
+        </Card>
+
+        <Card className="interview-lobby-health-summary">
+          <Space style={{ width: '100%', justifyContent: 'space-between' }} wrap>
+            <Space size={10}>
+              <div className="interview-lobby-icon-wrap green">
+                <Activity size={16} />
+              </div>
+              <Typography.Text strong>
+                系统状态：{providerHealth?.overall === 'UP' ? '正常' : providerHealth?.overall === 'DEGRADED' ? '降级运行' : '异常'}
+              </Typography.Text>
+            </Space>
+            <Button
+              type="link"
+              onClick={() => setHealthDetailsOpen((previous) => !previous)}
+              icon={healthDetailsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            >
+              {healthDetailsOpen ? '隐藏详情' : '展开详情'}
+            </Button>
+          </Space>
+          {healthDetailsOpen ? (
+            <div style={{ marginTop: 12 }}>
+              <ProviderHealthBanner health={providerHealth} />
+            </div>
+          ) : null}
+        </Card>
+
         <Modal
           title="创建面试"
           open={createModalOpen}
@@ -1019,7 +1348,7 @@ export function InterviewPage() {
                   jd_id: createPositionMode === 'jd' ? values.jd_id : undefined,
                   difficulty: values.difficulty,
                   input_mode: values.input_mode,
-                  output_mode: values.output_mode,
+                  output_mode: 'voice',
                   session_name: values.session_name,
                   question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
                 })
@@ -1048,7 +1377,7 @@ export function InterviewPage() {
                     checked={createPositionMode === 'jd'}
                     checkedChildren="JD"
                     unCheckedChildren="方向"
-                    onChange={(checked) => {
+                    onChange={(checked: boolean) => {
                       const mode: 'role' | 'jd' = checked ? 'jd' : 'role'
                       setCreatePositionMode(mode)
                       if (mode === 'role') {
@@ -1099,14 +1428,6 @@ export function InterviewPage() {
                 />
               </Form.Item>
               <Form.Item name="input_mode" label="输入模式">
-                <Radio.Group
-                  options={[
-                    { label: '文本', value: 'text' },
-                    { label: '语音', value: 'voice' },
-                  ]}
-                />
-              </Form.Item>
-              <Form.Item name="output_mode" label="输出模式">
                 <Radio.Group
                   options={[
                     { label: '文本', value: 'text' },
@@ -1194,7 +1515,7 @@ export function InterviewPage() {
           }}
           okText="确认绑定"
           cancelText="取消"
-          width={1100}
+          width="min(1100px, 92vw)"
           styles={{ body: { height: 640, overflow: 'hidden' } }}
           zIndex={1100}
         >
@@ -1267,7 +1588,7 @@ export function InterviewPage() {
           open={previewOpen}
           onCancel={() => setPreviewOpen(false)}
           footer={null}
-          width={900}
+          width="min(900px, 92vw)"
           destroyOnClose
         >
           {previewType === 'pdf' ? (
@@ -1289,17 +1610,23 @@ export function InterviewPage() {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: historyCollapsed
-          ? 'minmax(0, 1fr) minmax(0, 3fr)'
-          : 'minmax(0, 2fr) minmax(0, 4fr) minmax(0, 2fr)',
+        gridTemplateColumns: isDesktopWide
+          ? historyCollapsed
+            ? 'minmax(220px, 1fr) minmax(0, 3fr)'
+            : 'minmax(220px, 2fr) minmax(0, 4fr) minmax(220px, 2fr)'
+          : isTabletUp
+            ? 'minmax(220px, 1fr) minmax(0, 2fr)'
+            : 'minmax(0, 1fr)',
         gap: 16,
         width: '100%',
+        height: '100%',
+        minHeight: 0,
         transition: 'grid-template-columns 0.2s ease',
         boxSizing: 'border-box',
-        overflowX: 'hidden',
+        overflow: 'hidden',
       }}
     >
-      <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0 }}>
+      <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
         {/* <Card title="会话信息">
           <Space wrap>
             <Tag color="volcano">轮次：第 {followUpCount + 1} 轮</Tag>
@@ -1390,14 +1717,43 @@ export function InterviewPage() {
                 </div>
               </Space>
             </div>
+            <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, padding: 12, background: '#fafcff' }}>
+              <Space align="start" size={10} style={{ width: '100%' }}>
+                <FlagOutlined style={{ color: '#7c6cff', marginTop: 2 }} />
+                <div>
+                  <Typography.Text type="secondary">面试难度</Typography.Text>
+                  <div>
+                    {interviewStatusQuery.data?.difficulty === 'easy'
+                      ? '简单'
+                      : interviewStatusQuery.data?.difficulty === 'hard'
+                        ? '困难'
+                        : '中等'}
+                  </div>
+                </div>
+              </Space>
+            </div>
           </Space>
         </Card>
         <ProviderHealthBanner health={providerHealth} />
       </Space>
 
-      <div style={{ display: 'grid', gridTemplateRows: '1fr 2fr', gap: 16, minHeight: 560, minWidth: 0 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateRows: isTabletUp ? 'minmax(0, 3fr) minmax(0, 2fr)' : 'auto auto',
+          gap: 16,
+          minHeight: isTabletUp ? 560 : undefined,
+          height: '100%',
+          minWidth: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingRight: 4,
+        }}
+      >
         <Card
           title="问题区"
+          style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+          bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           extra={
             <Space size={8}>
               <Typography.Text strong>
@@ -1419,24 +1775,106 @@ export function InterviewPage() {
         >
           {outputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
-              <Typography.Paragraph style={{ marginBottom: 0 }}>
-                {currentQuestion ? '已生成语音题目，可直接播放。' : '等待题目生成...'}
-              </Typography.Paragraph>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {!currentQuestion
+                    ? '等待题目生成...'
+                    : questionAudioPlaying
+                      ? '正在播放语音题目'
+                      : questionAudioEnded
+                        ? '语音播放结束，可重播题目'
+                        : '语音题目已就绪'}
+                </Typography.Paragraph>
+                {questionAudioEnded ? (
+                  <Tooltip title="重播题目语音">
+                    <Button
+                      shape="circle"
+                      icon={<RedoOutlined />}
+                      onClick={() => {
+                        if (!autoPlayAudioRef.current) {
+                          return
+                        }
+                        autoPlayAudioRef.current.currentTime = 0
+                        setQuestionAudioEnded(false)
+                        void autoPlayAudioRef.current.play().catch(() => {
+                          message.warning('重播失败，请重试')
+                        })
+                      }}
+                    />
+                  </Tooltip>
+                ) : null}
+              </div>
               {ttsAudioUrl ? (
-                <audio
-                  ref={autoPlayAudioRef}
-                  controls
-                  src={ttsAudioUrl}
-                  style={{ width: '100%' }}
-                  onPlay={() => setQuestionAudioPlaying(true)}
-                  onPause={() => setQuestionAudioPlaying(false)}
-                  onAbort={() => setQuestionAudioPlaying(false)}
-                  onEmptied={() => setQuestionAudioPlaying(false)}
-                  onError={() => setQuestionAudioPlaying(false)}
-                  onEnded={handleQuestionAudioEnded}
-                >
-                  您的浏览器不支持音频播放。
-                </audio>
+                <>
+                  <audio
+                    ref={autoPlayAudioRef}
+                    src={ttsAudioUrl}
+                    style={{ display: 'none' }}
+                    onPlay={() => {
+                      setQuestionAudioPlaying(true)
+                      setQuestionAudioEnded(false)
+                    }}
+                    onPause={() => setQuestionAudioPlaying(false)}
+                    onAbort={() => setQuestionAudioPlaying(false)}
+                    onEmptied={() => setQuestionAudioPlaying(false)}
+                    onError={() => setQuestionAudioPlaying(false)}
+                    onEnded={handleQuestionAudioEnded}
+                  >
+                    您的浏览器不支持音频播放。
+                  </audio>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      justifyContent: 'center',
+                      gap: 8,
+                      height: 96,
+                      padding: '12px 16px',
+                      borderRadius: 10,
+                      background: '#f5f8ff',
+                      border: '1px solid #dce7ff',
+                    }}
+                  >
+                    {audioBarSeedsRef.current.map((seed, index) => {
+                      const active = questionAudioPlaying
+                      const barHeight = active ? seed.base : Math.max(18, Math.floor(seed.base * 0.45))
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            width: 10,
+                            height: barHeight,
+                            borderRadius: 4,
+                            background: active ? '#4f7cff' : '#9eb7ff',
+                            transformOrigin: 'bottom center',
+                            animation: active ? `question-voice-bar-${seed.animationType} ${seed.duration}ms ease-in-out infinite` : 'none',
+                            animationDelay: `${seed.delay}ms`,
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                  <Typography.Paragraph
+                    style={{
+                      marginBottom: 0,
+                      minHeight: 72,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                      background: '#fafafa',
+                      border: '1px dashed #e0e0e0',
+                      borderRadius: 8,
+                      padding: 10,
+                    }}
+                  >
+                    {displayedQuestionText || '...'}
+                  </Typography.Paragraph>
+                  <style>{`
+                    @keyframes question-voice-bar-0 { 0%, 100% { transform: scaleY(0.55);} 50% { transform: scaleY(1.25);} }
+                    @keyframes question-voice-bar-1 { 0%, 100% { transform: scaleY(0.7);} 50% { transform: scaleY(1.35);} }
+                    @keyframes question-voice-bar-2 { 0%, 100% { transform: scaleY(0.5);} 50% { transform: scaleY(1.1);} }
+                    @keyframes question-voice-bar-3 { 0%, 100% { transform: scaleY(0.65);} 50% { transform: scaleY(1.3);} }
+                  `}</style>
+                </>
               ) : (
                 <Typography.Text type="secondary">当前题目语音暂不可用，可先参考文本作答。</Typography.Text>
               )}
@@ -1446,7 +1884,7 @@ export function InterviewPage() {
           )}
         </Card>
 
-        <Card title="回答区">
+        <Card title="回答区" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {inputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Text>本题目语音作答</Typography.Text>
@@ -1535,7 +1973,7 @@ export function InterviewPage() {
         </Card>
       </div>
       {!historyCollapsed ? (
-        <div style={{ minWidth: 0, height: 720, maxHeight: 720 }}>
+        <div style={{ minWidth: 0, height: '100%', minHeight: 0, overflow: 'hidden' }}>
           <Card
             title="历史记录"
             style={{ height: '100%' }}
@@ -1637,7 +2075,7 @@ export function InterviewPage() {
         open={previewOpen}
         onCancel={() => setPreviewOpen(false)}
         footer={null}
-        width={900}
+        width="min(900px, 92vw)"
         destroyOnClose
       >
         {previewType === 'pdf' ? (

@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import { AdminImportsPage } from '../pages/AdminImportsPage'
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
+import { HomeOverviewPage } from '../pages/HomeOverviewPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
 import { JobManagePage } from '../pages/JobManagePage'
@@ -33,7 +34,7 @@ function ProtectedRoute(props: { children: JSX.Element }) {
 function AdminRoute(props: { children: JSX.Element }) {
   const user = useAuthStore((state) => state.user)
   if (!user || user.role !== 'admin') {
-    return <Navigate to="/prepare" replace />
+    return <Navigate to="/overview" replace />
   }
   return props.children
 }
@@ -46,7 +47,15 @@ export function AppRouter() {
     <BrowserRouter>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<Navigate to={isAuthenticated ? '/prepare' : '/login'} replace />} />
+          <Route path="/" element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />} />
+          <Route
+            path="/overview"
+            element={
+              <ProtectedRoute>
+                <HomeOverviewPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -71,7 +80,7 @@ export function AppRouter() {
             path="/prepare"
             element={
               <ProtectedRoute>
-                <Navigate to="/interview" replace />
+                <Navigate to="/overview" replace />
               </ProtectedRoute>
             }
           />

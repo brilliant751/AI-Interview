@@ -93,6 +93,7 @@ class OpenAIProviderClient:
         answer: str,
         references: list[dict],
         stage: str,
+        difficulty: str,
         history_messages: list[dict[str, str]],
         job_role: str,
         jd_content: str,
@@ -103,15 +104,23 @@ class OpenAIProviderClient:
         """调用 LLM 生成下一题。"""
         ref_context = self._build_reference_context(references=references)
         role_or_jd = (jd_content or "").strip() or f"岗位方向：{job_role or '未提供'}"
+        difficulty_hint_map = {
+            "easy": "基础难度：优先核验基础概念与真实参与度，避免一次追问过深。",
+            "medium": "标准难度：平衡实现细节、取舍理由与结果验证。",
+            "hard": "高难度：重点追问边界条件、故障排查、性能优化与反例分析。",
+        }
+        difficulty_hint = difficulty_hint_map.get(difficulty, difficulty_hint_map["medium"])
         messages: list[dict[str, str]] = [
             {
                 "role": "system",
                 "content": (
                     "你是一位资深中文技术面试官。"
-                    "你的目标是基于候选人历史回答，提出一个具体、可追问、可验证的下一问。"
+                    "你的回答就是面试官现场说出的下一句提问。"
+                    "请像真人面试官一样自然说话，口语化、简洁、直接。"
                     "优先围绕技术决策、实现细节、权衡取舍、排障过程、结果度量。"
-                    "不要复述题干，不要泛泛而谈，不要同时问多个问题。"
-                    "如候选人回答过短（如“不会”“不清楚”“no”），应先做澄清式追问。"
+                    "不要复述题干，不要泛泛而谈，不要一次问多个问题，不要写成说明文。"
+                    "禁止输出“追问意图”、括号解释、分点、Markdown 标题或加粗。"
+                    "只返回一句可直接说出口的中文问句。"
                 ),
             }
         ]
@@ -147,6 +156,7 @@ class OpenAIProviderClient:
                 "content": (
                     f"岗位方向或岗位描述：{role_or_jd}\n"
                     f"当前阶段：{stage}\n"
+                    f"面试难度：{difficulty}（{difficulty_hint}）\n"
                     f"参考资料（含JD与简历）：\n{ref_context}"
                 ),
             }
@@ -175,6 +185,35 @@ class OpenAIProviderClient:
         if not question:
             raise ValueError("LLM 返回空问题")
         return question
+
+    def generate_report_json(
+        self,
+        prompt_messages: list[dict[str, str]],
+        schema: dict,
+        max_tokens: int = 2200,
+    ) -> dict:
+        """调用 LLM 按 JSON Schema 生成结构化面试报告。"""
+        result = self.client.chat.completions.create(
+            model=self.settings.llm_model,
+            messages=prompt_messages,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "interview_report_schema",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+            extra_body={"thinking": {"type": "disabled"}},
+            max_tokens=max_tokens,
+        )
+        message = result.choices[0].message
+        content = (message.content or "").strip()
+        if not content:
+            raise ValueError("LLM 未返回结构化报告内容")
+        import json
+
+        return json.loads(content)
 
     def health(self) -> str:
         """返回 provider 健康状态。"""

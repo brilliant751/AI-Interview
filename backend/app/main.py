@@ -22,6 +22,7 @@ from app.services.material_import_service import MaterialImportService
 from app.services.practice_service import PracticeService
 from app.services.question_bank_service import QuestionBankService
 from app.services.report_worker import ReportWorker
+from app.services.turn_worker import TurnWorker
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     repo = InterviewRepository(db_path=settings.db_path)
     repo.init_schema()
     report_worker = ReportWorker(repo=repo)
+    turn_worker = TurnWorker(repo=repo)
     material_import_service = MaterialImportService(repo_root=REPO_ROOT)
     audit_service = AuditService()
     auth_service = AuthService(repo=repo, audit_service=audit_service)
@@ -59,16 +61,18 @@ async def lifespan(app: FastAPI):
     )
     app.state.repo = repo
     app.state.report_worker = report_worker
+    app.state.turn_worker = turn_worker
     app.state.material_import_service = material_import_service
     app.state.audit_service = audit_service
     app.state.auth_service = auth_service
     app.state.question_bank_service = question_bank_service
-    app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker)
+    app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker, turn_worker=turn_worker)
     app.state.practice_service = PracticeService(repo=repo)
     logger.info("应用启动完成，数据库与服务已初始化")
     yield
     await material_import_service.shutdown()
     await report_worker.shutdown()
+    await turn_worker.shutdown()
     logger.info("应用关闭完成，资源已释放")
 
 

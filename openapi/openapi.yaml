@@ -111,6 +111,34 @@ paths:
               schema:
                 type: object
                 properties:
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        interview_id: { type: string }
+                        session_name: { type: string }
+                        resume_id: { type: string }
+                        resume_file_name: { type: string }
+                        job_role: { type: string }
+                        difficulty: { type: string }
+                        status: { type: string }
+                        jd_id: { type: string }
+                        jd_title: { type: string }
+                        jd_source_type: { type: string }
+                        started_at: { type: string }
+                        finished_at: { type: string, nullable: true }
+                        turn_count: { type: integer }
+                        overall_score: { type: integer, nullable: true }
+                        created_at: { type: string }
+                        duration_seconds: { type: integer }
+                        duration_updated_at: { type: string, nullable: true }
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
                   interview_id: { type: string }
                   current_stage: { type: string }
                   first_question: { type: string }
@@ -345,41 +373,11 @@ paths:
                 answer_audio_format: { type: string, default: mp3 }
       responses:
         "200":
-          description: 成功
+          description: 已受理，后台处理中
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  interview_id: { type: string }
-                  stage: { type: string }
-                  next_question: { type: string }
-                  follow_up_count: { type: integer }
-                  live_score: { type: integer }
-                  output_mode: { type: string }
-                  tts_audio_url: { type: string, nullable: true }
-                  pipeline_meta:
-                    type: object
-                    properties:
-                      input_source: { type: string }
-                      providers:
-                        type: object
-                        properties:
-                          asr: { type: string, nullable: true }
-                          llm: { type: string, nullable: true }
-                          tts: { type: string, nullable: true }
-                      provider_status:
-                        type: object
-                        properties:
-                          asr: { type: string }
-                          llm: { type: string }
-                          tts: { type: string }
-                      degrade_flags:
-                        type: array
-                        items: { type: string }
-                      trace_id: { type: string }
-                      latency_ms: { type: integer }
-                      generation_mode: { type: string, enum: [local_ai, fallback_template, mock] }
+                $ref: '#/components/schemas/InterviewTurnJobResponse'
         "409":
           description: 状态冲突
         "502":
@@ -408,7 +406,30 @@ paths:
                   format: binary
       responses:
         "200":
+          description: 已受理，后台处理中
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewTurnJobResponse'
+  /api/v1/interviews/{interview_id}/turn-jobs/{job_id}:
+    get:
+      summary: 查询轮次异步任务状态
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
           description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewTurnJobResultResponse'
   /api/v1/interviews/{interview_id}/finish:
     post:
       summary: 结束面试并触发报告
@@ -448,6 +469,26 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/report:
+    get:
+      summary: 查询我的报告列表
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [GENERATING, READY, FAILED] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportListResponse'
   /api/v1/report/{interview_id}:
     get:
       summary: 查询面试报告
@@ -459,6 +500,10 @@ paths:
       responses:
         "200":
           description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
   /api/v1/report/{interview_id}/retry:
     post:
       summary: 重试报告生成
@@ -470,6 +515,10 @@ paths:
       responses:
         "200":
           description: 已触发重试
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportRetryResponse'
   /api/v1/interviews/history:
     get:
       summary: 查询历史记录
@@ -879,6 +928,141 @@ components:
               answer: { type: string }
               question_ts: { type: string }
               answer_ts: { type: string, nullable: true }
+    InterviewTurnResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        stage: { type: string }
+        next_question: { type: string }
+        follow_up_count: { type: integer }
+        live_score: { type: integer }
+        output_mode: { type: string }
+        tts_audio_url: { type: string, nullable: true }
+        pipeline_meta:
+          type: object
+          properties:
+            input_source: { type: string }
+            providers:
+              type: object
+              properties:
+                asr: { type: string, nullable: true }
+                llm: { type: string, nullable: true }
+                tts: { type: string, nullable: true }
+            provider_status:
+              type: object
+              properties:
+                asr: { type: string }
+                llm: { type: string }
+                tts: { type: string }
+            degrade_flags:
+              type: array
+              items: { type: string }
+            trace_id: { type: string }
+            latency_ms: { type: integer }
+            generation_mode: { type: string, enum: [local_ai, fallback_template, mock] }
+    InterviewTurnJobResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        job_id: { type: string }
+        status: { type: string, enum: [PROCESSING] }
+    InterviewTurnJobResultResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        job_id: { type: string }
+        status: { type: string, enum: [PROCESSING, READY, FAILED] }
+        result:
+          allOf:
+            - $ref: '#/components/schemas/InterviewTurnResponse'
+          nullable: true
+        error_message: { type: string }
+    ReportResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [GENERATING, READY, FAILED] }
+        overall_score: { type: integer, nullable: true }
+        strengths:
+          type: array
+          items: { type: string }
+        weaknesses:
+          type: array
+          items: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+        dimension_scores:
+          type: array
+          items:
+            type: object
+            properties:
+              dimension: { type: string }
+              capability_score: { type: integer }
+              match_score: { type: integer }
+              confidence: { type: string }
+              evidence: { type: string }
+        jd_resume_alignment:
+          type: array
+          items:
+            type: object
+            properties:
+              jd_skill: { type: string }
+              priority: { type: string }
+              resume_evidence: { type: string }
+              answer_evidence: { type: string }
+              status: { type: string }
+              note: { type: string }
+        question_deep_dives:
+          type: array
+          items:
+            type: object
+            properties:
+              question_no: { type: integer }
+              question: { type: string }
+              intent: { type: string }
+              answer_summary: { type: string }
+              hit_rate: { type: integer }
+              depth_level: { type: string }
+              resume_relevance: { type: string }
+              jd_relevance: { type: string }
+              strengths: { type: string }
+              gaps: { type: string }
+              follow_up_questions:
+                type: array
+                items: { type: string }
+        key_risks:
+          type: array
+          items: { type: string }
+        final_recommendation: { type: string }
+        error_message: { type: string, nullable: true }
+    ReportListItem:
+      type: object
+      properties:
+        interview_id: { type: string }
+        session_name: { type: string }
+        job_role: { type: string }
+        difficulty: { type: string }
+        status: { type: string, enum: [GENERATING, READY, FAILED] }
+        overall_score: { type: integer, nullable: true }
+        updated_at: { type: string }
+        started_at: { type: string }
+        finished_at: { type: string, nullable: true }
+    ReportListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportListItem'
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+    ReportRetryResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [GENERATING] }
     JobDescriptionUploadResponse:
       type: object
       properties:
