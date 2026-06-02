@@ -35,6 +35,14 @@ def _install_email_validator_stub() -> None:
         importlib_metadata.version = _patched_version
         pydantic_networks.version = _patched_version
         return
+    if current_module is not None and getattr(current_module, "__file__", None):
+        return
+    try:
+        importlib_metadata.version("email-validator")
+        __import__("email_validator")
+        return
+    except Exception:
+        pass
     email_validator_stub = ModuleType("email_validator")
 
     class EmailNotValidError(ValueError):
@@ -118,7 +126,8 @@ class AdminImportsTestCase(unittest.TestCase):
         self.assertIn("task_id", payload)
 
         status_payload = payload
-        for _ in range(40):
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline:
             status_resp = self.client.get(
                 f"/api/v1/admin/imports/materials/{payload['task_id']}",
                 headers=self.admin_headers,

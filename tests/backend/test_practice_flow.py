@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import gc
 import sqlite3
 import sys
 import tempfile
@@ -32,6 +33,14 @@ def _install_email_validator_stub() -> None:
         importlib_metadata.version = _patched_version
         pydantic_networks.version = _patched_version
         return
+    if current_module is not None and getattr(current_module, "__file__", None):
+        return
+    try:
+        importlib_metadata.version("email-validator")
+        __import__("email_validator")
+        return
+    except Exception:
+        pass
     email_validator_stub = ModuleType("email_validator")
 
     class EmailNotValidError(ValueError):
@@ -88,6 +97,7 @@ class PracticeRepositoryTestCase(unittest.TestCase):
 
     def tearDown(self) -> None:
         """清理临时目录。"""
+        gc.collect()
         self.tmpdir.cleanup()
 
     def _table_names(self) -> set[str]:
@@ -663,6 +673,7 @@ class PracticeFlowTestCase(unittest.TestCase):
     def tearDown(self) -> None:
         """清理测试环境。"""
         self.client.__exit__(None, None, None)
+        gc.collect()
         self.tmpdir.cleanup()
         self._clear_env("AI_INTERVIEW_DB_PATH")
         self._clear_env("AI_INTERVIEW_AUTH_ENABLE_DEV_STATIC_TOKEN")

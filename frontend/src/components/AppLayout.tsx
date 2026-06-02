@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
+import { WorkspaceStatus } from './WorkspaceStatus'
 
 const { Header, Content } = Layout
 
@@ -83,6 +84,7 @@ export function AppLayout(props: { children: ReactNode }) {
       </Header>
       <Content style={{ padding: '24px 16px', maxWidth: 1380, margin: '0 auto', width: '100%' }}>
         {props.children}
+        <WorkspaceStatus />
       </Content>
     </Layout>
   )
