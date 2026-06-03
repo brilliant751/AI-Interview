@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -17,6 +18,8 @@ from app.core.logging_setup import setup_resume_context_logger
 from app.repositories.interview_repository import InterviewRepository
 from app.services.audit_service import AuditService
 from app.services.auth_service import AuthService
+from app.services.code_execution_service import CodeExecutionService
+from app.services.coding_practice_service import CodingPracticeService
 from app.services.interview_service import InterviewService
 from app.services.material_import_service import MaterialImportService
 from app.services.practice_service import PracticeService
@@ -26,6 +29,24 @@ from app.services.turn_worker import TurnWorker
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _bootstrap_coding_questions(repo: InterviewRepository, repo_root: Path) -> None:
+    """启动时幂等同步内置编程题到数据库。"""
+    material_path = repo_root / "backend" / "assets" / "material" / "coding" / "programming_practice_questions.json"
+    if not material_path.exists():
+        logger.warning("编程题材料文件不存在，跳过启动同步: path=%s", material_path)
+        return
+    try:
+        rows = json.loads(material_path.read_text(encoding="utf-8"))
+        if not isinstance(rows, list):
+            raise ValueError("编程题材料文件格式错误")
+        for row in rows:
+            repo.upsert_coding_question(row)
+        logger.info("编程题材料同步完成，count=%s", len(rows))
+    except Exception as exc:
+        logger.exception("编程题材料同步失败: %s", exc)
+        raise
 
 
 def _find_allowed_methods(app: FastAPI, path: str) -> list[str]:
@@ -49,6 +70,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     repo = InterviewRepository(db_path=settings.db_path)
     repo.init_schema()
+    _bootstrap_coding_questions(repo=repo, repo_root=REPO_ROOT)
     report_worker = ReportWorker(repo=repo)
     turn_worker = TurnWorker(repo=repo)
     material_import_service = MaterialImportService(repo_root=REPO_ROOT)
@@ -59,6 +81,7 @@ async def lifespan(app: FastAPI):
         import_service=material_import_service,
         repo_root=REPO_ROOT,
     )
+    code_execution_service = CodeExecutionService()
     app.state.repo = repo
     app.state.report_worker = report_worker
     app.state.turn_worker = turn_worker
@@ -66,8 +89,10 @@ async def lifespan(app: FastAPI):
     app.state.audit_service = audit_service
     app.state.auth_service = auth_service
     app.state.question_bank_service = question_bank_service
+    app.state.code_execution_service = code_execution_service
     app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker, turn_worker=turn_worker)
     app.state.practice_service = PracticeService(repo=repo)
+    app.state.coding_practice_service = CodingPracticeService(repo=repo, execution_service=code_execution_service)
     logger.info("应用启动完成，数据库与服务已初始化")
     yield
     await material_import_service.shutdown()
