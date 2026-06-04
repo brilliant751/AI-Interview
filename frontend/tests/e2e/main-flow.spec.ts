@@ -207,6 +207,8 @@ test('main flow should work with mocked backend', async ({ page }) => {
   await page.getByRole('button', { name: '去面试' }).click()
   await expect(page).toHaveURL(/\/interview$/)
   await expect(page.getByText('面试大厅')).toBeVisible()
+  await expect(page.getByText('创建新的模拟面试，或继续上次暂停的会话。')).toBeVisible()
+  await expect(page.getByText('暂停中的面试')).toBeVisible()
 
   await expect(page.getByRole('button', { name: '创建面试' })).toBeVisible()
   await page.getByRole('button', { name: '创建面试' }).click()

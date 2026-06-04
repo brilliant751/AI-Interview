@@ -1,0 +1,180 @@
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_2a215dabc694461a interview_id=int_dbefa5ea0a09 resume_id=res_fbfb8067a104
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_2a215dabc694461a interview_id=int_dbefa5ea0a09，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_2a215dabc694461a interview_id=int_dbefa5ea0a09 turn_id=turn_2700ab9d9bf4 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_64dcd0d44b544314 interview_id=int_26e3b590e925 resume_id=res_e3156f389ee3
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_64dcd0d44b544314 interview_id=int_26e3b590e925，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_64dcd0d44b544314 interview_id=int_26e3b590e925 turn_id=turn_d54d1ac2473b stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_eb10cd610d75494a interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_eb10cd610d75494a interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_eb10cd610d75494a interview_id=int_011e518ec748 turn_id=turn_966e1b3b5d11 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_845ef35f485a4839 interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_845ef35f485a4839 interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_845ef35f485a4839 interview_id=int_011e518ec748 turn_id=turn_899b87a8e041 stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_8955fd91f3a845ab interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_8955fd91f3a845ab interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_8955fd91f3a845ab interview_id=int_011e518ec748 turn_id=turn_cea26062a30f stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_6c8afb54080f4f68 interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_6c8afb54080f4f68 interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_6c8afb54080f4f68 interview_id=int_011e518ec748 turn_id=turn_df143e0c6597 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_40e97f50440a49a6 interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_40e97f50440a49a6 interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_40e97f50440a49a6 interview_id=int_011e518ec748 turn_id=turn_0fe34239ab18 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_b901fe396d7f48bc interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_b901fe396d7f48bc interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_b901fe396d7f48bc interview_id=int_011e518ec748 turn_id=turn_bae4ddb3bc42 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_b6e75997b2d9425b interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_b6e75997b2d9425b interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_b6e75997b2d9425b interview_id=int_011e518ec748 turn_id=turn_a6a10215c5cc stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_4a39d352f8b6481b interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_4a39d352f8b6481b interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_4a39d352f8b6481b interview_id=int_011e518ec748 turn_id=turn_3c2e513c1c55 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:07:55 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_8aff2c661683423e interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:55 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_8aff2c661683423e interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:55 | INFO | app.resume_context | 轮次已写入：trace_id=trace_8aff2c661683423e interview_id=int_011e518ec748 turn_id=turn_350ff88ff471 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:07:56 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_f36f74eb2dbe416c interview_id=int_011e518ec748 resume_id=res_c429fe5da155
+2026-06-01 21:07:56 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_f36f74eb2dbe416c interview_id=int_011e518ec748，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:56 | INFO | app.resume_context | 轮次已写入：trace_id=trace_f36f74eb2dbe416c interview_id=int_011e518ec748 turn_id=turn_f6d32d7009d0 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:07:56 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_eafec6b25d944426 interview_id=int_af0774bb5845 resume_id=res_56532de13e7a
+2026-06-01 21:07:56 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_eafec6b25d944426 interview_id=int_af0774bb5845，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:56 | INFO | app.resume_context | 轮次已写入：trace_id=trace_eafec6b25d944426 interview_id=int_af0774bb5845 turn_id=turn_acc1555493e7 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:56 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_21d40d9fe8a44b22 interview_id=int_3ce4d10ac784 resume_id=res_8759583f0bda
+2026-06-01 21:07:56 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_21d40d9fe8a44b22 interview_id=int_3ce4d10ac784，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:56 | INFO | app.resume_context | 轮次已写入：trace_id=trace_21d40d9fe8a44b22 interview_id=int_3ce4d10ac784 turn_id=turn_d6d66187b45a stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:56 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_bca891a2878f4864 interview_id=int_3ce4d10ac784 resume_id=res_8759583f0bda
+2026-06-01 21:07:56 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_bca891a2878f4864 interview_id=int_3ce4d10ac784，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:56 | INFO | app.resume_context | 轮次已写入：trace_id=trace_bca891a2878f4864 interview_id=int_3ce4d10ac784 turn_id=turn_1064486d7cdc stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:07:56 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_2eef218d3ff14d0d interview_id=int_3ce4d10ac784 resume_id=res_8759583f0bda
+2026-06-01 21:07:56 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_2eef218d3ff14d0d interview_id=int_3ce4d10ac784，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:57 | INFO | app.resume_context | 轮次已写入：trace_id=trace_2eef218d3ff14d0d interview_id=int_3ce4d10ac784 turn_id=turn_abfe484a127d stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:57 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_dd245195a3a449ac interview_id=int_3ce4d10ac784 resume_id=res_8759583f0bda
+2026-06-01 21:07:57 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_dd245195a3a449ac interview_id=int_3ce4d10ac784，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:57 | INFO | app.resume_context | 轮次已写入：trace_id=trace_dd245195a3a449ac interview_id=int_3ce4d10ac784 turn_id=turn_d2a74a5fa47e stage=TECHNICAL generation_mode=mock
+2026-06-01 21:07:58 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_a23cd0baee324c9c interview_id=int_308c383360de resume_id=res_dbacbf68dee9
+2026-06-01 21:07:58 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_a23cd0baee324c9c interview_id=int_308c383360de，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:58 | INFO | app.resume_context | 轮次已写入：trace_id=trace_a23cd0baee324c9c interview_id=int_308c383360de turn_id=turn_9df32ff2dcbb stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:07:58 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_232e21e3de5b4d78 interview_id=int_6b36f1add16d resume_id=res_fd0124f14083
+2026-06-01 21:07:58 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_232e21e3de5b4d78 interview_id=int_6b36f1add16d，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:58 | INFO | app.resume_context | 轮次已写入：trace_id=trace_232e21e3de5b4d78 interview_id=int_6b36f1add16d turn_id=turn_bb19ceb05489 stage=SELF_INTRO generation_mode=fallback_template
+2026-06-01 21:07:58 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_6716459b6f474af5 interview_id=int_ec08f30d5519 resume_id=res_ced0c61cb5e1
+2026-06-01 21:07:58 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_6716459b6f474af5 interview_id=int_ec08f30d5519，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:07:58 | INFO | app.resume_context | 轮次已写入：trace_id=trace_6716459b6f474af5 interview_id=int_ec08f30d5519 turn_id=turn_25145925e4bf stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:21 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_4b87edfc5fe04406 interview_id=int_6d64568e64f8 resume_id=res_dd43dccf4f0a
+2026-06-01 21:19:21 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_4b87edfc5fe04406 interview_id=int_6d64568e64f8，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:21 | INFO | app.resume_context | 轮次已写入：trace_id=trace_4b87edfc5fe04406 interview_id=int_6d64568e64f8 turn_id=turn_8bc0126606d7 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:21 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_5e57a223c86146be interview_id=int_dddebc089e36 resume_id=res_5a223c597e14
+2026-06-01 21:19:21 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_5e57a223c86146be interview_id=int_dddebc089e36，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:21 | INFO | app.resume_context | 轮次已写入：trace_id=trace_5e57a223c86146be interview_id=int_dddebc089e36 turn_id=turn_fe3586856dae stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_708c9d7dabe14f1f interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_708c9d7dabe14f1f interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_708c9d7dabe14f1f interview_id=int_e14d4de4230a turn_id=turn_3542359a6f12 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_80f6a356888d481f interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_80f6a356888d481f interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_80f6a356888d481f interview_id=int_e14d4de4230a turn_id=turn_b4066a99e7d8 stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_b00a762cdb8f443c interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_b00a762cdb8f443c interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_b00a762cdb8f443c interview_id=int_e14d4de4230a turn_id=turn_a185a4f611a7 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_a972f4b41d54420a interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_a972f4b41d54420a interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_a972f4b41d54420a interview_id=int_e14d4de4230a turn_id=turn_e107042afc4b stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_d6687dd8fcaf4bb8 interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_d6687dd8fcaf4bb8 interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_d6687dd8fcaf4bb8 interview_id=int_e14d4de4230a turn_id=turn_ecb835b1e15f stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_157a1e32db4c454c interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_157a1e32db4c454c interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_157a1e32db4c454c interview_id=int_e14d4de4230a turn_id=turn_6a39edfb9bd8 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_cbe5e30e5cf44b4e interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_cbe5e30e5cf44b4e interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_cbe5e30e5cf44b4e interview_id=int_e14d4de4230a turn_id=turn_02f1643eeef0 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_c2e8dc1bde3e45f0 interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_c2e8dc1bde3e45f0 interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_c2e8dc1bde3e45f0 interview_id=int_e14d4de4230a turn_id=turn_2587a375b2ad stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_d4b6a73b822e4f49 interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_d4b6a73b822e4f49 interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_d4b6a73b822e4f49 interview_id=int_e14d4de4230a turn_id=turn_8672982abe0b stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:19:22 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_c4731ea3b70e40bc interview_id=int_e14d4de4230a resume_id=res_a0823d5796c7
+2026-06-01 21:19:22 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_c4731ea3b70e40bc interview_id=int_e14d4de4230a，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:22 | INFO | app.resume_context | 轮次已写入：trace_id=trace_c4731ea3b70e40bc interview_id=int_e14d4de4230a turn_id=turn_a016fc5519a5 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:19:23 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_8fadd8d942164457 interview_id=int_4814b0be7db1 resume_id=res_f31c6a838ed0
+2026-06-01 21:19:23 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_8fadd8d942164457 interview_id=int_4814b0be7db1，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:23 | INFO | app.resume_context | 轮次已写入：trace_id=trace_8fadd8d942164457 interview_id=int_4814b0be7db1 turn_id=turn_ca81afbca7e8 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:24 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_16a7f99a45884cb0 interview_id=int_d6eafd89e544 resume_id=res_bfa22747945a
+2026-06-01 21:19:24 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_16a7f99a45884cb0 interview_id=int_d6eafd89e544，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:24 | INFO | app.resume_context | 轮次已写入：trace_id=trace_16a7f99a45884cb0 interview_id=int_d6eafd89e544 turn_id=turn_48198faefce7 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:24 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_54749c29075b4517 interview_id=int_d6eafd89e544 resume_id=res_bfa22747945a
+2026-06-01 21:19:24 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_54749c29075b4517 interview_id=int_d6eafd89e544，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:24 | INFO | app.resume_context | 轮次已写入：trace_id=trace_54749c29075b4517 interview_id=int_d6eafd89e544 turn_id=turn_50c396fbca9c stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:19:24 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_8252415665e34ccd interview_id=int_d6eafd89e544 resume_id=res_bfa22747945a
+2026-06-01 21:19:24 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_8252415665e34ccd interview_id=int_d6eafd89e544，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:24 | INFO | app.resume_context | 轮次已写入：trace_id=trace_8252415665e34ccd interview_id=int_d6eafd89e544 turn_id=turn_9684317b63a6 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:24 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_faf4d3bb9fdf4128 interview_id=int_d6eafd89e544 resume_id=res_bfa22747945a
+2026-06-01 21:19:24 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_faf4d3bb9fdf4128 interview_id=int_d6eafd89e544，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:24 | INFO | app.resume_context | 轮次已写入：trace_id=trace_faf4d3bb9fdf4128 interview_id=int_d6eafd89e544 turn_id=turn_490a24caa149 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:19:26 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_5c5dad1588a3497d interview_id=int_79e2974a8030 resume_id=res_c298871e8bef
+2026-06-01 21:19:26 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_5c5dad1588a3497d interview_id=int_79e2974a8030，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:26 | INFO | app.resume_context | 轮次已写入：trace_id=trace_5c5dad1588a3497d interview_id=int_79e2974a8030 turn_id=turn_ee127e9f5795 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:19:26 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_f468b459c9114176 interview_id=int_8b5585ac3953 resume_id=res_01378b024b46
+2026-06-01 21:19:26 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_f468b459c9114176 interview_id=int_8b5585ac3953，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:26 | INFO | app.resume_context | 轮次已写入：trace_id=trace_f468b459c9114176 interview_id=int_8b5585ac3953 turn_id=turn_bd7a0ea9462a stage=SELF_INTRO generation_mode=fallback_template
+2026-06-01 21:19:27 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_69c14e36db1b4bce interview_id=int_e2d1cc9fcf41 resume_id=res_8ccdff3539c3
+2026-06-01 21:19:27 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_69c14e36db1b4bce interview_id=int_e2d1cc9fcf41，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:19:27 | INFO | app.resume_context | 轮次已写入：trace_id=trace_69c14e36db1b4bce interview_id=int_e2d1cc9fcf41 turn_id=turn_8dbb846195da stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:35 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_5dcb6c3cba4442f1 interview_id=int_eda9a89aba86 resume_id=res_29c7f012e193
+2026-06-01 21:21:35 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_5dcb6c3cba4442f1 interview_id=int_eda9a89aba86，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:35 | INFO | app.resume_context | 轮次已写入：trace_id=trace_5dcb6c3cba4442f1 interview_id=int_eda9a89aba86 turn_id=turn_bf7c32efbee8 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:35 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_482432533ed74f8f interview_id=int_13300713bf58 resume_id=res_c2560c4b751e
+2026-06-01 21:21:35 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_482432533ed74f8f interview_id=int_13300713bf58，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:35 | INFO | app.resume_context | 轮次已写入：trace_id=trace_482432533ed74f8f interview_id=int_13300713bf58 turn_id=turn_4af59b493b70 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_7b1bbd93201943a9 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_7b1bbd93201943a9 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_7b1bbd93201943a9 interview_id=int_b8711f2303ed turn_id=turn_acc21e784613 stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_c1489420e4ee4de6 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_c1489420e4ee4de6 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_c1489420e4ee4de6 interview_id=int_b8711f2303ed turn_id=turn_01c7f5619f6d stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_2642d9eb84c045c3 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_2642d9eb84c045c3 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_2642d9eb84c045c3 interview_id=int_b8711f2303ed turn_id=turn_a9ed28229626 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_9cd26b04ae044f65 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_9cd26b04ae044f65 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_9cd26b04ae044f65 interview_id=int_b8711f2303ed turn_id=turn_1fd79b689928 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_0e97b60687a94301 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_0e97b60687a94301 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_0e97b60687a94301 interview_id=int_b8711f2303ed turn_id=turn_2b0830fccde3 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_e604070ab8804477 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_e604070ab8804477 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_e604070ab8804477 interview_id=int_b8711f2303ed turn_id=turn_7000032e5dab stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_4de420e8f25c46a5 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_4de420e8f25c46a5 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_4de420e8f25c46a5 interview_id=int_b8711f2303ed turn_id=turn_036cf15c418d stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_9738938e699e44e6 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_9738938e699e44e6 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_9738938e699e44e6 interview_id=int_b8711f2303ed turn_id=turn_53766b9932a1 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_518a3d4452e5432f interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_518a3d4452e5432f interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_518a3d4452e5432f interview_id=int_b8711f2303ed turn_id=turn_d304f7a8fdd8 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:21:36 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_344aaecdf9b04fb7 interview_id=int_b8711f2303ed resume_id=res_d74ff731cf3c
+2026-06-01 21:21:36 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_344aaecdf9b04fb7 interview_id=int_b8711f2303ed，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:36 | INFO | app.resume_context | 轮次已写入：trace_id=trace_344aaecdf9b04fb7 interview_id=int_b8711f2303ed turn_id=turn_c50b50563d67 stage=BEHAVIORAL generation_mode=mock
+2026-06-01 21:21:38 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_4334811ebf594450 interview_id=int_4382aae935a8 resume_id=res_e55c403e5cc4
+2026-06-01 21:21:38 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_4334811ebf594450 interview_id=int_4382aae935a8，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:38 | INFO | app.resume_context | 轮次已写入：trace_id=trace_4334811ebf594450 interview_id=int_4382aae935a8 turn_id=turn_3fbe96443bda stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:38 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_e5e6149074414a55 interview_id=int_ff02f9730ff6 resume_id=res_6725a2f00568
+2026-06-01 21:21:38 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_e5e6149074414a55 interview_id=int_ff02f9730ff6，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:38 | INFO | app.resume_context | 轮次已写入：trace_id=trace_e5e6149074414a55 interview_id=int_ff02f9730ff6 turn_id=turn_21b97bf8a5bd stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:38 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_4af50d59ff3c4682 interview_id=int_ff02f9730ff6 resume_id=res_6725a2f00568
+2026-06-01 21:21:38 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_4af50d59ff3c4682 interview_id=int_ff02f9730ff6，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:38 | INFO | app.resume_context | 轮次已写入：trace_id=trace_4af50d59ff3c4682 interview_id=int_ff02f9730ff6 turn_id=turn_aeacc4a84d29 stage=PROJECT_DEEP_DIVE generation_mode=mock
+2026-06-01 21:21:38 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_a463b9d4ff974471 interview_id=int_ff02f9730ff6 resume_id=res_6725a2f00568
+2026-06-01 21:21:38 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_a463b9d4ff974471 interview_id=int_ff02f9730ff6，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:38 | INFO | app.resume_context | 轮次已写入：trace_id=trace_a463b9d4ff974471 interview_id=int_ff02f9730ff6 turn_id=turn_d3da6ecb87af stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:39 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_ef420975553a4061 interview_id=int_ff02f9730ff6 resume_id=res_6725a2f00568
+2026-06-01 21:21:39 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_ef420975553a4061 interview_id=int_ff02f9730ff6，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:39 | INFO | app.resume_context | 轮次已写入：trace_id=trace_ef420975553a4061 interview_id=int_ff02f9730ff6 turn_id=turn_168f770c6760 stage=TECHNICAL generation_mode=mock
+2026-06-01 21:21:41 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_3cb3430a4b8149b5 interview_id=int_829caaf55f23 resume_id=res_6ece8daf0b70
+2026-06-01 21:21:41 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_3cb3430a4b8149b5 interview_id=int_829caaf55f23，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:41 | INFO | app.resume_context | 轮次已写入：trace_id=trace_3cb3430a4b8149b5 interview_id=int_829caaf55f23 turn_id=turn_c5aca06c652f stage=SELF_INTRO generation_mode=mock
+2026-06-01 21:21:41 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_1bfddaa9f47a4af7 interview_id=int_a544e1dd9c79 resume_id=res_eb526dfc5f92
+2026-06-01 21:21:41 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_1bfddaa9f47a4af7 interview_id=int_a544e1dd9c79，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:41 | INFO | app.resume_context | 轮次已写入：trace_id=trace_1bfddaa9f47a4af7 interview_id=int_a544e1dd9c79 turn_id=turn_08482f901f5d stage=SELF_INTRO generation_mode=fallback_template
+2026-06-01 21:21:42 | INFO | app.resume_context | 简历解析内容为空：trace_id=trace_86173eab2b2946f1 interview_id=int_754bae430f31 resume_id=res_234c9b6a9ea5
+2026-06-01 21:21:42 | INFO | app.resume_context | 本轮未命中简历要点：trace_id=trace_86173eab2b2946f1 interview_id=int_754bae430f31，继续使用岗位/JD/知识库上下文。
+2026-06-01 21:21:42 | INFO | app.resume_context | 轮次已写入：trace_id=trace_86173eab2b2946f1 interview_id=int_754bae430f31 turn_id=turn_c7bea8255ee0 stage=SELF_INTRO generation_mode=mock

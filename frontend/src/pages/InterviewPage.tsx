@@ -914,6 +914,31 @@ export function InterviewPage() {
     }
     return parsed.toLocaleString('zh-CN', { hour12: false })
   }
+  const formatJobRole = (value?: string) => {
+    if (value === 'java') {
+      return 'Java'
+    }
+    if (value === 'web') {
+      return 'Web'
+    }
+    return value || '-'
+  }
+  const formatDifficulty = (value?: string) => {
+    const labelMap: Record<string, string> = {
+      easy: '简单',
+      medium: '中等',
+      hard: '困难',
+    }
+    return labelMap[value || ''] || value || '-'
+  }
+  const formatInterviewStatus = (value?: string) => {
+    const labelMap: Record<string, string> = {
+      PAUSED: '已暂停',
+      ACTIVE: '进行中',
+      FINISHED: '已完成',
+    }
+    return labelMap[value || ''] || value || '-'
+  }
   /** 阶段文案配色，仅作用于问题区右上角阶段名。 */
   const stageTextStyle = useMemo(() => {
     const styleMap: Record<string, { color: string; background: string }> = {
@@ -935,13 +960,30 @@ export function InterviewPage() {
     return (
       <Space direction="vertical" size={16} style={{ width: '100%' }}>
         <ProviderHealthBanner health={providerHealth} />
-        <Card title="面试大厅">
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+        <Card
+          title={
+            <Space direction="vertical" size={2}>
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                面试大厅
+              </Typography.Title>
+              <Typography.Text type="secondary">创建新的模拟面试，或继续上次暂停的会话。</Typography.Text>
+            </Space>
+          }
+          extra={
             <Space wrap>
               <Button type="primary" onClick={() => setCreateModalOpen(true)}>
                 创建面试
               </Button>
               <Button onClick={() => navigate('/resumes')}>去上传/管理简历</Button>
+            </Space>
+          }
+        >
+          <Space direction="vertical" size={12} style={{ width: '100%' }}>
+            <Space direction="vertical" size={2}>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                暂停中的面试
+              </Typography.Title>
+              <Typography.Text type="secondary">从中断处恢复作答，避免重复创建相同场次。</Typography.Text>
             </Space>
             <Table
               rowKey="interview_id"
@@ -954,11 +996,31 @@ export function InterviewPage() {
                   dataIndex: 'session_name',
                   render: (value?: string) => value || '-',
                 },
-                { title: '会话ID', dataIndex: 'interview_id' },
-                { title: '简历', dataIndex: 'resume_id' },
-                { title: '岗位', dataIndex: 'job_role' },
-                { title: '难度', dataIndex: 'difficulty' },
-                { title: '状态', dataIndex: 'status' },
+                {
+                  title: '会话ID',
+                  dataIndex: 'interview_id',
+                  ellipsis: true,
+                },
+                {
+                  title: '岗位',
+                  dataIndex: 'job_role',
+                  render: (value?: string) => formatJobRole(value),
+                },
+                {
+                  title: '难度',
+                  dataIndex: 'difficulty',
+                  render: (value?: string) => <Tag color="blue">{formatDifficulty(value)}</Tag>,
+                },
+                {
+                  title: '状态',
+                  dataIndex: 'status',
+                  render: (value?: string) => <Tag color="gold">{formatInterviewStatus(value)}</Tag>,
+                },
+                {
+                  title: '开始时间',
+                  dataIndex: 'started_at',
+                  render: (value?: string) => formatDateTime(value),
+                },
                 {
                   title: '操作',
                   key: 'actions',
