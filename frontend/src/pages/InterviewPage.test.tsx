@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeAll, describe, expect, test, vi } from 'vitest'
 
@@ -57,24 +57,36 @@ beforeAll(() => {
 
 /** 面试大厅渲染测试。 */
 describe('InterviewPage lobby', () => {
-  test('should render lobby guidance and paused section title', async () => {
+  const renderLobby = () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
       },
     })
 
-    render(
+    return render(
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
           <InterviewPage />
         </MemoryRouter>
       </QueryClientProvider>,
     )
+  }
+
+  test('should render lobby guidance and paused section title', async () => {
+    renderLobby()
 
     expect(screen.getByText('面试大厅')).toBeInTheDocument()
     expect(screen.getByText('创建新的模拟面试，或继续上次暂停的会话。')).toBeInTheDocument()
     expect(screen.getByText('暂停中的面试')).toBeInTheDocument()
     expect(await screen.findByText('暂无暂停中的面试，可点击“创建面试”开始。')).toBeInTheDocument()
+  })
+
+  test('should open create modal from empty paused interview state', async () => {
+    renderLobby()
+
+    fireEvent.click(await screen.findByRole('button', { name: '立即创建面试' }))
+
+    expect(screen.getByRole('dialog', { name: '创建面试' })).toBeInTheDocument()
   })
 })

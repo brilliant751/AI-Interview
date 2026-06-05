@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Dropdown, Form, Input, Modal, Progress, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Dropdown, Empty, Form, Input, Modal, Progress, Radio, Select, Space, Switch, Table, Tag, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -1036,7 +1036,23 @@ export function InterviewPage() {
                   ),
                 },
               ]}
-              locale={{ emptyText: '暂无暂停中的面试，可点击“创建面试”开始。' }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      <Space direction="vertical" size={2}>
+                        <Typography.Text>暂无暂停中的面试，可点击“创建面试”开始。</Typography.Text>
+                        <Typography.Text type="secondary">新面试会先选择简历，再配置岗位、难度和问答模式。</Typography.Text>
+                      </Space>
+                    }
+                  >
+                    <Button type="primary" onClick={() => setCreateModalOpen(true)}>
+                      立即创建面试
+                    </Button>
+                  </Empty>
+                ),
+              }}
             />
           </Space>
         </Card>
