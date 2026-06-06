@@ -5,6 +5,106 @@
   },
   "item": [
     {
+      "name": "Interview Schedules",
+      "description": "预约相关接口响应包含 .ics 下载地址，以及 Google / Outlook 日历直达链接字段。",
+      "item": [
+        {
+          "name": "Create Interview Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"周三晚 Java 一面模拟\",\n  \"scheduled_start_at\": \"2026-06-10T20:00:00+08:00\",\n  \"duration_minutes\": 45,\n  \"resume_id\": \"{{resume_id}}\",\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"session_name\": \"周三晚 Java 一面模拟\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"]\n}"
+            },
+            "url": "{{base_url}}/interview-schedules"
+          }
+        },
+        {
+          "name": "List Interview Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interview-schedules"
+          }
+        },
+        {
+          "name": "Get Interview Schedule Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interview-schedules/{{schedule_id}}"
+          }
+        },
+        {
+          "name": "Cancel Interview Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"临时有事\"\n}"
+            },
+            "url": "{{base_url}}/interview-schedules/{{schedule_id}}/cancel"
+          }
+        },
+        {
+          "name": "Start Interview Schedule",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interview-schedules/{{schedule_id}}/start"
+          }
+        },
+        {
+          "name": "Download Interview Schedule Calendar",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interview-schedules/{{schedule_id}}/calendar.ics"
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {
@@ -199,9 +299,22 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"scheduled_start_at\": \"2026-06-06T10:30:00.000Z\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"voice_tone_id\": \"tone_default\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"scheduled_start_at\": \"2026-06-06T10:30:00.000Z\"\n}"
             },
             "url": "{{base_url}}/interviews"
+          }
+        },
+        {
+          "name": "List Voice Tones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interviews/voice-tones"
           }
         },
         {
@@ -891,6 +1004,10 @@
     },
     {
       "key": "coding_session_id",
+      "value": ""
+    },
+    {
+      "key": "schedule_id",
       "value": ""
     }
   ]

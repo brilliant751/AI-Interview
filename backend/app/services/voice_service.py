@@ -115,12 +115,16 @@ class VoiceService:
         print(f"[ASR] VoiceService/Mock 转写结果: {recognized_text}", flush=True)
         return recognized_text
 
-    def tts(self, text: str) -> str:
+    def tts(self, text: str, instructions: str = "", speed: float = 1.0) -> str:
         """将文本转语音并返回音频 URL。"""
         safe = text.replace(" ", "_")[:48]
         if self.tts_provider == "openai":
             try:
-                audio_bytes = self._get_openai_client().synthesize_speech(text)
+                audio_bytes = self._get_openai_client().synthesize_speech(
+                    text=text,
+                    instructions=instructions,
+                    speed=speed,
+                )
                 encoded = base64.b64encode(audio_bytes).decode("utf-8")
                 return f"data:audio/mpeg;base64,{encoded}"
             except Exception as exc:

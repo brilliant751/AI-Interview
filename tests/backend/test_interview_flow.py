@@ -132,6 +132,39 @@ class InterviewFlowTestCase(unittest.TestCase):
             time.sleep(sleep_seconds)
         return latest_job_data
 
+    def test_list_voice_tones(self) -> None:
+        """验证可查询语气配置列表。"""
+        resp = self.client.get("/api/v1/interviews/voice-tones", headers=self.user_headers)
+        self.assertEqual(200, resp.status_code)
+        items = resp.json().get("items", [])
+        self.assertGreaterEqual(len(items), 1)
+        self.assertIn("tone_id", items[0])
+        self.assertIn("tone_name", items[0])
+
+    def test_create_interview_with_voice_tone(self) -> None:
+        """验证创建面试时可指定语气配置。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+
+        tone_resp = self.client.get("/api/v1/interviews/voice-tones", headers=self.user_headers)
+        self.assertEqual(200, tone_resp.status_code)
+        selected_tone_id = tone_resp.json()["items"][0]["tone_id"]
+
+        create_payload = {
+            "resume_id": resume_id,
+            "jd_id": self.default_java_jd_id,
+            "job_role": "java",
+            "difficulty": "medium",
+            "input_mode": "voice",
+            "output_mode": "voice",
+            "voice_tone_id": selected_tone_id,
+        }
+        create_resp = self.client.post("/api/v1/interviews", json=create_payload, headers=self.user_headers)
+        self.assertEqual(200, create_resp.status_code)
+        self.assertEqual(selected_tone_id, create_resp.json().get("voice_tone_id"))
+
     def test_interview_flow(self) -> None:
         """验证主流程接口连通与状态可用。"""
         files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}

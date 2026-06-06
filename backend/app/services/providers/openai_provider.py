@@ -54,14 +54,20 @@ class OpenAIProviderClient:
         )
         return str(transcript).strip()
 
-    def synthesize_speech(self, text: str) -> bytes:
+    def synthesize_speech(self, text: str, instructions: str = "", speed: float = 1.0) -> bytes:
         """调用 TTS 生成语音二进制数据。"""
-        response = self.client.audio.speech.create(
-            model=self.settings.tts_model,
-            voice=self.settings.tts_voice,
-            input=text,
-            response_format="mp3",
-        )
+        kwargs = {
+            "model": self.settings.tts_model,
+            "voice": self.settings.tts_voice,
+            "input": text,
+            "response_format": "mp3",
+            "speed": speed,
+        }
+        tts_model = str(self.settings.tts_model or "").strip()
+        supports_instruction = tts_model.startswith("gpt-4o-mini-tts")
+        if instructions.strip() and supports_instruction:
+            kwargs["instructions"] = instructions.strip()
+        response = self.client.audio.speech.create(**kwargs)
         return response.read()
 
     def _build_reference_context(self, references: list[dict], limit: int = 3) -> str:

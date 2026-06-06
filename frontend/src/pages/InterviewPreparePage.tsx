@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { fetchProviderHealth } from '../api/admin'
 import { ProviderHealthBanner } from '../components/ProviderHealthBanner'
-import { createInterview, fetchHistory, fetchInterviewStatus, fetchJds, fetchResumes, uploadJd } from '../api/interview'
+import { createInterview, fetchHistory, fetchInterviewStatus, fetchJds, fetchResumes, fetchVoiceToneProfiles, uploadJd } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试准备页面。 */
@@ -66,6 +66,10 @@ export function InterviewPreparePage() {
         title: jdFilterTitle.trim() || undefined,
       }),
     enabled: jdPickerOpen,
+  })
+  const toneQuery = useQuery({
+    queryKey: ['voice-tone-profiles'],
+    queryFn: fetchVoiceToneProfiles,
   })
 
   useEffect(() => {
@@ -139,6 +143,13 @@ export function InterviewPreparePage() {
           errorMessage={healthQueryError}
         />
       </div>
+      <Card size="small" style={{ marginBottom: 16 }}>
+        <Space align="center" wrap>
+          <Typography.Text strong>还不想马上开练？</Typography.Text>
+          <Typography.Text type="secondary">可以先预约一场，到点后直接进入面试。</Typography.Text>
+          <Button onClick={() => navigate('/schedules')}>去预约模拟面试</Button>
+        </Space>
+      </Card>
       <Card size="small" style={{ marginBottom: 16 }}>
         <Tabs
           activeKey={activeBindingTab}
@@ -299,6 +310,7 @@ export function InterviewPreparePage() {
           difficulty: 'medium',
           input_mode: 'voice',
           output_mode: 'voice',
+          voice_tone_id: '',
           session_name: '',
           question_types: ['project', 'technical', 'scenario'],
         }}
@@ -313,10 +325,11 @@ export function InterviewPreparePage() {
             job_role: positionMode === 'role' ? values.job_role : undefined,
             difficulty: values.difficulty,
             input_mode: values.input_mode,
-            output_mode: 'voice',
+            output_mode: values.output_mode,
             session_name: values.session_name,
             question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
             jd_id: positionMode === 'jd' ? values.jd_id : undefined,
+            voice_tone_id: values.voice_tone_id || undefined,
           })
         }}
         form={form}
@@ -399,6 +412,34 @@ export function InterviewPreparePage() {
               { label: '语音', value: 'voice' },
             ]}
           />
+        </Form.Item>
+        <Form.Item name="output_mode" label="输出模式">
+          <Radio.Group
+            options={[
+              { label: '文本', value: 'text' },
+              { label: '语音', value: 'voice' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item
+          shouldUpdate={(prev, next) => prev.output_mode !== next.output_mode}
+          noStyle
+        >
+          {({ getFieldValue }) =>
+            getFieldValue('output_mode') === 'voice' ? (
+              <Form.Item name="voice_tone_id" label="面试官语气">
+                <Select
+                  loading={toneQuery.isLoading}
+                  allowClear
+                  placeholder="请选择语气（不选则使用默认）"
+                  options={(toneQuery.data?.items || []).map((item) => ({
+                    label: `${item.tone_name}（x${item.speed.toFixed(2)}）`,
+                    value: item.tone_id,
+                  }))}
+                />
+              </Form.Item>
+            ) : null
+          }
         </Form.Item>
         <Button type="primary" htmlType="submit" loading={createMutation.isPending}>
           创建会话

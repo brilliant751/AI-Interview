@@ -10,6 +10,7 @@ from app.api.v1.company import router as company_router
 from app.api.v1.coding_practice import router as coding_practice_router
 from app.api.v1.history import router as history_router
 from app.api.v1.interview import router as interview_router
+from app.api.v1.interview_schedule import router as interview_schedule_router
 from app.api.v1.practice import router as practice_router
 from app.api.v1.jd import router as jd_router
 from app.api.v1.report import router as report_router
@@ -22,6 +23,7 @@ api_router.include_router(coding_practice_router)
 api_router.include_router(resume_router)
 api_router.include_router(jd_router)
 api_router.include_router(interview_router)
+api_router.include_router(interview_schedule_router)
 api_router.include_router(practice_router)
 api_router.include_router(report_router)
 api_router.include_router(history_router)

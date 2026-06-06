@@ -18,7 +18,7 @@ import type { MenuProps } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
-import { fetchInterviewSchedules } from '../api/interview'
+import { fetchScheduledInterviews } from '../api/interview'
 import { useAuthStore } from '../stores/authStore'
 
 const { Header, Content, Sider } = Layout
@@ -50,7 +50,7 @@ export function AppLayout(props: { children: ReactNode }) {
   const todayScheduleQuery = useQuery({
     queryKey: ['today-interview-schedules', isAuthenticated],
     queryFn: () =>
-      fetchInterviewSchedules({
+      fetchScheduledInterviews({
         ...buildTodayRange(),
         statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],
       }),
@@ -88,10 +88,11 @@ export function AppLayout(props: { children: ReactNode }) {
 
   const sideMenuItems: MenuProps['items'] = [
     { key: '/overview', icon: <HomeOutlined />, label: <Link to="/overview">首页概览</Link> },
+    { key: '/schedules', icon: <ScheduleOutlined />, label: <Link to="/schedules">面试预约</Link> },
     { key: '/interview', icon: <FormOutlined />, label: <Link to="/interview">AI 面试</Link> },
     { key: '/practice', icon: <ReadOutlined />, label: <Link to="/practice">题库练习</Link> },
     { key: '/coding-practice', icon: <ReadOutlined />, label: <Link to="/coding-practice">编程练习</Link> },
-    { key: '/history', icon: <ScheduleOutlined />, label: <Link to="/history">面试记录</Link> },
+    { key: '/history', icon: <FileTextOutlined />, label: <Link to="/history">面试记录</Link> },
     { key: '/report', icon: <FileTextOutlined />, label: <Link to="/report">我的报告</Link> },
     { key: '/jobs', icon: <BookOutlined />, label: <Link to="/jobs">岗位库</Link> },
     { key: '/resumes', icon: <TeamOutlined />, label: <Link to="/resumes">简历管理</Link> },

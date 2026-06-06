@@ -657,8 +657,8 @@ paths:
             schema:
               $ref: '#/components/schemas/InterviewCreateRequest'
       responses:
-        '200':
-          description: Successful Response
+        "200":
+          description: 成功
           content:
             application/json:
               schema:
@@ -669,6 +669,152 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/interview-schedules:
+    get:
+      summary: 查询预约列表
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: date_from
+          schema: { type: string }
+        - in: query
+          name: date_to
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleListResponse'
+    post:
+      summary: 创建单次面试预约
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewScheduleCreateRequest'
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleCreateResponse'
+  /api/v1/interview-schedules/{schedule_id}:
+    get:
+      summary: 查询预约详情
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleDetailResponse'
+  /api/v1/interview-schedules/{schedule_id}/cancel:
+    post:
+      summary: 取消预约
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewScheduleCancelRequest'
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleCancelResponse'
+  /api/v1/interview-schedules/{schedule_id}/start:
+    post:
+      summary: 开始预约面试
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleStartResponse'
+  /api/v1/interview-schedules/{schedule_id}/calendar.ics:
+    get:
+      summary: 下载预约日历文件
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            text/calendar:
+              schema:
+                type: string
+  /api/v1/interviews/voice-tones:
+    get:
+      summary: 查询可选语气配置
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoiceToneProfileListResponse'
+  /api/v1/interviews/{interview_id}/status:
+    get:
+      summary: 查询面试会话状态
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+  /api/v1/interviews/{interview_id}/playback:
+    get:
+      summary: 查询面试回放详情
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
   /api/v1/interviews/{interview_id}/turns:
     post:
       tags:
@@ -1836,6 +1982,598 @@ paths:
       security: []
 components:
   schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password, display_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        display_name: { type: string }
+    RegisterResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    TokenRefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    LogoutRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token: { type: string }
+    ForgotPasswordRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        accepted: { type: boolean }
+        message: { type: string }
+    ResetPasswordRequest:
+      type: object
+      required: [reset_token, new_password]
+      properties:
+        reset_token: { type: string }
+        new_password: { type: string, minLength: 8 }
+    AuthUserProfile:
+      type: object
+      properties:
+        user_id: { type: string }
+        email: { type: string, format: email }
+        display_name: { type: string }
+        role: { type: string, enum: [user, admin] }
+        status: { type: string, enum: [active, disabled] }
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string }
+        token_type: { type: string, enum: [bearer] }
+        expires_in: { type: integer }
+        refresh_token: { type: string }
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    AuthMeResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/AuthUserProfile'
+    ResumeListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              resume_id: { type: string }
+              file_name: { type: string }
+              parse_status: { type: string }
+              created_at: { type: string }
+              last_used_at: { type: string, nullable: true }
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
+    InterviewCreateRequest:
+      type: object
+      required: [resume_id]
+      properties:
+        resume_id: { type: string }
+        jd_id: { type: string }
+        voice_tone_id: { type: string }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string, enum: [project, technical, scenario] }
+        job_role: { type: string, enum: [java, web], nullable: true }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        input_mode: { type: string, enum: [text, voice] }
+        output_mode: { type: string, enum: [text, voice] }
+    InterviewScheduleCreateRequest:
+      type: object
+      required: [scheduled_start_at, duration_minutes, resume_id]
+      properties:
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        duration_minutes: { type: integer, enum: [20, 45, 60] }
+        resume_id: { type: string }
+        job_role: { type: string, enum: [java, web], nullable: true }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        input_mode: { type: string, enum: [text, voice] }
+        output_mode: { type: string, enum: [text, voice] }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string, enum: [project, technical, scenario] }
+        jd_id: { type: string }
+        voice_tone_id: { type: string }
+    InterviewScheduleListItem:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        job_role: { type: string }
+        difficulty: { type: string }
+        resume_id: { type: string }
+        jd_id: { type: string }
+        interview_id: { type: string }
+        resume_file_name: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        created_at: { type: string }
+    InterviewScheduleListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewScheduleListItem'
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
+    InterviewScheduleCreateResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        timezone: { type: string }
+        interview_id: { type: string }
+        calendar_download_url: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        created_at: { type: string }
+    InterviewScheduleDetailResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        sequence_no: { type: integer, nullable: true }
+        plan_id: { type: string, nullable: true }
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        timezone: { type: string }
+        resume_id: { type: string }
+        resume_file_name: { type: string }
+        job_role: { type: string }
+        jd_id: { type: string }
+        jd_title: { type: string }
+        difficulty: { type: string }
+        input_mode: { type: string }
+        output_mode: { type: string }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string }
+        voice_tone_id: { type: string }
+        interview_id: { type: string }
+        calendar_download_url: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        can_start: { type: boolean }
+        can_cancel: { type: boolean }
+        created_at: { type: string }
+        updated_at: { type: string }
+    InterviewScheduleCancelRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    InterviewScheduleCancelResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [cancelled] }
+        cancelled_at: { type: string }
+    InterviewScheduleStartResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [in_progress] }
+        interview_id: { type: string }
+        current_stage: { type: string }
+        first_question: { type: string }
+        tts_audio_url: { type: string, nullable: true }
+    VoiceToneProfileListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceToneProfileItem'
+    VoiceToneProfileItem:
+      type: object
+      properties:
+        tone_id: { type: string }
+        tone_name: { type: string }
+        description: { type: string }
+        base_instructions: { type: string }
+        speed: { type: number }
+    InterviewTurnRequest:
+      type: object
+      required: [stage]
+      properties:
+        stage: { type: string }
+        answer_text: { type: string }
+        asr_text: { type: string }
+    InterviewPlaybackResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        resume:
+          type: object
+          properties:
+            resume_id: { type: string }
+            file_name: { type: string }
+        meta:
+          type: object
+          properties:
+            job_role: { type: string }
+            difficulty: { type: string }
+            status: { type: string }
+            jd_id: { type: string }
+            jd_title: { type: string }
+            jd_source_type: { type: string }
+            started_at: { type: string }
+            finished_at: { type: string, nullable: true }
+        turns:
+          type: array
+          items:
+            type: object
+            properties:
+              turn_id: { type: string }
+              sequence: { type: integer }
+              question: { type: string }
+              answer: { type: string }
+              question_ts: { type: string }
+              answer_ts: { type: string, nullable: true }
+    InterviewTurnResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        stage: { type: string }
+        next_question: { type: string }
+        follow_up_count: { type: integer }
+        live_score: { type: integer }
+        output_mode: { type: string }
+        tts_audio_url: { type: string, nullable: true }
+        pipeline_meta:
+          type: object
+          properties:
+            input_source: { type: string }
+            providers:
+              type: object
+              properties:
+                asr: { type: string, nullable: true }
+                llm: { type: string, nullable: true }
+                tts: { type: string, nullable: true }
+            provider_status:
+              type: object
+              properties:
+                asr: { type: string }
+                llm: { type: string }
+                tts: { type: string }
+            degrade_flags:
+              type: array
+              items: { type: string }
+            trace_id: { type: string }
+            latency_ms: { type: integer }
+            generation_mode: { type: string, enum: [local_ai, fallback_template, mock] }
+    InterviewTurnJobResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        job_id: { type: string }
+        status: { type: string, enum: [PROCESSING] }
+    InterviewTurnJobResultResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        job_id: { type: string }
+        status: { type: string, enum: [PROCESSING, READY, FAILED] }
+        result:
+          allOf:
+            - $ref: '#/components/schemas/InterviewTurnResponse'
+          nullable: true
+        error_message: { type: string }
+    ReportResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [GENERATING, READY, FAILED] }
+        overall_score: { type: integer, nullable: true }
+        strengths:
+          type: array
+          items: { type: string }
+        weaknesses:
+          type: array
+          items: { type: string }
+        suggestions:
+          type: array
+          items: { type: string }
+        dimension_scores:
+          type: array
+          items:
+            type: object
+            properties:
+              dimension: { type: string }
+              capability_score: { type: integer }
+              match_score: { type: integer }
+              confidence: { type: string }
+              evidence: { type: string }
+        jd_resume_alignment:
+          type: array
+          items:
+            type: object
+            properties:
+              jd_skill: { type: string }
+              priority: { type: string }
+              resume_evidence: { type: string }
+              answer_evidence: { type: string }
+              status: { type: string }
+              note: { type: string }
+        question_deep_dives:
+          type: array
+          items:
+            type: object
+            properties:
+              question_no: { type: integer }
+              question: { type: string }
+              intent: { type: string }
+              answer_summary: { type: string }
+              hit_rate: { type: integer }
+              depth_level: { type: string }
+              resume_relevance: { type: string }
+              jd_relevance: { type: string }
+              strengths: { type: string }
+              gaps: { type: string }
+              follow_up_questions:
+                type: array
+                items: { type: string }
+        key_risks:
+          type: array
+          items: { type: string }
+        final_recommendation: { type: string }
+        error_message: { type: string, nullable: true }
+    ReportListItem:
+      type: object
+      properties:
+        interview_id: { type: string }
+        session_name: { type: string }
+        job_role: { type: string }
+        difficulty: { type: string }
+        status: { type: string, enum: [GENERATING, READY, FAILED] }
+        overall_score: { type: integer, nullable: true }
+        updated_at: { type: string }
+        started_at: { type: string }
+        finished_at: { type: string, nullable: true }
+    ReportListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportListItem'
+        total: { type: integer }
+        page: { type: integer }
+        page_size: { type: integer }
+    ReportRetryResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [GENERATING] }
+    JobDescriptionUploadResponse:
+      type: object
+      properties:
+        jd_id: { type: string }
+        source_type: { type: string, enum: [USER_UPLOAD, SYSTEM_PRESET] }
+        title: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        status: { type: string }
+        created_at: { type: string }
+    JobDescriptionListItem:
+      type: object
+      properties:
+        jd_id: { type: string }
+        source_type: { type: string, enum: [USER_UPLOAD, SYSTEM_PRESET] }
+        title: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        status: { type: string }
+        created_at: { type: string }
+        updated_at: { type: string }
+    JobDescriptionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobDescriptionListItem'
+    MaterialImportRequest:
+      type: object
+      properties:
+        rebuild_mode: { type: string, enum: [full, incremental], default: full }
+        roles:
+          type: array
+          items: { type: string, enum: [java, web] }
+        dry_run: { type: boolean, default: false }
+        chunk_model: { type: string, default: qwen2.5:7b }
+        embedding_model: { type: string, default: nomic-embed-text }
+        task_type: { type: string, enum: [full_pipeline, question_bank], default: full_pipeline }
+    MaterialImportTriggerResponse:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+        stage: { type: string }
+        progress: { type: integer }
+        task_type: { type: string, enum: [full_pipeline, question_bank] }
+        idempotency_hit: { type: boolean }
+    MaterialImportTaskResponse:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [PENDING, RUNNING, SUCCESS, FAILED, PARTIAL_SUCCESS] }
+        stage: { type: string }
+        progress: { type: integer }
+        rebuild_mode: { type: string, enum: [full, incremental] }
+        roles:
+          type: array
+          items: { type: string, enum: [java, web] }
+        dry_run: { type: boolean }
+        task_type: { type: string, enum: [full_pipeline, question_bank] }
+        last_error: { type: string }
+        report_path: { type: string }
+    PracticeQuestionResponse:
+      type: object
+      properties:
+        session_question_id: { type: string }
+        question_order: { type: integer }
+        source_question_id: { type: string, nullable: true }
+        category: { type: string, nullable: true }
+        stem: { type: string }
+        analysis: { type: string, nullable: true }
+    PracticeCreateRequest:
+      type: object
+      required: [job_role, question_count]
+      properties:
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup], default: sequence }
+        question_count: { type: integer, minimum: 1, maximum: 50 }
+        category_filters:
+          type: array
+          items: { type: string, enum: [technical, project, scenario, behavior] }
+    PracticeSessionResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        completed_count: { type: integer }
+        finished: { type: boolean }
+        question_strategy: { type: string, enum: [sequence, followup_placeholder] }
+        current_question:
+          allOf:
+            - $ref: '#/components/schemas/PracticeQuestionResponse'
+          nullable: true
+    PracticeAnswerRequest:
+      type: object
+      required: [session_question_id, answer_text]
+      properties:
+        session_question_id: { type: string }
+        answer_text: { type: string }
+    PracticeAnswerResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        completed_count: { type: integer }
+        finished: { type: boolean }
+        question_strategy: { type: string, enum: [sequence, followup_placeholder] }
+        next_question:
+          allOf:
+            - $ref: '#/components/schemas/PracticeQuestionResponse'
+          nullable: true
+    PracticeRecordItemResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        answered_count: { type: integer }
+        created_at: { type: string }
+    PracticeRecordsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeRecordItemResponse'
+        total: { type: integer }
+    PracticeOverviewRoleStatsResponse:
+      type: object
+      properties:
+        job_role: { type: string, enum: [java, web] }
+        total_questions: { type: integer }
+        active_sessions: { type: integer }
+        finished_sessions: { type: integer }
+        answered_questions: { type: integer }
+        completion_rate: { type: number }
+        latest_active_practice_id: { type: string, nullable: true }
+    PracticeOverviewRecentRecordResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        answered_count: { type: integer }
+        created_at: { type: string }
+    PracticeOverviewResponse:
+      type: object
+      properties:
+        total_questions: { type: integer }
+        total_answered_questions: { type: integer }
+        total_sessions: { type: integer }
+        active_sessions: { type: integer }
+        role_stats:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeOverviewRoleStatsResponse'
+        recent_records:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeOverviewRecentRecordResponse'
+    PracticeSessionRecordQuestionResponse:
+      type: object
+      properties:
+        session_question_id: { type: string }
+        question_order: { type: integer }
+        category: { type: string, nullable: true }
+        stem: { type: string }
+        analysis: { type: string, nullable: true }
+        answer_text: { type: string, nullable: true }
+        answered_at: { type: string, nullable: true }
+    PracticeSessionRecordsResponse:
+      type: object
+      properties:
+        practice_id: { type: string }
+        job_role: { type: string, enum: [java, web] }
+        mode: { type: string, enum: [sequence, followup] }
+        status: { type: string, enum: [ACTIVE, FINISHED] }
+        total_questions: { type: integer }
+        completed_count: { type: integer }
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeSessionRecordQuestionResponse'
+        created_at: { type: string, nullable: true }
+        finished_at: { type: string, nullable: true }
     AdminQuestionBankCreateRequest:
       properties:
         job_role:
