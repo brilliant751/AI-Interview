@@ -26,6 +26,110 @@ export interface CreateInterviewResponse {
   voice_tone_name?: string
 }
 
+/** 创建预约请求体。 */
+export interface CreateInterviewSchedulePayload {
+  title?: string
+  scheduled_start_at: string
+  duration_minutes: 20 | 45 | 60
+  resume_id: string
+  job_role?: 'java' | 'web'
+  difficulty: 'easy' | 'medium' | 'hard'
+  input_mode: 'text' | 'voice'
+  output_mode: 'text' | 'voice'
+  session_name?: string
+  question_types?: Array<'project' | 'technical' | 'scenario'>
+  jd_id?: string
+  voice_tone_id?: string
+}
+
+/** 预约列表条目。 */
+export interface InterviewScheduleListItem {
+  schedule_id: string
+  title: string
+  status: 'scheduled' | 'ready' | 'in_progress' | 'completed' | 'missed' | 'cancelled'
+  source_type: 'single' | 'plan'
+  scheduled_start_at: string
+  scheduled_end_at: string
+  duration_minutes: number
+  job_role: string
+  difficulty: string
+  resume_id: string
+  jd_id?: string
+  interview_id?: string
+  resume_file_name?: string
+  google_calendar_url: string
+  outlook_calendar_url: string
+  created_at: string
+}
+
+/** 预约列表响应。 */
+export interface InterviewScheduleListResponse {
+  items: InterviewScheduleListItem[]
+  page: number
+  page_size: number
+  total: number
+}
+
+/** 预约创建响应。 */
+export interface InterviewScheduleCreateResponse {
+  schedule_id: string
+  status: 'scheduled' | 'ready' | 'in_progress' | 'completed' | 'missed' | 'cancelled'
+  source_type: 'single' | 'plan'
+  title: string
+  scheduled_start_at: string
+  scheduled_end_at: string
+  duration_minutes: number
+  timezone: string
+  interview_id?: string
+  calendar_download_url: string
+  google_calendar_url: string
+  outlook_calendar_url: string
+  created_at: string
+}
+
+/** 预约详情响应。 */
+export interface InterviewScheduleDetailResponse {
+  schedule_id: string
+  status: 'scheduled' | 'ready' | 'in_progress' | 'completed' | 'missed' | 'cancelled'
+  source_type: 'single' | 'plan'
+  sequence_no?: number | null
+  plan_id?: string | null
+  title: string
+  scheduled_start_at: string
+  scheduled_end_at: string
+  duration_minutes: number
+  timezone: string
+  resume_id: string
+  resume_file_name?: string
+  job_role: string
+  jd_id?: string
+  jd_title?: string
+  difficulty: 'easy' | 'medium' | 'hard'
+  input_mode: 'text' | 'voice'
+  output_mode: 'text' | 'voice'
+  session_name: string
+  question_types: Array<'project' | 'technical' | 'scenario'>
+  voice_tone_id?: string
+  interview_id?: string
+  calendar_download_url: string
+  google_calendar_url: string
+  outlook_calendar_url: string
+  can_start: boolean
+  can_cancel: boolean
+  created_at: string
+  updated_at: string
+}
+
+/** 预约开始响应。 */
+export interface InterviewScheduleStartResponse {
+  schedule_id: string
+  status: 'in_progress'
+  interview_id: string
+  current_stage: string
+  first_question: string
+  tts_audio_url?: string
+}
+
 /** 语气配置条目。 */
 export interface VoiceToneProfileItem {
   tone_id: string
@@ -346,6 +450,50 @@ export async function fetchResumeFile(resumeId: string): Promise<Blob> {
 export async function createInterview(payload: CreateInterviewPayload): Promise<CreateInterviewResponse> {
   const { data } = await apiClient.post('/interviews', payload)
   return data
+}
+
+/** 创建单次面试预约。 */
+export async function createInterviewSchedule(
+  payload: CreateInterviewSchedulePayload,
+): Promise<InterviewScheduleCreateResponse> {
+  const { data } = await apiClient.post('/interview-schedules', payload)
+  return data
+}
+
+/** 查询预约列表。 */
+export async function fetchInterviewSchedules(params: {
+  page: number
+  page_size: number
+  status?: string
+  date_from?: string
+  date_to?: string
+}): Promise<InterviewScheduleListResponse> {
+  const { data } = await apiClient.get<InterviewScheduleListResponse>('/interview-schedules', { params })
+  return data
+}
+
+/** 查询预约详情。 */
+export async function fetchInterviewScheduleDetail(scheduleId: string): Promise<InterviewScheduleDetailResponse> {
+  const { data } = await apiClient.get<InterviewScheduleDetailResponse>(`/interview-schedules/${scheduleId}`)
+  return data
+}
+
+/** 取消预约。 */
+export async function cancelInterviewSchedule(scheduleId: string, reason = ''): Promise<{ schedule_id: string; status: string; cancelled_at: string }> {
+  const { data } = await apiClient.post(`/interview-schedules/${scheduleId}/cancel`, { reason })
+  return data
+}
+
+/** 开始预约面试。 */
+export async function startInterviewSchedule(scheduleId: string): Promise<InterviewScheduleStartResponse> {
+  const { data } = await apiClient.post<InterviewScheduleStartResponse>(`/interview-schedules/${scheduleId}/start`)
+  return data
+}
+
+/** 下载预约日历文件。 */
+export async function downloadInterviewScheduleCalendar(scheduleId: string): Promise<Blob> {
+  const { data } = await apiClient.get(`/interview-schedules/${scheduleId}/calendar.ics`, { responseType: 'blob' })
+  return data as Blob
 }
 
 /** 查询可选语气配置。 */

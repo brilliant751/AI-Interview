@@ -33,6 +33,139 @@ class ResumeListResponse(BaseModel):
     total: int
 
 
+class InterviewScheduleCreateRequest(BaseModel):
+    """创建单次面试预约请求。"""
+
+    title: str = Field(default="", max_length=128)
+    scheduled_start_at: str = Field(min_length=16, max_length=64)
+    duration_minutes: Literal[20, 45, 60]
+    resume_id: str = Field(min_length=6)
+    job_role: Optional[Literal["java", "web"]] = None
+    difficulty: Literal["easy", "medium", "hard"] = "medium"
+    input_mode: Literal["text", "voice"] = "text"
+    output_mode: Literal["text", "voice"] = "text"
+    session_name: str = Field(default="", max_length=128)
+    question_types: list[Literal["project", "technical", "scenario"]] = Field(
+        default_factory=lambda: ["project", "technical", "scenario"]
+    )
+    jd_id: str = ""
+    voice_tone_id: str = ""
+
+    @model_validator(mode="after")
+    def validate_role_or_jd(self) -> "InterviewScheduleCreateRequest":
+        """校验岗位方向与岗位描述至少提供一个。"""
+        if self.job_role is None and not (self.jd_id or "").strip():
+            raise ValueError("job_role 与 jd_id 至少提供一个")
+        return self
+
+
+class InterviewScheduleListItem(BaseModel):
+    """面试预约列表条目。"""
+
+    schedule_id: str
+    title: str = ""
+    status: Literal["scheduled", "ready", "in_progress", "completed", "missed", "cancelled"]
+    source_type: Literal["single", "plan"] = "single"
+    scheduled_start_at: str
+    scheduled_end_at: str
+    duration_minutes: int
+    job_role: str = ""
+    difficulty: str = "medium"
+    resume_id: str
+    jd_id: str = ""
+    interview_id: str = ""
+    resume_file_name: str = ""
+    google_calendar_url: str = ""
+    outlook_calendar_url: str = ""
+    created_at: str
+
+
+class InterviewScheduleListResponse(BaseModel):
+    """面试预约列表响应。"""
+
+    items: list[InterviewScheduleListItem] = Field(default_factory=list)
+    page: int
+    page_size: int
+    total: int
+
+
+class InterviewScheduleCreateResponse(BaseModel):
+    """创建单次面试预约响应。"""
+
+    schedule_id: str
+    status: Literal["scheduled", "ready", "in_progress", "completed", "missed", "cancelled"]
+    source_type: Literal["single", "plan"] = "single"
+    title: str = ""
+    scheduled_start_at: str
+    scheduled_end_at: str
+    duration_minutes: int
+    timezone: str = "Asia/Shanghai"
+    interview_id: str = ""
+    calendar_download_url: str
+    google_calendar_url: str
+    outlook_calendar_url: str
+    created_at: str
+
+
+class InterviewScheduleDetailResponse(BaseModel):
+    """面试预约详情响应。"""
+
+    schedule_id: str
+    status: Literal["scheduled", "ready", "in_progress", "completed", "missed", "cancelled"]
+    source_type: Literal["single", "plan"] = "single"
+    sequence_no: Optional[int] = None
+    plan_id: Optional[str] = None
+    title: str = ""
+    scheduled_start_at: str
+    scheduled_end_at: str
+    duration_minutes: int
+    timezone: str = "Asia/Shanghai"
+    resume_id: str
+    resume_file_name: str = ""
+    job_role: str = ""
+    jd_id: str = ""
+    jd_title: str = ""
+    difficulty: str = "medium"
+    input_mode: str = "text"
+    output_mode: str = "text"
+    session_name: str = ""
+    question_types: list[str] = Field(default_factory=list)
+    voice_tone_id: str = ""
+    interview_id: str = ""
+    calendar_download_url: str
+    google_calendar_url: str
+    outlook_calendar_url: str
+    can_start: bool = False
+    can_cancel: bool = False
+    created_at: str
+    updated_at: str
+
+
+class InterviewScheduleCancelRequest(BaseModel):
+    """取消预约请求。"""
+
+    reason: str = Field(default="", max_length=200)
+
+
+class InterviewScheduleCancelResponse(BaseModel):
+    """取消预约响应。"""
+
+    schedule_id: str
+    status: Literal["cancelled"]
+    cancelled_at: str
+
+
+class InterviewScheduleStartResponse(BaseModel):
+    """开始预约面试响应。"""
+
+    schedule_id: str
+    status: Literal["in_progress"]
+    interview_id: str
+    current_stage: str
+    first_question: str
+    tts_audio_url: Optional[str] = None
+
+
 class InterviewCreateRequest(BaseModel):
     """创建面试会话请求。"""
 

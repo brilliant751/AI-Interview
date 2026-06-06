@@ -21,6 +21,7 @@ from app.services.auth_service import AuthService
 from app.services.code_execution_service import CodeExecutionService
 from app.services.coding_practice_service import CodingPracticeService
 from app.services.interview_service import InterviewService
+from app.services.interview_schedule_service import InterviewScheduleService
 from app.services.material_import_service import MaterialImportService
 from app.services.practice_service import PracticeService
 from app.services.question_bank_service import QuestionBankService
@@ -90,7 +91,13 @@ async def lifespan(app: FastAPI):
     app.state.auth_service = auth_service
     app.state.question_bank_service = question_bank_service
     app.state.code_execution_service = code_execution_service
-    app.state.interview_service = InterviewService(repo=repo, report_worker=report_worker, turn_worker=turn_worker)
+    interview_service = InterviewService(repo=repo, report_worker=report_worker, turn_worker=turn_worker)
+    app.state.interview_service = interview_service
+    app.state.interview_schedule_service = InterviewScheduleService(
+        repo=repo,
+        interview_service=interview_service,
+        settings=settings,
+    )
     app.state.practice_service = PracticeService(repo=repo)
     app.state.coding_practice_service = CodingPracticeService(repo=repo, execution_service=code_execution_service)
     logger.info("应用启动完成，数据库与服务已初始化")

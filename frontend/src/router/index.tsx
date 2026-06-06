@@ -10,6 +10,7 @@ import { HistoryPage } from '../pages/HistoryPage'
 import { HomeOverviewPage } from '../pages/HomeOverviewPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
+import { InterviewSchedulePage } from '../pages/InterviewSchedulePage'
 import { JobManagePage } from '../pages/JobManagePage'
 import { LoginPage } from '../pages/LoginPage'
 import { PracticePreparePage } from '../pages/PracticePreparePage'
@@ -83,6 +84,14 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <Navigate to="/overview" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/schedules"
+            element={
+              <ProtectedRoute>
+                <InterviewSchedulePage />
               </ProtectedRoute>
             }
           />

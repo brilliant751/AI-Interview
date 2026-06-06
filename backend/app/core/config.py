@@ -54,6 +54,7 @@ class Settings(BaseSettings):
         "http://localhost:4173",
         "http://127.0.0.1:4173",
     ]
+    frontend_base_url: str = "http://localhost:5173"
 
     openai_api_key: str = ""
     asr_model: str = "paraformer-zh"

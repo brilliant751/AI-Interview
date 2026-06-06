@@ -144,6 +144,13 @@ export function InterviewPreparePage() {
         />
       </div>
       <Card size="small" style={{ marginBottom: 16 }}>
+        <Space align="center" wrap>
+          <Typography.Text strong>还不想马上开练？</Typography.Text>
+          <Typography.Text type="secondary">可以先预约一场，到点后直接进入面试。</Typography.Text>
+          <Button onClick={() => navigate('/schedules')}>去预约模拟面试</Button>
+        </Space>
+      </Card>
+      <Card size="small" style={{ marginBottom: 16 }}>
         <Tabs
           activeKey={activeBindingTab}
           onChange={(value) => setActiveBindingTab(value as 'resume' | 'jd')}

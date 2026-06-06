@@ -669,6 +669,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/interview-schedules:
+    get:
+      summary: 查询预约列表
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: date_from
+          schema: { type: string }
+        - in: query
+          name: date_to
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: page_size
+          schema: { type: integer, default: 10 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleListResponse'
+    post:
+      summary: 创建单次面试预约
+      parameters:
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewScheduleCreateRequest'
+      responses:
+        "201":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleCreateResponse'
+  /api/v1/interview-schedules/{schedule_id}:
+    get:
+      summary: 查询预约详情
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleDetailResponse'
+  /api/v1/interview-schedules/{schedule_id}/cancel:
+    post:
+      summary: 取消预约
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InterviewScheduleCancelRequest'
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleCancelResponse'
+  /api/v1/interview-schedules/{schedule_id}/start:
+    post:
+      summary: 开始预约面试
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-Idempotency-Key
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleStartResponse'
+  /api/v1/interview-schedules/{schedule_id}/calendar.ics:
+    get:
+      summary: 下载预约日历文件
+      parameters:
+        - in: path
+          name: schedule_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            text/calendar:
+              schema:
+                type: string
   /api/v1/interviews/voice-tones:
     get:
       summary: 查询可选语气配置
@@ -1965,6 +2079,122 @@ components:
         difficulty: { type: string, enum: [easy, medium, hard] }
         input_mode: { type: string, enum: [text, voice] }
         output_mode: { type: string, enum: [text, voice] }
+    InterviewScheduleCreateRequest:
+      type: object
+      required: [scheduled_start_at, duration_minutes, resume_id]
+      properties:
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        duration_minutes: { type: integer, enum: [20, 45, 60] }
+        resume_id: { type: string }
+        job_role: { type: string, enum: [java, web], nullable: true }
+        difficulty: { type: string, enum: [easy, medium, hard] }
+        input_mode: { type: string, enum: [text, voice] }
+        output_mode: { type: string, enum: [text, voice] }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string, enum: [project, technical, scenario] }
+        jd_id: { type: string }
+        voice_tone_id: { type: string }
+    InterviewScheduleListItem:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        title: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        job_role: { type: string }
+        difficulty: { type: string }
+        resume_id: { type: string }
+        jd_id: { type: string }
+        interview_id: { type: string }
+        resume_file_name: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        created_at: { type: string }
+    InterviewScheduleListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/InterviewScheduleListItem'
+        page: { type: integer }
+        page_size: { type: integer }
+        total: { type: integer }
+    InterviewScheduleCreateResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        timezone: { type: string }
+        interview_id: { type: string }
+        calendar_download_url: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        created_at: { type: string }
+    InterviewScheduleDetailResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [scheduled, ready, in_progress, completed, missed, cancelled] }
+        source_type: { type: string, enum: [single, plan] }
+        sequence_no: { type: integer, nullable: true }
+        plan_id: { type: string, nullable: true }
+        title: { type: string }
+        scheduled_start_at: { type: string }
+        scheduled_end_at: { type: string }
+        duration_minutes: { type: integer }
+        timezone: { type: string }
+        resume_id: { type: string }
+        resume_file_name: { type: string }
+        job_role: { type: string }
+        jd_id: { type: string }
+        jd_title: { type: string }
+        difficulty: { type: string }
+        input_mode: { type: string }
+        output_mode: { type: string }
+        session_name: { type: string }
+        question_types:
+          type: array
+          items: { type: string }
+        voice_tone_id: { type: string }
+        interview_id: { type: string }
+        calendar_download_url: { type: string }
+        google_calendar_url: { type: string }
+        outlook_calendar_url: { type: string }
+        can_start: { type: boolean }
+        can_cancel: { type: boolean }
+        created_at: { type: string }
+        updated_at: { type: string }
+    InterviewScheduleCancelRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    InterviewScheduleCancelResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [cancelled] }
+        cancelled_at: { type: string }
+    InterviewScheduleStartResponse:
+      type: object
+      properties:
+        schedule_id: { type: string }
+        status: { type: string, enum: [in_progress] }
+        interview_id: { type: string }
+        current_stage: { type: string }
+        first_question: { type: string }
+        tts_audio_url: { type: string, nullable: true }
     VoiceToneProfileListResponse:
       type: object
       properties:

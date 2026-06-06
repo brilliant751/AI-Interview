@@ -4,7 +4,7 @@ import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Form, Grid, Inp
 import { AxiosError } from 'axios'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { fetchProviderHealth } from '../api/admin'
@@ -157,8 +157,6 @@ export function InterviewPage() {
     const messageText = String((axiosError as { message?: string })?.message || '').toLowerCase()
     return code === 'ERR_CANCELED' || name === 'CanceledError' || messageText.includes('canceled')
   }
-  /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
-  const buildQuestionKey = () => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
   /** 计算麦克风优先级：优先本机内建麦克风，弱化 iPhone 连续互通设备。 */
   const scoreAudioInputLabel = (label: string) => {
     const lowerLabel = label.toLowerCase()
@@ -189,7 +187,7 @@ export function InterviewPage() {
     return sorted[0].deviceId
   }
   /** 刷新可用麦克风设备列表并更新默认选择。 */
-  const refreshAudioInputDevices = async () => {
+  const refreshAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
       return
     }
@@ -206,9 +204,9 @@ export function InterviewPage() {
       }
       return pickPreferredAudioInputId(audioInputs)
     })
-  }
+  }, [])
   /** 请求麦克风权限后刷新设备，用于拿到完整设备名称。 */
-  const prepareAudioInputDevices = async () => {
+  const prepareAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       return
     }
@@ -222,7 +220,7 @@ export function InterviewPage() {
     } finally {
       setAudioDevicesLoading(false)
     }
-  }
+  }, [refreshAudioInputDevices])
   const {
     resumeId,
     currentStage,
@@ -243,6 +241,8 @@ export function InterviewPage() {
     reset,
   } = useInterviewStore((state) => state)
   const interviewId = routeInterviewId || ''
+  /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
+  const buildQuestionKey = useCallback(() => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`, [currentQuestion, currentStage, pipelineMeta?.trace_id])
 
   /** 面试页主动拉取 provider 健康状态，避免仅依赖准备页缓存。 */
   const healthQuery = useQuery({
@@ -535,7 +535,7 @@ export function InterviewPage() {
     return () => {
       mediaDevices.removeEventListener('devicechange', handleDeviceChange)
     }
-  }, [inputMode])
+  }, [inputMode, prepareAudioInputDevices, refreshAudioInputDevices])
 
   /** 题目语音播放结束后触发倒计时。 */
   const handleQuestionAudioEnded = () => {
@@ -1101,7 +1101,7 @@ export function InterviewPage() {
   }
 
   /** 执行 10 秒倒计时并在结束后自动开始录音。 */
-  const startCountdownRecording = (force: boolean = false) => {
+  const startCountdownRecording = useCallback((force: boolean = false) => {
     if (!force && (recording || countdown > 0 || submitMutation.isPending || currentStage === 'END')) {
       return
     }
@@ -1127,7 +1127,7 @@ export function InterviewPage() {
         return previous - 1
       })
     }, 1000)
-  }
+  }, [AUTO_RECORD_COUNTDOWN_SECONDS, countdown, currentStage, recording, submitMutation.isPending])
 
   /** 新题目出现时，语音输入自动倒计时 10 秒开始录音。 */
   useEffect(() => {
@@ -1154,7 +1154,7 @@ export function InterviewPage() {
     }
     pendingCountdownQuestionKeyRef.current = ''
     startCountdownRecording(true)
-  }, [inputMode, interviewId, currentQuestion, currentStage, outputMode, ttsAudioUrl, pipelineMeta?.trace_id])
+  }, [buildQuestionKey, currentQuestion, currentStage, inputMode, interviewId, outputMode, pipelineMeta?.trace_id, startCountdownRecording, ttsAudioUrl])
 
   const recordingProgressPercent = Math.round((recordingElapsedSeconds / MAX_RECORDING_SECONDS) * 100)
   const formatDuration = (seconds: number) => {

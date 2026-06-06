@@ -203,6 +203,8 @@ class InterviewRepository:
                 CREATE TABLE IF NOT EXISTS interview_sessions (
                   interview_id TEXT PRIMARY KEY,
                   user_id TEXT,
+                  schedule_id TEXT,
+                  source_type TEXT NOT NULL DEFAULT 'instant',
                   resume_id TEXT NOT NULL,
                   jd_id TEXT,
                   voice_tone_id TEXT NOT NULL DEFAULT '',
@@ -227,6 +229,38 @@ class InterviewRepository:
                   started_at TEXT NOT NULL DEFAULT (datetime('now')),
                   finished_at TEXT,
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS interview_schedules (
+                  schedule_id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  plan_id TEXT,
+                  source_type TEXT NOT NULL DEFAULT 'single',
+                  sequence_no INTEGER,
+                  interview_id TEXT,
+                  title TEXT NOT NULL DEFAULT '',
+                  resume_id TEXT NOT NULL,
+                  jd_id TEXT NOT NULL DEFAULT '',
+                  job_role TEXT NOT NULL DEFAULT '',
+                  difficulty TEXT NOT NULL DEFAULT 'medium',
+                  input_mode TEXT NOT NULL DEFAULT 'text',
+                  output_mode TEXT NOT NULL DEFAULT 'text',
+                  session_name TEXT NOT NULL DEFAULT '',
+                  question_types TEXT NOT NULL DEFAULT '[]',
+                  voice_tone_id TEXT NOT NULL DEFAULT '',
+                  duration_minutes INTEGER NOT NULL,
+                  scheduled_start_at TEXT NOT NULL,
+                  scheduled_end_at TEXT NOT NULL,
+                  timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+                  status TEXT NOT NULL DEFAULT 'scheduled',
+                  cancel_reason TEXT NOT NULL DEFAULT '',
+                  reminder_status TEXT NOT NULL DEFAULT '{{}}',
+                  calendar_sync_status TEXT NOT NULL DEFAULT '',
+                  started_at TEXT,
+                  completed_at TEXT,
+                  cancelled_at TEXT,
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
 
                 CREATE TABLE IF NOT EXISTS interview_turns (
@@ -402,6 +436,8 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_sessions", "voice_tone_name", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "voice_tone_instructions", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "voice_tone_speed", "REAL NOT NULL DEFAULT 1.0")
+            self._ensure_column(conn, "interview_sessions", "schedule_id", "TEXT")
+            self._ensure_column(conn, "interview_sessions", "source_type", "TEXT NOT NULL DEFAULT 'instant'")
             self._ensure_column(conn, "job_descriptions", "company_id", "TEXT")
             self._ensure_column(conn, "interview_turns", "user_id", "TEXT")
             conn.execute(
@@ -460,6 +496,10 @@ class InterviewRepository:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_resumes_user_created ON resumes(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_created ON interview_sessions(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_session_jd_id ON interview_sessions(jd_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_session_schedule_id ON interview_sessions(schedule_id)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_schedules_user_start ON interview_schedules(user_id, scheduled_start_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_schedules_status ON interview_schedules(user_id, status, scheduled_start_at DESC)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_schedules_plan_sequence ON interview_schedules(plan_id, sequence_no)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_voice_tone_profiles_active_sort ON voice_tone_profiles(is_active, sort_order)")
             self._seed_voice_tone_profiles(conn)
 
@@ -938,12 +978,14 @@ class InterviewRepository:
             conn.execute(
                 """
                 INSERT INTO interview_sessions(
-                  interview_id, user_id, resume_id, jd_id, voice_tone_id, voice_tone_name, voice_tone_instructions, voice_tone_speed, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, scheduled_start_at, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SELF_INTRO', 0, 0, 0, ?, ?)
+                  interview_id, user_id, schedule_id, source_type, resume_id, jd_id, voice_tone_id, voice_tone_name, voice_tone_instructions, voice_tone_speed, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, scheduled_start_at, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SELF_INTRO', 0, 0, 0, ?, ?)
                 """,
                 (
                     interview_id,
                     user_id,
+                    str(payload.get("schedule_id") or ""),
+                    str(payload.get("source_type") or "instant"),
                     payload["resume_id"],
                     snapshot.get("jd_id"),
                     str(payload.get("voice_tone_id") or ""),
@@ -1818,6 +1860,171 @@ class InterviewRepository:
             row = conn.execute("SELECT * FROM job_descriptions WHERE jd_id = ?", (jd_id,)).fetchone()
         return dict(row) if row else None
 
+    def create_schedule(self, user_id: str, payload: dict) -> dict:
+        """创建单次面试预约记录。"""
+        schedule_id = f"sch_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO interview_schedules(
+                  schedule_id, user_id, plan_id, source_type, sequence_no, interview_id, title, resume_id, jd_id, job_role,
+                  difficulty, input_mode, output_mode, session_name, question_types, voice_tone_id, duration_minutes,
+                  scheduled_start_at, scheduled_end_at, timezone, status, cancel_reason, reminder_status, calendar_sync_status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', '', '{}', '')
+                """,
+                (
+                    schedule_id,
+                    user_id,
+                    payload.get("plan_id"),
+                    str(payload.get("source_type") or "single"),
+                    payload.get("sequence_no"),
+                    str(payload.get("interview_id") or ""),
+                    str(payload.get("title") or payload.get("session_name") or ""),
+                    str(payload.get("resume_id") or ""),
+                    str(payload.get("jd_id") or ""),
+                    str(payload.get("job_role") or ""),
+                    str(payload.get("difficulty") or "medium"),
+                    str(payload.get("input_mode") or "text"),
+                    str(payload.get("output_mode") or "text"),
+                    str(payload.get("session_name") or ""),
+                    json.dumps(payload.get("question_types") or ["project", "technical", "scenario"], ensure_ascii=False),
+                    str(payload.get("voice_tone_id") or ""),
+                    int(payload.get("duration_minutes") or 0),
+                    str(payload.get("scheduled_start_at") or ""),
+                    str(payload.get("scheduled_end_at") or ""),
+                    str(payload.get("timezone") or "Asia/Shanghai"),
+                ),
+            )
+            row = conn.execute(
+                "SELECT * FROM interview_schedules WHERE schedule_id = ?",
+                (schedule_id,),
+            ).fetchone()
+        return dict(row) if row else {}
+
+    def list_schedules(
+        self,
+        user_id: str,
+        status: str | None,
+        date_from: str | None,
+        date_to: str | None,
+        offset: int,
+        limit: int,
+    ) -> tuple[list[dict], int]:
+        """分页查询面试预约列表。"""
+        where = "WHERE s.user_id = ?"
+        params: list[object] = [user_id]
+        if status:
+            where += " AND s.status = ?"
+            params.append(status)
+        if date_from:
+            where += " AND s.scheduled_start_at >= ?"
+            params.append(date_from)
+        if date_to:
+            where += " AND s.scheduled_start_at <= ?"
+            params.append(date_to)
+        with self._session() as conn:
+            total = conn.execute(
+                f"SELECT COUNT(1) AS cnt FROM interview_schedules s {where}",
+                params,
+            ).fetchone()["cnt"]
+            rows = conn.execute(
+                f"""
+                SELECT
+                  s.*,
+                  COALESCE(r.filename, '') AS resume_file_name,
+                  COALESCE(j.title, s.jd_id, '') AS jd_title
+                FROM interview_schedules s
+                LEFT JOIN resumes r ON r.resume_id = s.resume_id AND r.user_id = s.user_id
+                LEFT JOIN job_descriptions j ON j.jd_id = s.jd_id
+                {where}
+                ORDER BY s.scheduled_start_at ASC, s.created_at DESC
+                LIMIT ? OFFSET ?
+                """,
+                [*params, limit, offset],
+            ).fetchall()
+        return [dict(row) for row in rows], int(total)
+
+    def get_schedule(self, schedule_id: str) -> dict | None:
+        """查询单个面试预约。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT
+                  s.*,
+                  COALESCE(r.filename, '') AS resume_file_name,
+                  COALESCE(j.title, s.jd_id, '') AS jd_title
+                FROM interview_schedules s
+                LEFT JOIN resumes r ON r.resume_id = s.resume_id AND r.user_id = s.user_id
+                LEFT JOIN job_descriptions j ON j.jd_id = s.jd_id
+                WHERE s.schedule_id = ?
+                """,
+                (schedule_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def update_schedule_status(self, schedule_id: str, user_id: str, status: str) -> bool:
+        """更新预约状态。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE interview_schedules
+                SET status = ?,
+                    updated_at = datetime('now'),
+                    started_at = CASE WHEN ? = 'in_progress' THEN COALESCE(started_at, datetime('now')) ELSE started_at END,
+                    completed_at = CASE WHEN ? = 'completed' THEN COALESCE(completed_at, datetime('now')) ELSE completed_at END,
+                    cancelled_at = CASE WHEN ? = 'cancelled' THEN COALESCE(cancelled_at, datetime('now')) ELSE cancelled_at END
+                WHERE schedule_id = ? AND user_id = ?
+                """,
+                (status, status, status, status, schedule_id, user_id),
+            )
+        return row.rowcount > 0
+
+    def cancel_schedule(self, schedule_id: str, user_id: str, reason: str) -> str | None:
+        """取消预约并返回取消时间。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE interview_schedules
+                SET status = 'cancelled',
+                    cancel_reason = ?,
+                    cancelled_at = datetime('now'),
+                    updated_at = datetime('now')
+                WHERE schedule_id = ? AND user_id = ? AND status IN ('scheduled', 'ready')
+                """,
+                (reason, schedule_id, user_id),
+            )
+            if row.rowcount <= 0:
+                return None
+            cancelled = conn.execute(
+                "SELECT cancelled_at FROM interview_schedules WHERE schedule_id = ?",
+                (schedule_id,),
+            ).fetchone()
+        return str(cancelled["cancelled_at"]) if cancelled else None
+
+    def bind_schedule_to_interview(self, schedule_id: str, user_id: str, interview_id: str) -> None:
+        """为预约绑定真实面试会话。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                UPDATE interview_schedules
+                SET interview_id = ?, updated_at = datetime('now')
+                WHERE schedule_id = ? AND user_id = ?
+                """,
+                (interview_id, schedule_id, user_id),
+            )
+            conn.execute(
+                """
+                UPDATE interview_sessions
+                SET schedule_id = ?, source_type = 'scheduled'
+                WHERE interview_id = ? AND user_id = ?
+                """,
+                (schedule_id, interview_id, user_id),
+            )
+
+    def mark_schedule_in_progress(self, schedule_id: str, user_id: str) -> None:
+        """标记预约为进行中。"""
+        self.update_schedule_status(schedule_id=schedule_id, user_id=user_id, status="in_progress")
+
     def list_jds(
         self,
         user_id: str,
@@ -2116,6 +2323,16 @@ class InterviewRepository:
                     END,
                     duration_updated_at = datetime('now')
                 WHERE interview_id = ?
+                """,
+                (interview_id,),
+            )
+            conn.execute(
+                """
+                UPDATE interview_schedules
+                SET status='completed',
+                    completed_at=datetime('now'),
+                    updated_at=datetime('now')
+                WHERE interview_id = ? AND status != 'cancelled'
                 """,
                 (interview_id,),
             )
