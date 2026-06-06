@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider } from 'antd'
 
 import { AppRouter } from './router'
+import './monaco/config'
 import { useAuthStore } from './stores/authStore'
 import './styles/global.css'
 

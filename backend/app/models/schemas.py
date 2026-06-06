@@ -598,6 +598,109 @@ class PracticeSessionRecordsResponse(BaseModel):
     finished_at: Optional[str] = None
 
 
+class CodingPracticeQuestionSummaryResponse(BaseModel):
+    """编程题列表项响应。"""
+
+    question_id: str
+    slug: str
+    title: str
+    difficulty: Literal["easy", "medium", "hard"]
+    topic_tags: list[str] = Field(default_factory=list)
+    status: Literal["NOT_STARTED", "ACTIVE", "SOLVED"]
+    last_language: Literal["cpp", "java", "javascript"] = "cpp"
+    latest_submission_status: Optional[str] = None
+    session_id: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+class CodingPracticeQuestionDetailResponse(BaseModel):
+    """编程题详情响应。"""
+
+    question_id: str
+    slug: str
+    title: str
+    difficulty: Literal["easy", "medium", "hard"]
+    topic_tags: list[str] = Field(default_factory=list)
+    prompt_markdown: str
+    input_spec: str
+    output_spec: str
+    constraints_text: str = ""
+    sample_cases: list[dict[str, str]] = Field(default_factory=list)
+    self_test_case: dict[str, str] = Field(default_factory=dict)
+
+
+class CodingPracticeQuestionListResponse(BaseModel):
+    """编程题列表响应。"""
+
+    items: list[CodingPracticeQuestionSummaryResponse] = Field(default_factory=list)
+    total: int
+
+
+class CodingPracticeCreateSessionRequest(BaseModel):
+    """创建编程练习会话请求。"""
+
+    question_id: str = Field(min_length=3)
+
+
+class CodingPracticeSessionResponse(BaseModel):
+    """编程练习会话响应。"""
+
+    session_id: str
+    question: CodingPracticeQuestionDetailResponse
+    status: Literal["ACTIVE", "SOLVED"]
+    active_language: Literal["cpp", "java", "javascript"]
+    last_opened_at: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class CodingPracticeRunRequest(BaseModel):
+    """运行自测请求。"""
+
+    language: Literal["cpp", "java", "javascript"]
+    source_code: str = Field(default="", max_length=200000)
+
+
+class CodingPracticeExecutionResultResponse(BaseModel):
+    """运行或提交结果响应。"""
+
+    status: str
+    passed_count: int
+    total_count: int
+    submit_type: Literal["RUN", "SUBMIT"]
+    message: str
+    results: list[dict] = Field(default_factory=list)
+    compile_output: Optional[str] = None
+
+
+class CodingPracticeExecutionResponse(BaseModel):
+    """运行或提交接口响应。"""
+
+    session_id: str
+    submission_id: str
+    result: CodingPracticeExecutionResultResponse
+
+
+class CodingPracticeRecordItemResponse(BaseModel):
+    """编程练习记录项。"""
+
+    session_id: str
+    question_id: str
+    title: str
+    difficulty: Literal["easy", "medium", "hard"]
+    status: Literal["ACTIVE", "SOLVED"]
+    last_language: Literal["cpp", "java", "javascript"]
+    latest_submission_status: Optional[str] = None
+    last_opened_at: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class CodingPracticeRecordsResponse(BaseModel):
+    """编程练习记录列表响应。"""
+
+    items: list[CodingPracticeRecordItemResponse] = Field(default_factory=list)
+    total: int
+
+
 class RegisterRequest(BaseModel):
     """注册请求。"""
 

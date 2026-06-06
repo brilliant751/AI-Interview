@@ -6,12 +6,15 @@ AI 模拟面试平台。
 
 - 题库练习：用户可直接从网站进入题库练习，按岗位、模式、题量和类别抽题，使用文字连续作答。
 - 题库管理：管理员可在网站分页查看题库、按关键词筛选、上传 Markdown 题库文件、单题表单录入，并触发题库导入任务。
+- 编程练习：用户可进入“编程练习”列表，选择题目后在网页端使用 C++11、Java、JavaScript 编写代码，编辑器默认提供示例模板，支持自测运行与正式判题。
 
 ## 环境要求
 
 - Python 3.11+
 - Node.js 18+
 - npm 9+
+- `g++`（支持 `-std=c++11`）
+- `javac` / `java`（编译使用 `--release 21`）
 
 ## 一键启动
 
@@ -63,6 +66,7 @@ npm install
 python backend/assets/scripts/data/validate_materials.py --strict
 python backend/assets/scripts/data/normalize_materials.py
 python backend/assets/scripts/data/build_question_bank.py
+python backend/assets/scripts/data/import_coding_practice_questions.py
 python backend/assets/scripts/data/build_knowledge_vectorstore.py
 ```
 
@@ -133,6 +137,17 @@ VITE_API_BASE=http://localhost:18500/api/v1
 - 管理端上传接口：`POST /api/v1/practice/questions/upload`
 - 管理端单题录入接口：`POST /api/v1/practice/questions`
 - 管理端导入任务查询接口：`GET /api/v1/practice/questions/import-tasks/{task_id}`
+
+## 编程练习数据与接口
+
+- 编程题材料文件：`backend/assets/material/coding/programming_practice_questions.json`
+- 编程题导入脚本：`python backend/assets/scripts/data/import_coding_practice_questions.py`
+- 题目列表接口：`GET /api/v1/coding-practice/questions`
+- 创建/恢复会话接口：`POST /api/v1/coding-practice/sessions`
+- 会话详情接口不返回题解代码，编辑器默认模板仅在前端本地注入，不持久化用户代码
+- 运行自测接口：`POST /api/v1/coding-practice/sessions/{session_id}/run`
+- 正式判题接口：`POST /api/v1/coding-practice/sessions/{session_id}/submit`
+- 记录列表接口：`GET /api/v1/coding-practice/records`
 
 ## 本地模型模式
 
