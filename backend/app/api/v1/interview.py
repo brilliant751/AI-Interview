@@ -17,6 +17,9 @@ from app.models.schemas import (
     InterviewPlaybackMeta,
     InterviewPlaybackResponse,
     InterviewPlaybackResume,
+    InterviewScheduleItemResponse,
+    InterviewScheduleListResponse,
+    InterviewStartResponse,
     InterviewPlaybackTurn,
     InterviewStatusResponse,
     PausedInterviewItemResponse,
@@ -234,6 +237,53 @@ async def resume_interview(
     return ResumeInterviewResponse(**result)
 
 
+@router.get("/schedules", response_model=InterviewScheduleListResponse)
+async def list_interview_schedules(
+    scheduled_from: Optional[str] = None,
+    scheduled_to: Optional[str] = None,
+    statuses: Optional[str] = None,
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> InterviewScheduleListResponse:
+    """按时间范围查询当前用户预约面试列表。"""
+    status_items = [item.strip().upper() for item in str(statuses or "").split(",") if item.strip()]
+    rows = service.list_scheduled_interviews(
+        user_id=auth.user_id,
+        scheduled_from=scheduled_from,
+        scheduled_to=scheduled_to,
+        statuses=status_items or None,
+    )
+    return InterviewScheduleListResponse(
+        items=[
+            InterviewScheduleItemResponse(
+                interview_id=str(row.get("interview_id") or ""),
+                session_name=str(row.get("session_name") or ""),
+                resume_id=str(row.get("resume_id") or ""),
+                resume_file_name=str(row.get("resume_file_name") or ""),
+                job_role=str(row.get("job_role") or ""),
+                difficulty=str(row.get("difficulty") or ""),
+                status=str(row.get("status") or ""),
+                scheduled_start_at=str(row.get("scheduled_start_at") or ""),
+                started_at=row.get("started_at"),
+                current_stage=str(row.get("current_stage") or "SELF_INTRO"),
+                start_available=bool(row.get("start_available")),
+            )
+            for row in rows
+        ]
+    )
+
+
+@router.post("/{interview_id}/start", response_model=InterviewStartResponse)
+async def start_interview(
+    interview_id: str,
+    auth: AuthContext = Depends(require_user),
+    service: InterviewService = Depends(get_service),
+) -> InterviewStartResponse:
+    """开始已到预约时间的面试。"""
+    result = service.start_scheduled_interview(interview_id=interview_id, user_id=auth.user_id)
+    return InterviewStartResponse(**result)
+
+
 @router.get("/paused", response_model=PausedInterviewListResponse)
 async def list_paused_interviews(
     auth: AuthContext = Depends(require_user),
@@ -292,7 +342,9 @@ async def get_interview_status(
     if not current_question:
         current_question = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
     tts_audio_url = None
-    if str(session.get("output_mode") or "") == "voice":
+    status_value = str(session.get("status") or "")
+    start_available = service._get_start_available(session)
+    if str(session.get("output_mode") or "") == "voice" and status_value != "SCHEDULED":
         try:
             tts_audio_url = service.voice_service.tts(current_question)
         except ApiError:
@@ -315,6 +367,8 @@ async def get_interview_status(
         jd_id=jd_id,
         jd_title=str(session.get("jd_snapshot_title") or ""),
         jd_source_type=jd_source_type,
+        scheduled_start_at=session.get("scheduled_start_at"),
+        start_available=start_available,
         current_question=current_question,
         tts_audio_url=tts_audio_url,
         duration_seconds=int(session.get("duration_seconds") or 0),

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from starlette.concurrency import run_in_threadpool
@@ -51,6 +52,8 @@ class InterviewService:
             raise ApiError(code="STATE_409", message="面试已结束，禁止继续提交", status_code=409)
         if session["status"] == "PAUSED":
             raise ApiError(code="STATE_409", message="面试已暂停，请先恢复后再提交", status_code=409)
+        if session["status"] == "SCHEDULED":
+            raise ApiError(code="INTERVIEW_409_NOT_READY", message="未到预约开始时间，请先开始面试", status_code=409)
         stage = str(payload.get("stage") or "")
         if stage != str(session.get("current_stage") or ""):
             raise ApiError(code="STATE_409", message="提交阶段与会话阶段不一致", status_code=409)
@@ -88,6 +91,34 @@ class InterviewService:
             "error_message": str(row.get("error_message") or ""),
         }
 
+    def _parse_schedule_time(self, value: str) -> datetime:
+        """解析前端传入的预约时间。"""
+        normalized = value.strip()
+        if not normalized:
+            raise ApiError(code="INTERVIEW_400_SCHEDULE_TIME_INVALID", message="预约开始时间不能为空", status_code=400)
+        normalized = normalized.replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError as exc:
+            raise ApiError(code="INTERVIEW_400_SCHEDULE_TIME_INVALID", message="预约开始时间格式不正确", status_code=400) from exc
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    def _to_sqlite_datetime(self, value: datetime) -> str:
+        """将 UTC 时间转换为 SQLite 可读格式。"""
+        return value.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+    def _get_start_available(self, session: dict) -> bool:
+        """判断预约面试是否已经到达可开始时间。"""
+        if str(session.get("status") or "") != "SCHEDULED":
+            return False
+        scheduled_start_at = str(session.get("scheduled_start_at") or "").strip()
+        if not scheduled_start_at:
+            return False
+        scheduled_at = self._parse_schedule_time(scheduled_start_at.replace(" ", "T"))
+        return scheduled_at <= datetime.now(timezone.utc)
+
     def create_session(self, payload: dict, user_id: str) -> dict:
         """创建会话并返回首题。"""
         resume = self.repo.get_resume(payload["resume_id"])
@@ -118,25 +149,90 @@ class InterviewService:
                 "jd_snapshot_content": str(jd.get("content_text") or "")[:2000],
             }
         payload["job_role"] = normalized_role
+        scheduled_start_at_raw = str(payload.get("scheduled_start_at") or "").strip()
+        status = "ACTIVE"
+        if scheduled_start_at_raw:
+            scheduled_start_at = self._parse_schedule_time(scheduled_start_at_raw)
+            if scheduled_start_at <= datetime.now(timezone.utc):
+                raise ApiError(code="INTERVIEW_400_SCHEDULE_TIME_INVALID", message="预约时间必须晚于当前时间", status_code=400)
+            payload["scheduled_start_at"] = self._to_sqlite_datetime(scheduled_start_at)
+            status = "SCHEDULED"
+        else:
+            payload["scheduled_start_at"] = ""
+        payload["status"] = status
         session = self.repo.create_session(user_id=user_id, payload=payload, jd_snapshot=jd_snapshot)
         first_question = INTERVIEW_FIRST_QUESTION
         output_mode = str(payload.get("output_mode") or "text")
         tts_audio_url: Optional[str] = None
-        if output_mode == "voice":
+        if output_mode == "voice" and status == "ACTIVE":
             try:
                 tts_audio_url = self.voice_service.tts(first_question)
             except ApiError as exc:
                 logger.warning("首题语音合成失败，降级为文本输出：%s", exc.message)
         return {
             "interview_id": session["interview_id"],
+            "status": status,
             "current_stage": session["current_stage"],
             "first_question": first_question,
+            "scheduled_start_at": payload["scheduled_start_at"] or None,
             "tts_audio_url": tts_audio_url,
         }
 
     def list_paused_interviews(self, user_id: str) -> list[dict]:
         """查询用户暂停中的面试会话。"""
         return self.repo.list_paused_sessions(user_id=user_id)
+
+    def list_scheduled_interviews(
+        self,
+        user_id: str,
+        scheduled_from: str | None,
+        scheduled_to: str | None,
+        statuses: list[str] | None = None,
+    ) -> list[dict]:
+        """查询用户的预约面试列表。"""
+        normalized_from = self._to_sqlite_datetime(self._parse_schedule_time(scheduled_from)) if scheduled_from else None
+        normalized_to = self._to_sqlite_datetime(self._parse_schedule_time(scheduled_to)) if scheduled_to else None
+        rows = self.repo.list_scheduled_sessions(
+            user_id=user_id,
+            scheduled_from=normalized_from,
+            scheduled_to=normalized_to,
+            statuses=statuses,
+        )
+        for row in rows:
+            row["start_available"] = self._get_start_available(row)
+        return rows
+
+    def start_scheduled_interview(self, interview_id: str, user_id: str) -> dict:
+        """开始已到预约时间的面试会话。"""
+        session = self.repo.get_session(interview_id)
+        if not session:
+            raise ApiError(code="NOT_FOUND", message="面试会话不存在", status_code=404)
+        if str(session.get("user_id") or "") != user_id:
+            raise ApiError(code="INTERVIEW_403_FORBIDDEN", message="无权访问该面试会话", status_code=403)
+        status = str(session.get("status") or "")
+        if status == "FINISHED":
+            raise ApiError(code="STATE_409", message="面试已结束，无法开始", status_code=409)
+        if status == "PAUSED":
+            result = self.resume_interview(interview_id=interview_id, user_id=user_id)
+            result["status"] = "ACTIVE"
+            result["scheduled_start_at"] = session.get("scheduled_start_at")
+            return result
+        if status == "ACTIVE":
+            result = self.resume_interview(interview_id=interview_id, user_id=user_id)
+            result["status"] = "ACTIVE"
+            result["scheduled_start_at"] = session.get("scheduled_start_at")
+            return result
+        if status != "SCHEDULED":
+            raise ApiError(code="STATE_409", message="当前会话不处于预约状态", status_code=409)
+        if not self._get_start_available(session):
+            raise ApiError(code="INTERVIEW_409_NOT_READY", message="未到预约开始时间，暂时无法开始面试", status_code=409)
+        started = self.repo.start_scheduled_session(user_id=user_id, interview_id=interview_id)
+        if not started:
+            raise ApiError(code="STATE_409", message="预约面试开始失败，请刷新后重试", status_code=409)
+        result = self.resume_interview(interview_id=interview_id, user_id=user_id)
+        result["status"] = "ACTIVE"
+        result["scheduled_start_at"] = session.get("scheduled_start_at")
+        return result
 
     def pause_interview(self, interview_id: str, user_id: str) -> dict:
         """暂停进行中的面试会话。"""
@@ -299,6 +395,8 @@ class InterviewService:
             raise ApiError(code="STATE_409", message="面试已结束，禁止继续提交", status_code=409)
         if session["status"] == "PAUSED":
             raise ApiError(code="STATE_409", message="面试已暂停，请先恢复后再提交", status_code=409)
+        if session["status"] == "SCHEDULED":
+            raise ApiError(code="INTERVIEW_409_NOT_READY", message="未到预约开始时间，请先开始面试", status_code=409)
 
         stage = payload["stage"]
         if stage != session["current_stage"]:

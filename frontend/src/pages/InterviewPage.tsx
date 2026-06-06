@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
+import dayjs, { type Dayjs } from 'dayjs'
 import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -12,6 +13,7 @@ import {
   createInterview,
   fetchHistory,
   fetchInterviewPlayback,
+  fetchInterviewSchedules,
   fetchJds,
   fetchTurnJobResult,
   fetchInterviewStatus,
@@ -19,6 +21,7 @@ import {
   fetchResumeFile,
   fetchResumes,
   finishInterview,
+  startScheduledInterview,
   submitAudioTurn,
   submitTurn,
 } from '../api/interview'
@@ -74,6 +77,9 @@ export function InterviewPage() {
   const [createJobRole, setCreateJobRole] = useState<'java' | 'web'>('java')
   const [createPositionMode, setCreatePositionMode] = useState<'role' | 'jd'>('role')
   const [createSelectedJdTitle, setCreateSelectedJdTitle] = useState('')
+  const [calendarValue, setCalendarValue] = useState<Dayjs>(() => dayjs())
+  const [selectedScheduleDate, setSelectedScheduleDate] = useState<Dayjs>(() => dayjs())
+  const [startingScheduleInterviewId, setStartingScheduleInterviewId] = useState('')
   const [jdFilterRole, setJdFilterRole] = useState('')
   const [jdFilterTitle, setJdFilterTitle] = useState('')
   const [questionAudioPlaying, setQuestionAudioPlaying] = useState(false)
@@ -105,6 +111,42 @@ export function InterviewPage() {
       return null
     }
     return parsed
+  }
+  /** 将表单中的本地日期时间转换为 ISO 字符串。 */
+  const toScheduleIsoString = (value?: string) => {
+    if (!value) {
+      return ''
+    }
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) {
+      return ''
+    }
+    return parsed.toISOString()
+  }
+  /** 按本地日期生成 YYYY-MM-DD key。 */
+  const buildDateKey = (value?: string) => {
+    const parsed = parseBackendDate(value)
+    if (!parsed) {
+      return ''
+    }
+    const year = parsed.getFullYear()
+    const month = String(parsed.getMonth() + 1).padStart(2, '0')
+    const day = String(parsed.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  /** 格式化预约开始时间。 */
+  const formatScheduleDateTime = (value?: string) => {
+    const parsed = parseBackendDate(value)
+    if (!parsed) {
+      return '--'
+    }
+    return parsed.toLocaleString('zh-CN', {
+      hour12: false,
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
   }
   /** 判断请求是否属于主动取消。 */
   const isCanceledRequestError = (error: unknown) => {
@@ -518,6 +560,17 @@ export function InterviewPage() {
     queryFn: () => fetchHistory({ page: 1, page_size: 20, status: 'PAUSED' }),
     enabled: !interviewId,
   })
+  /** 查询当前月份的预约面试。 */
+  const scheduleQuery = useQuery({
+    queryKey: ['interview-schedules', calendarValue.format('YYYY-MM')],
+    queryFn: () =>
+      fetchInterviewSchedules({
+        scheduled_from: calendarValue.startOf('month').toDate().toISOString(),
+        scheduled_to: calendarValue.endOf('month').toDate().toISOString(),
+        statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],
+      }),
+    enabled: !interviewId,
+  })
 
   /** 查询创建面试弹窗中的 JD 列表。 */
   const jdQuery = useQuery({
@@ -541,11 +594,34 @@ export function InterviewPage() {
     const current = items.find((item) => item.resume_id === resumeId)
     return current?.file_name || ''
   }, [resumeId, resumeQuery.data])
+  const scheduleItems = scheduleQuery.data?.items ?? []
+  const scheduleMap = useMemo(() => {
+    const mapped = new Map<string, typeof scheduleItems>()
+    scheduleItems.forEach((item) => {
+      const key = buildDateKey(item.scheduled_start_at)
+      const currentItems = mapped.get(key) ?? []
+      currentItems.push(item)
+      mapped.set(key, currentItems)
+    })
+    return mapped
+  }, [scheduleItems])
+  const selectedScheduleItems = useMemo(
+    () => scheduleMap.get(selectedScheduleDate.format('YYYY-MM-DD')) ?? [],
+    [scheduleMap, selectedScheduleDate],
+  )
 
   /** 创建面试会话。 */
   const createMutation = useMutation({
     mutationFn: createInterview,
     onSuccess: (data, variables) => {
+      setCreateModalOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['interview-schedules'] }).catch(() => undefined)
+      queryClient.invalidateQueries({ queryKey: ['today-interview-schedules'] }).catch(() => undefined)
+      queryClient.invalidateQueries({ queryKey: ['paused-interviews', 'interview-page'] }).catch(() => undefined)
+      if (data.status === 'SCHEDULED') {
+        message.success(`预约成功，开始时间：${formatScheduleDateTime(data.scheduled_start_at)}`)
+        return
+      }
       setSessionConfig({
         interviewId: data.interview_id,
         jobRole: variables.job_role || createJobRole,
@@ -557,11 +633,40 @@ export function InterviewPage() {
         ttsAudioUrl: data.tts_audio_url,
       })
       message.success('会话创建成功')
-      setCreateModalOpen(false)
       navigate(`/interview/${data.interview_id}`)
     },
     onError: () => {
       message.error('创建会话失败，请重试')
+    },
+  })
+  /** 开始预约面试。 */
+  const startScheduleMutation = useMutation({
+    mutationFn: startScheduledInterview,
+    onMutate: (targetInterviewId) => {
+      setStartingScheduleInterviewId(targetInterviewId)
+    },
+    onSuccess: (data) => {
+      resetRoundRuntimeState()
+      setSessionConfig({
+        interviewId: data.interview_id,
+        jobRole: data.job_role,
+        difficulty: data.difficulty,
+        inputMode: data.input_mode,
+        outputMode: data.output_mode,
+        stage: data.stage,
+        firstQuestion: data.question,
+        ttsAudioUrl: data.tts_audio_url,
+      })
+      queryClient.invalidateQueries({ queryKey: ['interview-schedules'] }).catch(() => undefined)
+      queryClient.invalidateQueries({ queryKey: ['today-interview-schedules'] }).catch(() => undefined)
+      message.success('已开始预约面试')
+      navigate(`/interview/${data.interview_id}`)
+      setStartingScheduleInterviewId('')
+    },
+    onError: (error) => {
+      const parsed = (error as AxiosError<{ error?: { message?: string } }>)?.response?.data?.error?.message
+      message.error(parsed || '开始预约面试失败，请重试')
+      setStartingScheduleInterviewId('')
     },
   })
   /** 恢复暂停面试。 */
@@ -1096,9 +1201,35 @@ export function InterviewPage() {
       hard: 'red',
     }
     const statusColorMap: Record<string, string> = {
+      SCHEDULED: 'blue',
       PAUSED: 'processing',
       ACTIVE: 'green',
       FINISHED: 'default',
+    }
+    const scheduleCount = scheduleItems.length
+    const selectedDateLabel = selectedScheduleDate.format('YYYY 年 MM 月 DD 日')
+    const calendarCellRender = (current: Dayjs, info: { originNode: React.ReactNode; type: string }) => {
+      if (info.type !== 'date') {
+        return info.originNode
+      }
+      const currentItems = scheduleMap.get(current.format('YYYY-MM-DD')) ?? []
+      if (currentItems.length === 0) {
+        return info.originNode
+      }
+      return (
+        <div style={{ minHeight: 68, padding: '4px 2px' }}>
+          <div>{info.originNode}</div>
+          <Space direction="vertical" size={2} style={{ width: '100%' }}>
+            <Badge
+              count={currentItems.length}
+              style={{ backgroundColor: currentItems.some((item) => item.start_available) ? '#16a34a' : '#1677ff' }}
+            />
+            <Typography.Text style={{ fontSize: 11 }} ellipsis>
+              {formatScheduleDateTime(currentItems[0]?.scheduled_start_at)}
+            </Typography.Text>
+          </Space>
+        </div>
+      )
     }
     return (
       <Space className="interview-lobby" direction="vertical" size={16} style={{ width: '100%' }}>
@@ -1219,6 +1350,88 @@ export function InterviewPage() {
           </Row>
         </Card>
 
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={15}>
+            <Card
+              className="interview-lobby-section-card"
+              title="预约日历"
+              extra={<Tag color={scheduleCount > 0 ? 'processing' : 'default'}>{`${scheduleCount} 条预约`}</Tag>}
+            >
+              <Calendar
+                fullscreen={false}
+                value={calendarValue}
+                onPanelChange={(value) => setCalendarValue(value)}
+                onSelect={(value) => setSelectedScheduleDate(value)}
+                fullCellRender={calendarCellRender}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} xl={9}>
+            <Card
+              className="interview-lobby-section-card"
+              title={`${selectedDateLabel} 的安排`}
+              extra={
+                <Button
+                  type="link"
+                  onClick={() => {
+                    setCreateModalOpen(true)
+                    createForm.setFieldValue('schedule_mode', 'schedule')
+                    createForm.setFieldValue('scheduled_start_at', `${selectedScheduleDate.format('YYYY-MM-DD')}T09:00`)
+                  }}
+                >
+                  在当天新增预约
+                </Button>
+              }
+            >
+              {selectedScheduleItems.length === 0 ? (
+                <Typography.Text type="secondary">这一天还没有预约面试，可以直接新建。</Typography.Text>
+              ) : (
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {selectedScheduleItems.map((item) => (
+                    <Card key={item.interview_id} size="small" bodyStyle={{ padding: 14 }}>
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                          <Typography.Text strong>{item.session_name || '未命名面试'}</Typography.Text>
+                          <Tag color={statusColorMap[item.status] || 'blue'}>{item.status}</Tag>
+                        </Space>
+                        <Space wrap size={8}>
+                          <Tag color={roleColorMap[item.job_role] || 'blue'}>{`岗位：${item.job_role}`}</Tag>
+                          <Tag color={difficultyColorMap[item.difficulty] || 'gold'}>{`难度：${item.difficulty}`}</Tag>
+                          <Tag color={item.start_available ? 'green' : 'default'}>{item.start_available ? '已到开始时间' : '待开始'}</Tag>
+                        </Space>
+                        <Typography.Text type="secondary">{`预约时间：${formatScheduleDateTime(item.scheduled_start_at)}`}</Typography.Text>
+                        <Typography.Text type="secondary">{`简历：${item.resume_file_name || item.resume_id}`}</Typography.Text>
+                        {item.status === 'SCHEDULED' ? (
+                          <Button
+                            type="primary"
+                            loading={startScheduleMutation.isPending && startingScheduleInterviewId === item.interview_id}
+                            disabled={!item.start_available}
+                            onClick={() => startScheduleMutation.mutate(item.interview_id)}
+                          >
+                            {item.start_available ? '开始面试' : '未到开始时间'}
+                          </Button>
+                        ) : item.status === 'PAUSED' ? (
+                          <Button
+                            type="primary"
+                            loading={resumePausedMutation.isPending && resumingInterviewId === item.interview_id}
+                            onClick={() => resumePausedMutation.mutate(item.interview_id)}
+                          >
+                            继续面试
+                          </Button>
+                        ) : (
+                          <Button type="default" onClick={() => navigate(`/interview/${item.interview_id}`)}>
+                            进入面试
+                          </Button>
+                        )}
+                      </Space>
+                    </Card>
+                  ))}
+                </Space>
+              )}
+            </Card>
+          </Col>
+        </Row>
+
         <Card className="interview-lobby-section-card" title="继续上次面试">
           {pausedQuery.isLoading ? (
             <Typography.Text type="secondary">正在加载暂停中的会话...</Typography.Text>
@@ -1329,6 +1542,8 @@ export function InterviewPage() {
                 difficulty: 'medium',
                 input_mode: 'voice',
                 output_mode: 'voice',
+                schedule_mode: 'now',
+                scheduled_start_at: '',
                 session_name: '',
                 question_types: ['project', 'technical', 'scenario'],
               }}
@@ -1336,6 +1551,15 @@ export function InterviewPage() {
                 if (!resumeId) {
                   message.warning('请先在弹窗中选择简历')
                   setResumePickerOpen(true)
+                  return
+                }
+                if (values.schedule_mode === 'schedule' && !values.scheduled_start_at) {
+                  message.warning('请选择预约开始时间')
+                  return
+                }
+                const scheduledStartAt = values.schedule_mode === 'schedule' ? toScheduleIsoString(values.scheduled_start_at) : ''
+                if (values.schedule_mode === 'schedule' && !scheduledStartAt) {
+                  message.warning('预约开始时间格式不正确')
                   return
                 }
                 createMutation.mutate({
@@ -1347,6 +1571,7 @@ export function InterviewPage() {
                   output_mode: 'voice',
                   session_name: values.session_name,
                   question_types: questionTypeOrder.filter((item) => (values.question_types || []).includes(item)),
+                  scheduled_start_at: scheduledStartAt || undefined,
                 })
               }}
             >
@@ -1430,6 +1655,28 @@ export function InterviewPage() {
                     { label: '语音', value: 'voice' },
                   ]}
                 />
+              </Form.Item>
+              <Form.Item name="schedule_mode" label="开始方式">
+                <Radio.Group
+                  options={[
+                    { label: '立即开始', value: 'now' },
+                    { label: '预约开始', value: 'schedule' },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item shouldUpdate noStyle>
+                {() =>
+                  createForm.getFieldValue('schedule_mode') === 'schedule' ? (
+                    <Form.Item
+                      name="scheduled_start_at"
+                      label="预约开始时间"
+                      rules={[{ required: true, message: '请选择预约开始时间' }]}
+                      extra="仅支持预约未来时间，到点后才可开始面试。"
+                    >
+                      <Input type="datetime-local" min={dayjs().format('YYYY-MM-DDTHH:mm')} />
+                    </Form.Item>
+                  ) : null
+                }
               </Form.Item>
               <Button type="primary" htmlType="submit" loading={createMutation.isPending}>
                 创建会话
