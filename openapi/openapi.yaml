@@ -284,6 +284,30 @@ paths:
       responses:
         "200":
           description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewCreateResponse'
+  /api/v1/interviews/schedules:
+    get:
+      summary: 查询预约面试列表
+      parameters:
+        - in: query
+          name: scheduled_from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: scheduled_to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: statuses
+          schema: { type: string, description: 逗号分隔的状态列表 }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleListResponse'
   /api/v1/interviews/{interview_id}/status:
     get:
       summary: 查询面试会话状态
@@ -463,6 +487,21 @@ paths:
       responses:
         "200":
           description: 成功
+  /api/v1/interviews/{interview_id}/start:
+    post:
+      summary: 开始预约面试
+      parameters:
+        - in: path
+          name: interview_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewStartResponse'
   /api/v1/interviews/paused:
     get:
       summary: 查询暂停中的面试列表
@@ -882,6 +921,7 @@ components:
       properties:
         resume_id: { type: string }
         jd_id: { type: string }
+        scheduled_start_at: { type: string, format: date-time }
         session_name: { type: string }
         question_types:
           type: array
@@ -890,6 +930,15 @@ components:
         difficulty: { type: string, enum: [easy, medium, hard] }
         input_mode: { type: string, enum: [text, voice] }
         output_mode: { type: string, enum: [text, voice] }
+    InterviewCreateResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [ACTIVE, SCHEDULED] }
+        current_stage: { type: string }
+        first_question: { type: string }
+        scheduled_start_at: { type: string, nullable: true }
+        tts_audio_url: { type: string, nullable: true }
     InterviewTurnRequest:
       type: object
       required: [stage]
@@ -928,6 +977,27 @@ components:
               answer: { type: string }
               question_ts: { type: string }
               answer_ts: { type: string, nullable: true }
+    InterviewStatusResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string }
+        current_stage: { type: string }
+        follow_up_count: { type: integer }
+        technical_count: { type: integer }
+        job_role: { type: string }
+        difficulty: { type: string }
+        input_mode: { type: string }
+        output_mode: { type: string }
+        jd_id: { type: string }
+        jd_title: { type: string }
+        jd_source_type: { type: string }
+        scheduled_start_at: { type: string, nullable: true }
+        start_available: { type: boolean }
+        current_question: { type: string }
+        tts_audio_url: { type: string, nullable: true }
+        duration_seconds: { type: integer }
+        duration_updated_at: { type: string, nullable: true }
     InterviewTurnResponse:
       type: object
       properties:
@@ -977,6 +1047,38 @@ components:
             - $ref: '#/components/schemas/InterviewTurnResponse'
           nullable: true
         error_message: { type: string }
+    InterviewScheduleListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              interview_id: { type: string }
+              session_name: { type: string }
+              resume_id: { type: string }
+              resume_file_name: { type: string }
+              job_role: { type: string }
+              difficulty: { type: string }
+              status: { type: string }
+              scheduled_start_at: { type: string }
+              started_at: { type: string, nullable: true }
+              current_stage: { type: string }
+              start_available: { type: boolean }
+    InterviewStartResponse:
+      type: object
+      properties:
+        interview_id: { type: string }
+        status: { type: string, enum: [ACTIVE] }
+        stage: { type: string }
+        question: { type: string }
+        job_role: { type: string }
+        difficulty: { type: string }
+        input_mode: { type: string }
+        output_mode: { type: string }
+        scheduled_start_at: { type: string, nullable: true }
+        tts_audio_url: { type: string, nullable: true }
     ReportResponse:
       type: object
       properties:

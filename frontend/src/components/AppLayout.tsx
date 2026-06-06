@@ -10,12 +10,15 @@ import {
   TeamOutlined,
   UserOutlined,
 } from '@ant-design/icons'
-import { Badge, Button, Dropdown, Grid, Layout, Menu, Space, Typography } from 'antd'
+import { useQuery } from '@tanstack/react-query'
+import { Badge, Button, Dropdown, Grid, Layout, Menu, Space, Typography, notification } from 'antd'
 import type { ReactNode } from 'react'
+import { useEffect } from 'react'
 import type { MenuProps } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
+import { fetchInterviewSchedules } from '../api/interview'
 import { useAuthStore } from '../stores/authStore'
 
 const { Header, Content, Sider } = Layout
@@ -31,6 +34,57 @@ export function AppLayout(props: { children: ReactNode }) {
   const refreshToken = useAuthStore((state) => state.refreshToken)
   const clearSession = useAuthStore((state) => state.clearSession)
   const isInterviewSessionPage = /^\/interview\/[^/]+/.test(location.pathname)
+  const [notificationApi, notificationContextHolder] = notification.useNotification()
+
+  /** 生成今日本地时间范围，对后端显式传输 ISO 边界。 */
+  const buildTodayRange = () => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+    return {
+      scheduled_from: start.toISOString(),
+      scheduled_to: end.toISOString(),
+    }
+  }
+
+  const todayScheduleQuery = useQuery({
+    queryKey: ['today-interview-schedules', isAuthenticated],
+    queryFn: () =>
+      fetchInterviewSchedules({
+        ...buildTodayRange(),
+        statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],
+      }),
+    enabled: isAuthenticated,
+    refetchInterval: isAuthenticated ? 60000 : false,
+  })
+  const todayScheduleItems = todayScheduleQuery.data?.items ?? []
+  const todayPendingCount = todayScheduleItems.length
+
+  useEffect(() => {
+    if (!isAuthenticated || todayScheduleItems.length === 0) {
+      return
+    }
+    const todayKey = new Date().toISOString().slice(0, 10)
+    const reminderKey = `ai_interview_schedule_notice_${todayKey}`
+    const currentFingerprint = todayScheduleItems.map((item) => `${item.interview_id}:${item.status}`).join('|')
+    if (window.localStorage.getItem(reminderKey) === currentFingerprint) {
+      return
+    }
+    notificationApi.open({
+      key: reminderKey,
+      message: `今天有 ${todayScheduleItems.length} 场面试安排`,
+      description: '请前往 AI 面试大厅查看预约详情；到点后可直接开始面试。',
+      duration: 6,
+      btn: (
+        <Button size="small" type="primary" onClick={() => navigate('/interview')}>
+          查看安排
+        </Button>
+      ),
+      onClose: () => {
+        window.localStorage.setItem(reminderKey, currentFingerprint)
+      },
+    })
+  }, [isAuthenticated, navigate, notificationApi, todayScheduleItems])
 
   const sideMenuItems: MenuProps['items'] = [
     { key: '/overview', icon: <HomeOutlined />, label: <Link to="/overview">首页概览</Link> },
@@ -88,6 +142,7 @@ export function AppLayout(props: { children: ReactNode }) {
         background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)',
       }}
     >
+      {notificationContextHolder}
       <Header
         style={{
           display: 'flex',
@@ -107,8 +162,8 @@ export function AppLayout(props: { children: ReactNode }) {
         </Space>
         {isAuthenticated ? (
           <Space size={14}>
-            <Badge count={2} size="small">
-              <Button shape="circle" icon={<BellOutlined />} />
+            <Badge count={todayPendingCount} size="small">
+              <Button shape="circle" icon={<BellOutlined />} onClick={() => navigate('/interview')} />
             </Badge>
             <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
               <Button icon={<UserOutlined />}>{user?.display_name || user?.email?.split('@')[0] || '用户'}</Button>

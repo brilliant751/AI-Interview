@@ -46,6 +46,7 @@ class InterviewCreateRequest(BaseModel):
         default_factory=lambda: ["project", "technical", "scenario"]
     )
     jd_id: str = ""
+    scheduled_start_at: str = ""
 
     @model_validator(mode="after")
     def validate_role_or_jd(self) -> "InterviewCreateRequest":
@@ -59,8 +60,10 @@ class InterviewCreateResponse(BaseModel):
     """创建面试会话响应。"""
 
     interview_id: str
+    status: str = "ACTIVE"
     current_stage: str
     first_question: str
+    scheduled_start_at: Optional[str] = None
     tts_audio_url: Optional[str] = None
 
 
@@ -182,10 +185,49 @@ class InterviewStatusResponse(BaseModel):
     jd_id: str = ""
     jd_title: str = ""
     jd_source_type: str = ""
+    scheduled_start_at: Optional[str] = None
+    start_available: bool = False
     current_question: str = ""
     tts_audio_url: Optional[str] = None
     duration_seconds: int = 0
     duration_updated_at: Optional[str] = None
+
+
+class InterviewScheduleItemResponse(BaseModel):
+    """预约面试条目响应。"""
+
+    interview_id: str
+    session_name: str = ""
+    resume_id: str = ""
+    resume_file_name: str = ""
+    job_role: str
+    difficulty: str
+    status: str
+    scheduled_start_at: str
+    started_at: Optional[str] = None
+    current_stage: str = "SELF_INTRO"
+    start_available: bool = False
+
+
+class InterviewScheduleListResponse(BaseModel):
+    """预约面试列表响应。"""
+
+    items: list[InterviewScheduleItemResponse] = Field(default_factory=list)
+
+
+class InterviewStartResponse(BaseModel):
+    """开始预约面试响应。"""
+
+    interview_id: str
+    status: str
+    stage: str
+    question: str
+    job_role: str
+    difficulty: str
+    input_mode: str
+    output_mode: str
+    scheduled_start_at: Optional[str] = None
+    tts_audio_url: Optional[str] = None
 
 
 class PausedInterviewItemResponse(BaseModel):

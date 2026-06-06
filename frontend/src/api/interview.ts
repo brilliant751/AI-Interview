@@ -10,13 +10,16 @@ export interface CreateInterviewPayload {
   session_name?: string
   question_types?: Array<'project' | 'technical' | 'scenario'>
   jd_id?: string
+  scheduled_start_at?: string
 }
 
 /** 会话创建响应。 */
 export interface CreateInterviewResponse {
   interview_id: string
+  status: 'ACTIVE' | 'SCHEDULED'
   current_stage: string
   first_question: string
+  scheduled_start_at?: string
   tts_audio_url?: string
 }
 
@@ -226,10 +229,46 @@ export interface InterviewStatusResponse {
   jd_id?: string
   jd_title?: string
   jd_source_type?: string
+  scheduled_start_at?: string
+  start_available: boolean
   current_question: string
   tts_audio_url?: string
   duration_seconds: number
   duration_updated_at?: string
+}
+
+/** 预约面试条目。 */
+export interface InterviewScheduleItem {
+  interview_id: string
+  session_name?: string
+  resume_id: string
+  resume_file_name?: string
+  job_role: 'java' | 'web' | string
+  difficulty: 'easy' | 'medium' | 'hard' | string
+  status: 'SCHEDULED' | 'ACTIVE' | 'PAUSED' | 'FINISHED' | string
+  scheduled_start_at: string
+  started_at?: string
+  current_stage: string
+  start_available: boolean
+}
+
+/** 预约面试列表响应。 */
+export interface InterviewScheduleListResponse {
+  items: InterviewScheduleItem[]
+}
+
+/** 开始预约面试响应。 */
+export interface StartScheduledInterviewResponse {
+  interview_id: string
+  status: 'ACTIVE'
+  stage: string
+  question: string
+  job_role: 'java' | 'web'
+  difficulty: 'easy' | 'medium' | 'hard'
+  input_mode: 'text' | 'voice'
+  output_mode: 'text' | 'voice'
+  scheduled_start_at?: string
+  tts_audio_url?: string
 }
 
 /** JD 列表响应。 */
@@ -382,6 +421,28 @@ export async function fetchInterviewStatus(
 /** 查询面试回放详情。 */
 export async function fetchInterviewPlayback(interviewId: string): Promise<InterviewPlaybackResponse> {
   const { data } = await apiClient.get<InterviewPlaybackResponse>(`/interviews/${interviewId}/playback`)
+  return data
+}
+
+/** 查询预约面试列表。 */
+export async function fetchInterviewSchedules(params: {
+  scheduled_from?: string
+  scheduled_to?: string
+  statuses?: string[]
+}): Promise<InterviewScheduleListResponse> {
+  const { data } = await apiClient.get<InterviewScheduleListResponse>('/interviews/schedules', {
+    params: {
+      scheduled_from: params.scheduled_from,
+      scheduled_to: params.scheduled_to,
+      statuses: params.statuses?.join(','),
+    },
+  })
+  return data
+}
+
+/** 开始预约面试。 */
+export async function startScheduledInterview(interviewId: string): Promise<StartScheduledInterviewResponse> {
+  const { data } = await apiClient.post<StartScheduledInterviewResponse>(`/interviews/${interviewId}/start`)
   return data
 }
 

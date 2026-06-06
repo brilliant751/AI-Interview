@@ -6,6 +6,7 @@ import json
 import sqlite3
 import uuid
 from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 
@@ -136,6 +137,7 @@ class InterviewRepository:
                   input_mode TEXT NOT NULL,
                   output_mode TEXT NOT NULL,
                   status TEXT NOT NULL DEFAULT 'ACTIVE',
+                  scheduled_start_at TEXT,
                   current_stage TEXT NOT NULL DEFAULT 'SELF_INTRO',
                   follow_up_count INTEGER NOT NULL DEFAULT 0,
                   technical_count INTEGER NOT NULL DEFAULT 0,
@@ -295,6 +297,7 @@ class InterviewRepository:
             self._ensure_column(conn, "interview_sessions", "jd_id", "TEXT")
             self._ensure_column(conn, "interview_sessions", "jd_snapshot_title", "TEXT NOT NULL DEFAULT ''")
             self._ensure_column(conn, "interview_sessions", "jd_snapshot_content", "TEXT NOT NULL DEFAULT ''")
+            self._ensure_column(conn, "interview_sessions", "scheduled_start_at", "TEXT")
             self._ensure_column(conn, "interview_reports", "dimension_scores", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_reports", "jd_resume_alignment", "TEXT NOT NULL DEFAULT '[]'")
             self._ensure_column(conn, "interview_reports", "question_deep_dives", "TEXT NOT NULL DEFAULT '[]'")
@@ -760,12 +763,17 @@ class InterviewRepository:
         """创建面试会话记录。"""
         interview_id = f"int_{uuid.uuid4().hex[:12]}"
         snapshot = jd_snapshot or {}
+        status = str(payload.get("status") or "ACTIVE")
+        scheduled_start_at = str(payload.get("scheduled_start_at") or "").strip() or None
+        now_text = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        started_at = scheduled_start_at or now_text
+        duration_updated_at = now_text if status == "ACTIVE" else None
         with self._session() as conn:
             conn.execute(
                 """
                 INSERT INTO interview_sessions(
-                  interview_id, user_id, resume_id, jd_id, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', 'SELF_INTRO', 0, 0, 0, datetime('now'), datetime('now'))
+                  interview_id, user_id, resume_id, jd_id, jd_snapshot_title, jd_snapshot_content, session_name, question_types, job_role, difficulty, input_mode, output_mode, status, scheduled_start_at, current_stage, follow_up_count, technical_count, duration_seconds, duration_updated_at, started_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SELF_INTRO', 0, 0, 0, ?, ?)
                 """,
                 (
                     interview_id,
@@ -780,9 +788,13 @@ class InterviewRepository:
                     payload["difficulty"],
                     payload["input_mode"],
                     payload["output_mode"],
+                    status,
+                    scheduled_start_at,
+                    duration_updated_at,
+                    started_at,
                 ),
             )
-        return {"interview_id": interview_id, "current_stage": "SELF_INTRO"}
+        return {"interview_id": interview_id, "current_stage": "SELF_INTRO", "status": status}
 
     def create_practice_session(self, user_id: str, payload: dict) -> dict:
         """创建题库练习会话记录。"""
@@ -1350,6 +1362,70 @@ class InterviewRepository:
                 (interview_id,),
             ).fetchone()
         return dict(row) if row else None
+
+    def list_scheduled_sessions(
+        self,
+        user_id: str,
+        scheduled_from: str | None,
+        scheduled_to: str | None,
+        statuses: list[str] | None = None,
+    ) -> list[dict]:
+        """按预约时间范围查询当前用户的预约面试。"""
+        where = [
+            "s.user_id = ?",
+            "COALESCE(s.scheduled_start_at, '') != ''",
+        ]
+        params: list[object] = [user_id]
+        if scheduled_from:
+            where.append("datetime(s.scheduled_start_at) >= datetime(?)")
+            params.append(scheduled_from)
+        if scheduled_to:
+            where.append("datetime(s.scheduled_start_at) <= datetime(?)")
+            params.append(scheduled_to)
+        normalized_statuses = [str(item).strip().upper() for item in (statuses or []) if str(item).strip()]
+        if normalized_statuses:
+            placeholders = ", ".join("?" for _ in normalized_statuses)
+            where.append(f"s.status IN ({placeholders})")
+            params.extend(normalized_statuses)
+        where_clause = " AND ".join(where)
+        with self._session() as conn:
+            rows = conn.execute(
+                f"""
+                SELECT
+                  s.interview_id,
+                  s.session_name,
+                  s.resume_id,
+                  COALESCE(r.filename, '') AS resume_file_name,
+                  s.job_role,
+                  s.difficulty,
+                  s.status,
+                  s.scheduled_start_at,
+                  s.started_at,
+                  s.current_stage
+                FROM interview_sessions s
+                LEFT JOIN resumes r ON r.resume_id = s.resume_id AND r.user_id = s.user_id
+                WHERE {where_clause}
+                ORDER BY datetime(s.scheduled_start_at) ASC, s.interview_id ASC
+                """,
+                params,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def start_scheduled_session(self, user_id: str, interview_id: str) -> bool:
+        """将已到点的预约会话切换为进行中。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                UPDATE interview_sessions
+                SET status = 'ACTIVE',
+                    duration_updated_at = datetime('now')
+                WHERE interview_id = ?
+                  AND user_id = ?
+                  AND status = 'SCHEDULED'
+                """,
+                (interview_id, user_id),
+            )
+        return row.rowcount > 0
 
     def pause_session(self, user_id: str, interview_id: str) -> bool:
         """将进行中的会话置为暂停。"""

@@ -199,7 +199,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\"\n}"
+              "raw": "{\n  \"resume_id\": \"{{resume_id}}\",\n  \"jd_id\": \"{{jd_id}}\",\n  \"session_name\": \"Java 一面\",\n  \"question_types\": [\"project\", \"technical\", \"scenario\"],\n  \"job_role\": \"java\",\n  \"difficulty\": \"medium\",\n  \"input_mode\": \"voice\",\n  \"output_mode\": \"voice\",\n  \"scheduled_start_at\": \"2026-06-06T10:30:00.000Z\"\n}"
             },
             "url": "{{base_url}}/interviews"
           }
@@ -396,6 +396,32 @@
               }
             ],
             "url": "{{base_url}}/interviews/{{interview_id}}/resume"
+          }
+        },
+        {
+          "name": "List Interview Schedules",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interviews/schedules?scheduled_from=2026-06-01T00:00:00.000Z&scheduled_to=2026-06-30T23:59:59.999Z&statuses=SCHEDULED,ACTIVE,PAUSED"
+          }
+        },
+        {
+          "name": "Start Scheduled Interview",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/interviews/{{interview_id}}/start"
           }
         },
         {
