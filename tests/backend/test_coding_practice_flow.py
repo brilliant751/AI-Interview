@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 import sys
 import tempfile
 import unittest
@@ -162,6 +161,8 @@ class CodingPracticeFlowTestCase(unittest.TestCase):
         self.user_headers = {"Authorization": "Bearer user-token"}
         self.admin_headers = {"Authorization": "Bearer admin-token"}
         self._seed_coding_question()
+        self.execution_calls: list[dict] = []
+        self.client.app.state.coding_practice_service.execution_service.execute_cases = self._fake_execute_cases
 
     def tearDown(self) -> None:
         """清理测试环境。"""
@@ -219,6 +220,25 @@ class CodingPracticeFlowTestCase(unittest.TestCase):
                 "source": {"origin": "unit-test"},
             }
         )
+
+    def _fake_execute_cases(self, language: str, source_code: str, cases: list[dict], submit_type: str) -> dict:
+        """替代真实编译器执行，保证 API 流程测试不依赖本地工具链。"""
+        self.execution_calls.append(
+            {
+                "language": language,
+                "source_code": source_code,
+                "case_count": len(cases),
+                "submit_type": submit_type,
+            }
+        )
+        return {
+            "status": "ACCEPTED",
+            "passed_count": len(cases),
+            "total_count": len(cases),
+            "submit_type": submit_type,
+            "message": "全部通过",
+            "results": [],
+        }
 
     def test_list_questions_and_create_session(self) -> None:
         """应能获取题目列表并创建练习会话。"""
@@ -313,6 +333,7 @@ class CodingPracticeFlowTestCase(unittest.TestCase):
             self.assertEqual(200, run_resp.status_code, msg=f"{language}: {run_resp.text}")
             self.assertEqual("ACCEPTED", run_resp.json()["result"]["status"], msg=f"{language}: {run_resp.text}")
             self.assertEqual(1, run_resp.json()["result"]["passed_count"], msg=f"{language}: {run_resp.text}")
+        self.assertEqual(["cpp", "java", "javascript"], [call["language"] for call in self.execution_calls])
 
     def test_scope_protection(self) -> None:
         """不同用户不能读取他人的编程练习会话。"""
