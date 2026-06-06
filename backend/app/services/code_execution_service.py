@@ -99,7 +99,7 @@ class CodeExecutionService:
         if language == "java":
             return _LanguageConfig(
                 source_file="Main.java",
-                compile_command=["javac", "--release", "21", "Main.java"],
+                compile_command=None,
                 run_command=["java", "-cp", ".", "Main"],
             )
         if language == "javascript":
@@ -112,11 +112,27 @@ class CodeExecutionService:
 
     def _compile_if_needed(self, workdir: Path, config: _LanguageConfig) -> str | None:
         """执行编译步骤。"""
+        if config.source_file == "Main.java":
+            return self._compile_java(workdir)
         if config.compile_command is None:
             return None
+        return self._run_compile_command(workdir, config.compile_command)
+
+    def _compile_java(self, workdir: Path) -> str | None:
+        """编译 Java 代码，并在低版本 JDK 环境下自动降级。"""
+        primary_command = ["javac", "--release", "21", "Main.java"]
+        compile_error = self._run_compile_command(workdir, primary_command)
+        if compile_error is None:
+            return None
+        if "release version 21 not supported" not in compile_error.lower():
+            return compile_error
+        return self._run_compile_command(workdir, ["javac", "Main.java"])
+
+    def _run_compile_command(self, workdir: Path, command: list[str]) -> str | None:
+        """执行单条编译命令并返回错误输出。"""
         try:
             result = subprocess.run(
-                config.compile_command,
+                command,
                 cwd=workdir,
                 capture_output=True,
                 text=True,
