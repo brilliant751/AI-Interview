@@ -73,6 +73,30 @@ class InterviewFlowTestCase(unittest.TestCase):
         self.assertEqual(200, jd_upload.status_code)
         return jd_upload.json()["jd_id"]
 
+    def _create_scheduled_interview(self, minutes_from_now: int = 30) -> tuple[str, str]:
+        """创建预约面试并返回会话 ID 与预约时间。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+        scheduled_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes_from_now)).isoformat()
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": self.default_java_jd_id,
+                "job_role": "java",
+                "difficulty": "medium",
+                "input_mode": "text",
+                "output_mode": "text",
+                "scheduled_start_at": scheduled_at,
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, create_resp.status_code)
+        self.assertEqual("SCHEDULED", create_resp.json()["status"])
+        return create_resp.json()["interview_id"], scheduled_at
+
     def _submit_turn_and_wait(
         self,
         interview_id: str,

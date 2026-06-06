@@ -110,7 +110,7 @@ def normalize_question_file(role: str, source_path: Path, content: str) -> list[
         prompt = pick_section_text(seg.body, "题干") or seg.title
         category = normalize_question_category(pick_section_text(seg.body, "类别"))
         analysis = pick_section_text(seg.body, "解析")
-        source_rel_path = str(source_path.relative_to(REPO_ROOT))
+        source_rel_path = source_path.relative_to(REPO_ROOT).as_posix()
         record_id = stable_id(role, source_rel_path, str(seg.order), seg.title)
         rows.append(
             {
