@@ -916,6 +916,82 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/interviews/schedules:
+    get:
+      tags:
+      - interviews
+      summary: List Interview Schedules
+      description: 按时间范围查询当前用户预约面试列表。
+      operationId: list_interview_schedules_api_v1_interviews_schedules_get
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: scheduled_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scheduled From
+      - name: scheduled_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scheduled To
+      - name: statuses
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Statuses
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewScheduleListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/v1/interviews/{interview_id}/start:
+    post:
+      tags:
+      - interviews
+      summary: Start Interview
+      description: 开始已到预约时间的面试。
+      operationId: start_interview_api_v1_interviews__interview_id__start_post
+      security:
+      - HTTPBearer: []
+      parameters:
+      - name: interview_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Interview Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterviewStartResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
   /api/v1/interviews/paused:
     get:
       tags:
@@ -2577,6 +2653,10 @@ components:
           type: string
           title: Jd Id
           default: ''
+        scheduled_start_at:
+          type: string
+          title: Scheduled Start At
+          default: ''
       type: object
       required:
       - resume_id
@@ -2587,12 +2667,21 @@ components:
         interview_id:
           type: string
           title: Interview Id
+        status:
+          type: string
+          title: Status
+          default: ACTIVE
         current_stage:
           type: string
           title: Current Stage
         first_question:
           type: string
           title: First Question
+        scheduled_start_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scheduled Start At
         tts_audio_url:
           anyOf:
           - type: string
@@ -2734,6 +2823,115 @@ components:
       - question_ts
       title: InterviewPlaybackTurn
       description: 回放中的单轮问答。
+    InterviewScheduleItemResponse:
+      properties:
+        interview_id:
+          type: string
+          title: Interview Id
+        session_name:
+          type: string
+          title: Session Name
+          default: ''
+        resume_id:
+          type: string
+          title: Resume Id
+          default: ''
+        resume_file_name:
+          type: string
+          title: Resume File Name
+          default: ''
+        job_role:
+          type: string
+          title: Job Role
+        difficulty:
+          type: string
+          title: Difficulty
+        status:
+          type: string
+          title: Status
+        scheduled_start_at:
+          type: string
+          title: Scheduled Start At
+        started_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Started At
+        current_stage:
+          type: string
+          title: Current Stage
+          default: SELF_INTRO
+        start_available:
+          type: boolean
+          title: Start Available
+          default: false
+      type: object
+      required:
+      - interview_id
+      - job_role
+      - difficulty
+      - status
+      - scheduled_start_at
+      title: InterviewScheduleItemResponse
+      description: 预约面试条目响应。
+    InterviewScheduleListResponse:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/InterviewScheduleItemResponse'
+          type: array
+          title: Items
+      type: object
+      title: InterviewScheduleListResponse
+      description: 预约面试列表响应。
+    InterviewStartResponse:
+      properties:
+        interview_id:
+          type: string
+          title: Interview Id
+        status:
+          type: string
+          title: Status
+        stage:
+          type: string
+          title: Stage
+        question:
+          type: string
+          title: Question
+        job_role:
+          type: string
+          title: Job Role
+        difficulty:
+          type: string
+          title: Difficulty
+        input_mode:
+          type: string
+          title: Input Mode
+        output_mode:
+          type: string
+          title: Output Mode
+        scheduled_start_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scheduled Start At
+        tts_audio_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tts Audio Url
+      type: object
+      required:
+      - interview_id
+      - status
+      - stage
+      - question
+      - job_role
+      - difficulty
+      - input_mode
+      - output_mode
+      title: InterviewStartResponse
+      description: 开始预约面试响应。
     InterviewStatusResponse:
       properties:
         interview_id:
@@ -2779,6 +2977,15 @@ components:
           type: string
           title: Jd Source Type
           default: ''
+        scheduled_start_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scheduled Start At
+        start_available:
+          type: boolean
+          title: Start Available
+          default: false
         current_question:
           type: string
           title: Current Question

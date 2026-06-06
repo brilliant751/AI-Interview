@@ -8,6 +8,7 @@ import tempfile
 import time
 import unittest
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -71,6 +72,30 @@ class InterviewFlowTestCase(unittest.TestCase):
         )
         self.assertEqual(200, jd_upload.status_code)
         return jd_upload.json()["jd_id"]
+
+    def _create_scheduled_interview(self, minutes_from_now: int = 30) -> tuple[str, str]:
+        """创建预约面试并返回会话 ID 与预约时间。"""
+        files = {"file": ("resume.pdf", b"mock-pdf-content", "application/pdf")}
+        resume_resp = self.client.post("/api/v1/resumes", files=files, headers=self.user_headers)
+        self.assertIn(resume_resp.status_code, [200, 201])
+        resume_id = resume_resp.json()["resume_id"]
+        scheduled_at = (datetime.now(timezone.utc) + timedelta(minutes=minutes_from_now)).isoformat()
+        create_resp = self.client.post(
+            "/api/v1/interviews",
+            json={
+                "resume_id": resume_id,
+                "jd_id": self.default_java_jd_id,
+                "job_role": "java",
+                "difficulty": "medium",
+                "input_mode": "text",
+                "output_mode": "text",
+                "scheduled_start_at": scheduled_at,
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, create_resp.status_code)
+        self.assertEqual("SCHEDULED", create_resp.json()["status"])
+        return create_resp.json()["interview_id"], scheduled_at
 
     def _submit_turn_and_wait(
         self,
@@ -261,6 +286,51 @@ class InterviewFlowTestCase(unittest.TestCase):
         )
         self.assertEqual(200, resume_resp.status_code)
         self.assertEqual("ACTIVE", resume_resp.json()["status"])
+
+    def test_schedule_creation_and_list(self) -> None:
+        """验证可以创建预约面试并按时间范围查询。"""
+        interview_id, scheduled_at = self._create_scheduled_interview(minutes_from_now=45)
+        start_range = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+        end_range = (datetime.now(timezone.utc) + timedelta(minutes=60)).isoformat()
+        list_resp = self.client.get(
+            "/api/v1/interviews/schedules",
+            params={
+                "scheduled_from": start_range,
+                "scheduled_to": end_range,
+                "statuses": "SCHEDULED",
+            },
+            headers=self.user_headers,
+        )
+        self.assertEqual(200, list_resp.status_code)
+        self.assertTrue(any(item["interview_id"] == interview_id for item in list_resp.json()["items"]))
+        target = next(item for item in list_resp.json()["items"] if item["interview_id"] == interview_id)
+        self.assertEqual("SCHEDULED", target["status"])
+        self.assertFalse(target["start_available"])
+        self.assertTrue(target["scheduled_start_at"])
+        self.assertTrue(scheduled_at)
+
+    def test_schedule_cannot_start_before_time_but_can_start_when_due(self) -> None:
+        """验证预约面试未到时间不可开始，到点后可开始。"""
+        interview_id, _scheduled_at = self._create_scheduled_interview(minutes_from_now=20)
+        early_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        self.assertEqual(409, early_resp.status_code)
+        self.assertEqual("INTERVIEW_409_NOT_READY", early_resp.json()["error"]["code"])
+
+        repo = self.client.app.state.repo
+        with repo._session() as conn:
+            conn.execute(
+                """
+                UPDATE interview_sessions
+                SET scheduled_start_at = datetime('now', '-5 minutes')
+                WHERE interview_id = ?
+                """,
+                (interview_id,),
+            )
+
+        start_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        self.assertEqual(200, start_resp.status_code)
+        self.assertEqual("ACTIVE", start_resp.json()["status"])
+        self.assertEqual(interview_id, start_resp.json()["interview_id"])
 
     def test_list_turns_endpoint(self) -> None:
         """验证查询轮次列表接口返回有效数据。"""
