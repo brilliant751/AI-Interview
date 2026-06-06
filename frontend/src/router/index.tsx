@@ -3,6 +3,8 @@ import { Navigate, Route, BrowserRouter, Routes, useLocation } from 'react-route
 import { AppLayout } from '../components/AppLayout'
 import { useAuthStore } from '../stores/authStore'
 import { AdminImportsPage } from '../pages/AdminImportsPage'
+import { CodingPracticeListPage } from '../pages/CodingPracticeListPage'
+import { CodingPracticeSessionPage } from '../pages/CodingPracticeSessionPage'
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
 import { HomeOverviewPage } from '../pages/HomeOverviewPage'
@@ -145,6 +147,22 @@ export function AppRouter() {
             element={
               <ProtectedRoute>
                 <PracticePreparePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coding-practice"
+            element={
+              <ProtectedRoute>
+                <CodingPracticeListPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/coding-practice/:sessionId"
+            element={
+              <ProtectedRoute>
+                <CodingPracticeSessionPage />
               </ProtectedRoute>
             }
           />

@@ -7,6 +7,7 @@ from fastapi import APIRouter
 from app.api.v1.admin import router as admin_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.company import router as company_router
+from app.api.v1.coding_practice import router as coding_practice_router
 from app.api.v1.history import router as history_router
 from app.api.v1.interview import router as interview_router
 from app.api.v1.practice import router as practice_router
@@ -17,6 +18,7 @@ from app.api.v1.resume import router as resume_router
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(auth_router)
 api_router.include_router(company_router)
+api_router.include_router(coding_practice_router)
 api_router.include_router(resume_router)
 api_router.include_router(jd_router)
 api_router.include_router(interview_router)

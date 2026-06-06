@@ -1,0 +1,167 @@
+[
+  {
+    "question_id": "coding-a-plus-b",
+    "slug": "a-plus-b",
+    "title": "A+B",
+    "difficulty": "easy",
+    "topic_tags": ["模拟", "输入输出"],
+    "prompt_markdown": "给定两个整数 `a` 和 `b`，输出它们的和。",
+    "input_spec": "输入一行，包含两个整数 `a` 和 `b`。",
+    "output_spec": "输出一个整数，表示 `a + b` 的结果。",
+    "constraints_text": "`a`、`b` 在 32 位有符号整数范围内。",
+    "sample_cases": [
+      { "input": "1 2\n", "output": "3\n" }
+    ],
+    "judge_cases": [
+      { "input": "1 2\n", "output": "3\n" },
+      { "input": "3 4\n", "output": "7\n" },
+      { "input": "0 0\n", "output": "0\n" },
+      { "input": "-1 3\n", "output": "2\n" },
+      { "input": "100 200\n", "output": "300\n" },
+      { "input": "-5 -6\n", "output": "-11\n" },
+      { "input": "7 8\n", "output": "15\n" },
+      { "input": "11 22\n", "output": "33\n" },
+      { "input": "9 -2\n", "output": "7\n" },
+      { "input": "123 456\n", "output": "579\n" }
+    ],
+    "self_test_case": { "input": "8 9\n", "output": "17\n" },
+    "starter_codes": {
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"hello world\" << \"\\n\";\n    return 0;\n}\n",
+      "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"hello world\");\n    }\n}\n",
+      "javascript": "console.log('hello world')\n"
+    },
+    "source": { "origin": "curated-local", "topic": "basic-io" }
+  },
+  {
+    "question_id": "coding-array-sum",
+    "slug": "array-sum",
+    "title": "数组求和",
+    "difficulty": "easy",
+    "topic_tags": ["数组", "循环"],
+    "prompt_markdown": "给定一个长度为 `n` 的整数数组，输出所有元素之和。",
+    "input_spec": "第一行输入整数 `n`。第二行输入 `n` 个整数。",
+    "output_spec": "输出数组元素之和。",
+    "constraints_text": "`1 <= n <= 1000`，数组元素绝对值不超过 `10^6`。",
+    "sample_cases": [
+      { "input": "3\n1 2 3\n", "output": "6\n" }
+    ],
+    "judge_cases": [
+      { "input": "1\n5\n", "output": "5\n" },
+      { "input": "2\n4 5\n", "output": "9\n" },
+      { "input": "5\n1 1 1 1 1\n", "output": "5\n" },
+      { "input": "4\n-1 2 -3 4\n", "output": "2\n" },
+      { "input": "3\n100 200 300\n", "output": "600\n" },
+      { "input": "6\n0 0 0 0 0 0\n", "output": "0\n" },
+      { "input": "3\n7 8 9\n", "output": "24\n" },
+      { "input": "5\n9 -2 3 -4 10\n", "output": "16\n" },
+      { "input": "2\n1000000 1000000\n", "output": "2000000\n" },
+      { "input": "7\n1 2 3 4 5 6 7\n", "output": "28\n" }
+    ],
+    "self_test_case": { "input": "4\n10 20 30 40\n", "output": "100\n" },
+    "starter_codes": {
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"hello world\" << \"\\n\";\n    return 0;\n}\n",
+      "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"hello world\");\n    }\n}\n",
+      "javascript": "console.log('hello world')\n"
+    },
+    "source": { "origin": "curated-local", "topic": "array" }
+  },
+  {
+    "question_id": "coding-fibonacci",
+    "slug": "fibonacci-nth",
+    "title": "第 n 个斐波那契数",
+    "difficulty": "easy",
+    "topic_tags": ["递推", "动态规划"],
+    "prompt_markdown": "定义斐波那契数列 `F(0)=0`，`F(1)=1`，`F(n)=F(n-1)+F(n-2)`。给定 `n`，输出 `F(n)`。",
+    "input_spec": "输入一个整数 `n`。",
+    "output_spec": "输出 `F(n)`。",
+    "constraints_text": "`0 <= n <= 45`。",
+    "sample_cases": [
+      { "input": "6\n", "output": "8\n" }
+    ],
+    "judge_cases": [
+      { "input": "0\n", "output": "0\n" },
+      { "input": "1\n", "output": "1\n" },
+      { "input": "2\n", "output": "1\n" },
+      { "input": "3\n", "output": "2\n" },
+      { "input": "5\n", "output": "5\n" },
+      { "input": "8\n", "output": "21\n" },
+      { "input": "10\n", "output": "55\n" },
+      { "input": "20\n", "output": "6765\n" },
+      { "input": "30\n", "output": "832040\n" },
+      { "input": "45\n", "output": "1134903170\n" }
+    ],
+    "self_test_case": { "input": "7\n", "output": "13\n" },
+    "starter_codes": {
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"hello world\" << \"\\n\";\n    return 0;\n}\n",
+      "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"hello world\");\n    }\n}\n",
+      "javascript": "console.log('hello world')\n"
+    },
+    "source": { "origin": "curated-local", "topic": "dp" }
+  },
+  {
+    "question_id": "coding-palindrome",
+    "slug": "palindrome-string",
+    "title": "回文字符串判断",
+    "difficulty": "easy",
+    "topic_tags": ["字符串", "双指针"],
+    "prompt_markdown": "给定一个只包含小写字母的字符串，判断它是否为回文串。若是输出 `YES`，否则输出 `NO`。",
+    "input_spec": "输入一个字符串 `s`。",
+    "output_spec": "如果 `s` 是回文串输出 `YES`，否则输出 `NO`。",
+    "constraints_text": "`1 <= |s| <= 10^5`。",
+    "sample_cases": [
+      { "input": "level\n", "output": "YES\n" }
+    ],
+    "judge_cases": [
+      { "input": "a\n", "output": "YES\n" },
+      { "input": "aa\n", "output": "YES\n" },
+      { "input": "ab\n", "output": "NO\n" },
+      { "input": "aba\n", "output": "YES\n" },
+      { "input": "abba\n", "output": "YES\n" },
+      { "input": "abcba\n", "output": "YES\n" },
+      { "input": "abca\n", "output": "NO\n" },
+      { "input": "racecar\n", "output": "YES\n" },
+      { "input": "coding\n", "output": "NO\n" },
+      { "input": "noonx\n", "output": "NO\n" }
+    ],
+    "self_test_case": { "input": "noon\n", "output": "YES\n" },
+    "starter_codes": {
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"hello world\" << \"\\n\";\n    return 0;\n}\n",
+      "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"hello world\");\n    }\n}\n",
+      "javascript": "console.log('hello world')\n"
+    },
+    "source": { "origin": "curated-local", "topic": "string" }
+  },
+  {
+    "question_id": "coding-max-subarray-sum",
+    "slug": "max-subarray-sum",
+    "title": "最大连续子数组和",
+    "difficulty": "medium",
+    "topic_tags": ["数组", "动态规划"],
+    "prompt_markdown": "给定一个整数数组，求最大连续子数组的元素和。",
+    "input_spec": "第一行输入整数 `n`。第二行输入 `n` 个整数。",
+    "output_spec": "输出最大连续子数组和。",
+    "constraints_text": "`1 <= n <= 10^5`，元素绝对值不超过 `10^4`。",
+    "sample_cases": [
+      { "input": "5\n1 -2 3 5 -1\n", "output": "8\n" }
+    ],
+    "judge_cases": [
+      { "input": "1\n5\n", "output": "5\n" },
+      { "input": "3\n-1 -2 -3\n", "output": "-1\n" },
+      { "input": "5\n1 2 3 4 5\n", "output": "15\n" },
+      { "input": "5\n1 -2 3 5 -1\n", "output": "8\n" },
+      { "input": "6\n-2 1 -3 4 -1 2\n", "output": "5\n" },
+      { "input": "4\n2 -1 2 3\n", "output": "6\n" },
+      { "input": "7\n-2 -3 4 -1 -2 1 5\n", "output": "7\n" },
+      { "input": "5\n0 0 0 0 0\n", "output": "0\n" },
+      { "input": "6\n5 -1 5 -1 5 -1\n", "output": "13\n" },
+      { "input": "8\n1 -1 1 -1 1 -1 1 -1\n", "output": "1\n" }
+    ],
+    "self_test_case": { "input": "6\n-2 1 -3 4 -1 2\n", "output": "5\n" },
+    "starter_codes": {
+      "cpp": "#include <iostream>\nusing namespace std;\n\nint main() {\n    cout << \"hello world\" << \"\\n\";\n    return 0;\n}\n",
+      "java": "public class Main {\n    public static void main(String[] args) {\n        System.out.println(\"hello world\");\n    }\n}\n",
+      "javascript": "console.log('hello world')\n"
+    },
+    "source": { "origin": "curated-local", "topic": "dp" }
+  }
+]
