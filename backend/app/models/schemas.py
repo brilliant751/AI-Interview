@@ -361,8 +361,8 @@ class InterviewScheduleItemResponse(BaseModel):
     start_available: bool = False
 
 
-class InterviewScheduleListResponse(BaseModel):
-    """预约面试列表响应。"""
+class InterviewScheduledSessionListResponse(BaseModel):
+    """预约面试会话列表响应。"""
 
     items: list[InterviewScheduleItemResponse] = Field(default_factory=list)
 

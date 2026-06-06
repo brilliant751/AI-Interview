@@ -18,7 +18,7 @@ from app.models.schemas import (
     InterviewPlaybackResponse,
     InterviewPlaybackResume,
     InterviewScheduleItemResponse,
-    InterviewScheduleListResponse,
+    InterviewScheduledSessionListResponse,
     InterviewStartResponse,
     InterviewPlaybackTurn,
     InterviewStatusResponse,
@@ -259,14 +259,14 @@ async def resume_interview(
     return ResumeInterviewResponse(**result)
 
 
-@router.get("/schedules", response_model=InterviewScheduleListResponse)
+@router.get("/schedules", response_model=InterviewScheduledSessionListResponse)
 async def list_interview_schedules(
     scheduled_from: Optional[str] = None,
     scheduled_to: Optional[str] = None,
     statuses: Optional[str] = None,
     auth: AuthContext = Depends(require_user),
     service: InterviewService = Depends(get_service),
-) -> InterviewScheduleListResponse:
+) -> InterviewScheduledSessionListResponse:
     """按时间范围查询当前用户预约面试列表。"""
     status_items = [item.strip().upper() for item in str(statuses or "").split(",") if item.strip()]
     rows = service.list_scheduled_interviews(
@@ -275,7 +275,7 @@ async def list_interview_schedules(
         scheduled_to=scheduled_to,
         statuses=status_items or None,
     )
-    return InterviewScheduleListResponse(
+    return InterviewScheduledSessionListResponse(
         items=[
             InterviewScheduleItemResponse(
                 interview_id=str(row.get("interview_id") or ""),
