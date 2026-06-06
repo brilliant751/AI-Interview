@@ -329,7 +329,12 @@
           "name": "Get Turn Job Result",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/interviews/{{interview_id}}/turn-jobs/{{job_id}}"
           }
         },
@@ -428,7 +433,12 @@
           "name": "List Reports",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
             "url": "{{base_url}}/report?page=1&page_size=10"
           }
         },
@@ -737,6 +747,113 @@
           }
         }
       ]
+    },
+    {
+      "name": "Coding Practice",
+      "item": [
+        {
+          "name": "List Coding Questions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/coding-practice/questions"
+          }
+        },
+        {
+          "name": "Create Coding Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_id\": \"coding-a-plus-b\"\n}"
+            },
+            "url": "{{base_url}}/coding-practice/sessions"
+          }
+        },
+        {
+          "name": "Get Coding Session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/coding-practice/sessions/{{coding_session_id}}"
+          }
+        },
+        {
+          "name": "Run Coding Self Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"javascript\",\n  \"source_code\": \"console.log('hello world')\"\n}"
+            },
+            "url": "{{base_url}}/coding-practice/sessions/{{coding_session_id}}/run"
+          }
+        },
+        {
+          "name": "Submit Coding Solution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"language\": \"javascript\",\n  \"source_code\": \"console.log('hello world')\"\n}"
+            },
+            "url": "{{base_url}}/coding-practice/sessions/{{coding_session_id}}/submit"
+          }
+        },
+        {
+          "name": "List Coding Records",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": "{{base_url}}/coding-practice/records"
+          }
+        }
+      ]
     }
   ],
   "variable": [
@@ -770,6 +887,10 @@
     },
     {
       "key": "task_id",
+      "value": ""
+    },
+    {
+      "key": "coding_session_id",
       "value": ""
     }
   ]

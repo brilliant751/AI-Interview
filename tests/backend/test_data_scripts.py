@@ -275,6 +275,79 @@ class DataScriptsTestCase(unittest.TestCase):
         self.assertEqual(1, skipped)
         self.assertEqual(1, count)
 
+    def test_import_coding_practice_questions_is_idempotent(self) -> None:
+        """验证编程题导入脚本重复执行时保持幂等。"""
+        import_coding_questions = self.load_script_module("import_coding_practice_questions")
+        sample_rows = [
+            {
+                "question_id": "coding-1",
+                "slug": "a-plus-b",
+                "title": "A+B",
+                "difficulty": "easy",
+                "topic_tags": ["模拟"],
+                "prompt_markdown": "给定两个整数，输出它们的和。",
+                "input_spec": "一行两个整数。",
+                "output_spec": "输出一个整数。",
+                "constraints_text": "整数范围在 32 位内。",
+                "sample_cases": [{"input": "1 2\n", "output": "3\n"}],
+                "judge_cases": [{"input": "3 4\n", "output": "7\n"}] * 10,
+                "self_test_case": {"input": "5 6\n", "output": "11\n"},
+                "starter_codes": {
+                    "cpp": "#include <iostream>\nint main(){return 0;}\n",
+                    "java": "public class Main { public static void main(String[] args) {} }\n",
+                    "javascript": "process.stdin.on('data', () => {})\n",
+                },
+                "source": {"origin": "unit-test"},
+            }
+        ]
+        conn = sqlite3.connect(":memory:")
+        try:
+            import_coding_questions.init_schema(conn)
+            with conn:
+                first = import_coding_questions.upsert_rows(conn, sample_rows)
+            with conn:
+                second = import_coding_questions.upsert_rows(conn, sample_rows)
+            count = conn.execute("SELECT COUNT(*) FROM coding_questions").fetchone()[0]
+        finally:
+            conn.close()
+
+        self.assertEqual((1, 0), first)
+        self.assertEqual((1, 0), second)
+        self.assertEqual(1, count)
+
+    def test_import_coding_practice_questions_rejects_invalid_case_count(self) -> None:
+        """编程题导入脚本应拒绝正式用例不足 10 条的题目。"""
+        import_coding_questions = self.load_script_module("import_coding_practice_questions")
+        bad_rows = [
+            {
+                "question_id": "coding-bad",
+                "slug": "bad-problem",
+                "title": "坏题目",
+                "difficulty": "easy",
+                "topic_tags": ["模拟"],
+                "prompt_markdown": "坏题目",
+                "input_spec": "输入",
+                "output_spec": "输出",
+                "constraints_text": "约束",
+                "sample_cases": [{"input": "1\n", "output": "1\n"}],
+                "judge_cases": [{"input": "1\n", "output": "1\n"}],
+                "self_test_case": {"input": "1\n", "output": "1\n"},
+                "starter_codes": {
+                    "cpp": "#include <iostream>\nint main(){return 0;}\n",
+                    "java": "public class Main { public static void main(String[] args) {} }\n",
+                    "javascript": "process.stdin.on('data', () => {})\n",
+                },
+                "source": {"origin": "unit-test"},
+            }
+        ]
+        conn = sqlite3.connect(":memory:")
+        try:
+            import_coding_questions.init_schema(conn)
+            with self.assertRaisesRegex(RuntimeError, "10"):
+                import_coding_questions.upsert_rows(conn, bad_rows)
+        finally:
+            conn.close()
+
     def test_vectorstore_build_dry_run(self) -> None:
         """验证向量索引构建 dry-run 可执行并输出关键字段。"""
         cmd = [

@@ -44,6 +44,7 @@
   - Java 知识库：`backend/assets/material/java/java-knowledge/`
   - Web 题库：`backend/assets/material/web/interview.md`
   - Web 知识库：`backend/assets/material/web/knowledge.md`
+  - 编程练习题库：`backend/assets/material/coding/programming_practice_questions.json`
 - 任何 Agent 规划/实现“题库导入、知识库向量化、检索构建”任务时，必须以上述路径为唯一输入来源，若新增来源需先在本文件登记。
 - 数据导入必须提供可复用脚本（支持重复执行、幂等、失败重试、校验报告），禁止仅通过一次性手工导入完成交付。
 

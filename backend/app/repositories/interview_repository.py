@@ -102,6 +102,83 @@ class InterviewRepository:
                 CREATE INDEX IF NOT EXISTS idx_practice_answers_user_session ON practice_answers(user_id, practice_id, created_at ASC);
         """
 
+    def _coding_tables_sql(self) -> str:
+        """返回编程练习域的表结构 DDL。"""
+        return """
+                CREATE TABLE IF NOT EXISTS coding_questions (
+                  question_id TEXT PRIMARY KEY,
+                  slug TEXT NOT NULL UNIQUE,
+                  title TEXT NOT NULL,
+                  difficulty TEXT NOT NULL,
+                  topic_tags TEXT NOT NULL DEFAULT '[]',
+                  prompt_markdown TEXT NOT NULL,
+                  input_spec TEXT NOT NULL,
+                  output_spec TEXT NOT NULL,
+                  constraints_text TEXT NOT NULL DEFAULT '',
+                  sample_cases TEXT NOT NULL DEFAULT '[]',
+                  judge_cases TEXT NOT NULL DEFAULT '[]',
+                  self_test_case TEXT NOT NULL DEFAULT '{}',
+                  starter_codes TEXT NOT NULL DEFAULT '{}',
+                  source TEXT NOT NULL DEFAULT '{}',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                );
+
+                CREATE TABLE IF NOT EXISTS coding_sessions (
+                  session_id TEXT PRIMARY KEY,
+                  user_id TEXT NOT NULL,
+                  question_id TEXT NOT NULL,
+                  status TEXT NOT NULL DEFAULT 'ACTIVE',
+                  last_language TEXT NOT NULL DEFAULT 'cpp',
+                  last_opened_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  UNIQUE(user_id, question_id),
+                  FOREIGN KEY (question_id) REFERENCES coding_questions(question_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS coding_drafts (
+                  draft_id TEXT PRIMARY KEY,
+                  session_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  question_id TEXT NOT NULL,
+                  language TEXT NOT NULL,
+                  source_code TEXT NOT NULL,
+                  last_result_payload TEXT NOT NULL DEFAULT '{}',
+                  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  UNIQUE(session_id, language),
+                  FOREIGN KEY (session_id) REFERENCES coding_sessions(session_id) ON DELETE CASCADE,
+                  FOREIGN KEY (question_id) REFERENCES coding_questions(question_id) ON DELETE CASCADE
+                );
+
+                CREATE TABLE IF NOT EXISTS coding_submissions (
+                  submission_id TEXT PRIMARY KEY,
+                  session_id TEXT NOT NULL,
+                  user_id TEXT NOT NULL,
+                  question_id TEXT NOT NULL,
+                  language TEXT NOT NULL,
+                  source_code TEXT NOT NULL,
+                  submit_type TEXT NOT NULL,
+                  status TEXT NOT NULL,
+                  passed_count INTEGER NOT NULL DEFAULT 0,
+                  total_count INTEGER NOT NULL DEFAULT 0,
+                  result_payload TEXT NOT NULL DEFAULT '{}',
+                  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                  FOREIGN KEY (session_id) REFERENCES coding_sessions(session_id) ON DELETE CASCADE,
+                  FOREIGN KEY (question_id) REFERENCES coding_questions(question_id) ON DELETE CASCADE
+                );
+        """
+
+    def _coding_indexes_sql(self) -> str:
+        """返回编程练习域的索引 DDL。"""
+        return """
+                CREATE INDEX IF NOT EXISTS idx_coding_questions_difficulty ON coding_questions(difficulty, question_id);
+                CREATE INDEX IF NOT EXISTS idx_coding_sessions_user_updated ON coding_sessions(user_id, updated_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_coding_drafts_session_language ON coding_drafts(session_id, language);
+                CREATE INDEX IF NOT EXISTS idx_coding_submissions_session_created ON coding_submissions(session_id, created_at DESC);
+        """
+
     def init_schema(self) -> None:
         """初始化核心表结构。"""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
@@ -263,11 +340,13 @@ class InterviewRepository:
                   created_at TEXT NOT NULL DEFAULT (datetime('now'))
                 );
                 {self._practice_tables_sql()}
+                {self._coding_tables_sql()}
 
                 CREATE INDEX IF NOT EXISTS idx_user_accounts_email ON user_accounts(email);
                 CREATE INDEX IF NOT EXISTS idx_refresh_user_expires ON auth_refresh_tokens(user_id, expires_at);
                 CREATE INDEX IF NOT EXISTS idx_reset_user_expires ON auth_password_reset_tokens(user_id, expires_at);
                 {self._practice_indexes_sql()}
+                {self._coding_indexes_sql()}
                 """
             )
             self._ensure_column(conn, "interview_sessions", "technical_count", "INTEGER NOT NULL DEFAULT 0")
@@ -371,6 +450,7 @@ class InterviewRepository:
                 "CREATE INDEX IF NOT EXISTS idx_turn_jobs_interview_created ON interview_turn_jobs(interview_id, created_at DESC)"
             )
             conn.executescript(self._practice_indexes_sql())
+            conn.executescript(self._coding_indexes_sql())
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_user_created ON job_descriptions(user_id, created_at DESC)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_role_source ON job_descriptions(job_role, source_type)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_jd_company_id ON job_descriptions(company_id)")
@@ -616,6 +696,20 @@ class InterviewRepository:
         ).fetchone()
         if not row:
             raise ValueError("题目快照不存在或无权访问")
+
+    def _require_coding_session_owner(self, conn: sqlite3.Connection, user_id: str, session_id: str) -> dict:
+        """确保用户对编程练习会话具备访问权限。"""
+        row = conn.execute(
+            """
+            SELECT session_id, question_id, status, last_language
+            FROM coding_sessions
+            WHERE session_id = ? AND user_id = ?
+            """,
+            (session_id, user_id),
+        ).fetchone()
+        if not row:
+            raise ValueError("编程练习会话不存在或无权访问")
+        return dict(row)
 
     def _seed_companies(self, conn: sqlite3.Connection) -> None:
         """初始化主流公司数据。"""
@@ -1248,6 +1342,348 @@ class InterviewRepository:
             item["metadata"] = self._safe_json_loads(item.get("metadata"), {})
             items.append(item)
         return items, total
+
+    def upsert_coding_question(self, payload: dict) -> None:
+        """幂等写入编程练习题。"""
+        with self._session() as conn:
+            conn.execute(
+                """
+                INSERT INTO coding_questions(
+                  question_id, slug, title, difficulty, topic_tags, prompt_markdown, input_spec, output_spec,
+                  constraints_text, sample_cases, judge_cases, self_test_case, starter_codes, source
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(question_id) DO UPDATE SET
+                  slug = excluded.slug,
+                  title = excluded.title,
+                  difficulty = excluded.difficulty,
+                  topic_tags = excluded.topic_tags,
+                  prompt_markdown = excluded.prompt_markdown,
+                  input_spec = excluded.input_spec,
+                  output_spec = excluded.output_spec,
+                  constraints_text = excluded.constraints_text,
+                  sample_cases = excluded.sample_cases,
+                  judge_cases = excluded.judge_cases,
+                  self_test_case = excluded.self_test_case,
+                  starter_codes = excluded.starter_codes,
+                  source = excluded.source,
+                  updated_at = datetime('now')
+                """,
+                (
+                    str(payload["question_id"]),
+                    str(payload["slug"]),
+                    str(payload["title"]),
+                    str(payload["difficulty"]),
+                    json.dumps(payload.get("topic_tags") or [], ensure_ascii=False),
+                    str(payload["prompt_markdown"]),
+                    str(payload["input_spec"]),
+                    str(payload["output_spec"]),
+                    str(payload.get("constraints_text") or ""),
+                    json.dumps(payload.get("sample_cases") or [], ensure_ascii=False),
+                    json.dumps(payload.get("judge_cases") or [], ensure_ascii=False),
+                    json.dumps(payload.get("self_test_case") or {}, ensure_ascii=False),
+                    json.dumps(payload.get("starter_codes") or {}, ensure_ascii=False),
+                    json.dumps(payload.get("source") or {}, ensure_ascii=False),
+                ),
+            )
+
+    def list_coding_questions(self) -> list[dict]:
+        """读取编程练习题列表。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT question_id, slug, title, difficulty, topic_tags, prompt_markdown, input_spec, output_spec,
+                       constraints_text, sample_cases, judge_cases, self_test_case, starter_codes, source, updated_at
+                FROM coding_questions
+                ORDER BY difficulty ASC, question_id ASC
+                """
+            ).fetchall()
+        return [self._decode_coding_question(dict(row)) for row in rows]
+
+    def get_coding_question(self, question_id: str) -> dict | None:
+        """按题目 ID 查询编程练习题。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT question_id, slug, title, difficulty, topic_tags, prompt_markdown, input_spec, output_spec,
+                       constraints_text, sample_cases, judge_cases, self_test_case, starter_codes, source, updated_at
+                FROM coding_questions
+                WHERE question_id = ?
+                LIMIT 1
+                """,
+                (question_id,),
+            ).fetchone()
+        if not row:
+            return None
+        return self._decode_coding_question(dict(row))
+
+    def create_or_get_coding_session(self, user_id: str, question_id: str) -> dict:
+        """按用户和题目获取或创建编程练习会话。"""
+        with self._session() as conn:
+            existing = conn.execute(
+                """
+                SELECT session_id, user_id, question_id, status, last_language, last_opened_at, created_at, updated_at
+                FROM coding_sessions
+                WHERE user_id = ? AND question_id = ?
+                LIMIT 1
+                """,
+                (user_id, question_id),
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    """
+                    UPDATE coding_sessions
+                    SET last_opened_at = datetime('now'), updated_at = datetime('now')
+                    WHERE session_id = ?
+                    """,
+                    (existing["session_id"],),
+                )
+                refreshed = conn.execute(
+                    """
+                    SELECT session_id, user_id, question_id, status, last_language, last_opened_at, created_at, updated_at
+                    FROM coding_sessions
+                    WHERE session_id = ?
+                    """,
+                    (existing["session_id"],),
+                ).fetchone()
+                return dict(refreshed)
+
+            session_id = f"code_{uuid.uuid4().hex[:12]}"
+            conn.execute(
+                """
+                INSERT INTO coding_sessions(session_id, user_id, question_id, status, last_language)
+                VALUES (?, ?, ?, 'ACTIVE', 'cpp')
+                """,
+                (session_id, user_id, question_id),
+            )
+            row = conn.execute(
+                """
+                SELECT session_id, user_id, question_id, status, last_language, last_opened_at, created_at, updated_at
+                FROM coding_sessions
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        return dict(row)
+
+    def get_coding_session(self, user_id: str, session_id: str) -> dict | None:
+        """查询当前用户的编程练习会话。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT session_id, user_id, question_id, status, last_language, last_opened_at, created_at, updated_at
+                FROM coding_sessions
+                WHERE session_id = ? AND user_id = ?
+                LIMIT 1
+                """,
+                (session_id, user_id),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def get_coding_session_by_id(self, session_id: str) -> dict | None:
+        """按主键查询编程练习会话。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT session_id, user_id, question_id, status, last_language, last_opened_at, created_at, updated_at
+                FROM coding_sessions
+                WHERE session_id = ?
+                LIMIT 1
+                """,
+                (session_id,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def save_coding_draft(
+        self,
+        user_id: str,
+        session_id: str,
+        question_id: str,
+        language: str,
+        source_code: str,
+        result_payload: dict,
+    ) -> dict:
+        """保存编程练习草稿并同步更新最近语言。"""
+        draft_id = f"draft_{uuid.uuid4().hex[:12]}"
+        with self._session() as conn:
+            self._require_coding_session_owner(conn, user_id, session_id)
+            conn.execute(
+                """
+                INSERT INTO coding_drafts(draft_id, session_id, user_id, question_id, language, source_code, last_result_payload)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id, language) DO UPDATE SET
+                  source_code = excluded.source_code,
+                  last_result_payload = excluded.last_result_payload,
+                  updated_at = datetime('now')
+                """,
+                (
+                    draft_id,
+                    session_id,
+                    user_id,
+                    question_id,
+                    language,
+                    source_code,
+                    json.dumps(result_payload or {}, ensure_ascii=False),
+                ),
+            )
+            conn.execute(
+                """
+                UPDATE coding_sessions
+                SET last_language = ?, updated_at = datetime('now'), last_opened_at = datetime('now')
+                WHERE session_id = ? AND user_id = ?
+                """,
+                (language, session_id, user_id),
+            )
+            row = conn.execute(
+                """
+                SELECT draft_id, session_id, user_id, question_id, language, source_code, last_result_payload, updated_at, created_at
+                FROM coding_drafts
+                WHERE session_id = ? AND language = ?
+                LIMIT 1
+                """,
+                (session_id, language),
+            ).fetchone()
+        return self._decode_coding_draft(dict(row))
+
+    def get_coding_draft(self, user_id: str, session_id: str, language: str) -> dict | None:
+        """读取指定语言的编程练习草稿。"""
+        with self._session() as conn:
+            row = conn.execute(
+                """
+                SELECT draft_id, session_id, user_id, question_id, language, source_code, last_result_payload, updated_at, created_at
+                FROM coding_drafts
+                WHERE session_id = ? AND user_id = ? AND language = ?
+                LIMIT 1
+                """,
+                (session_id, user_id, language),
+            ).fetchone()
+        if not row:
+            return None
+        return self._decode_coding_draft(dict(row))
+
+    def list_coding_drafts(self, user_id: str, session_id: str) -> list[dict]:
+        """读取当前会话的全部语言草稿。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT draft_id, session_id, user_id, question_id, language, source_code, last_result_payload, updated_at, created_at
+                FROM coding_drafts
+                WHERE session_id = ? AND user_id = ?
+                ORDER BY language ASC
+                """,
+                (session_id, user_id),
+            ).fetchall()
+        return [self._decode_coding_draft(dict(row)) for row in rows]
+
+    def add_coding_submission(
+        self,
+        user_id: str,
+        session_id: str,
+        question_id: str,
+        language: str,
+        source_code: str,
+        submit_type: str,
+        result_payload: dict,
+    ) -> dict:
+        """保存运行或提交结果。"""
+        submission_id = f"sub_{uuid.uuid4().hex[:12]}"
+        status = str(result_payload.get("status") or "FAILED")
+        passed_count = int(result_payload.get("passed_count") or 0)
+        total_count = int(result_payload.get("total_count") or 0)
+        with self._session() as conn:
+            self._require_coding_session_owner(conn, user_id, session_id)
+            conn.execute(
+                """
+                INSERT INTO coding_submissions(
+                  submission_id, session_id, user_id, question_id, language, source_code, submit_type,
+                  status, passed_count, total_count, result_payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    submission_id,
+                    session_id,
+                    user_id,
+                    question_id,
+                    language,
+                    source_code,
+                    submit_type,
+                    status,
+                    passed_count,
+                    total_count,
+                    json.dumps(result_payload or {}, ensure_ascii=False),
+                ),
+            )
+            conn.execute(
+                """
+                UPDATE coding_sessions
+                SET status = CASE WHEN ? = 'ACCEPTED' AND ? = 'SUBMIT' THEN 'SOLVED' ELSE status END,
+                    last_language = ?,
+                    updated_at = datetime('now'),
+                    last_opened_at = datetime('now')
+                WHERE session_id = ? AND user_id = ?
+                """,
+                (status, submit_type, language, session_id, user_id),
+            )
+            row = conn.execute(
+                """
+                SELECT submission_id, session_id, user_id, question_id, language, source_code, submit_type,
+                       status, passed_count, total_count, result_payload, created_at
+                FROM coding_submissions
+                WHERE submission_id = ?
+                LIMIT 1
+                """,
+                (submission_id,),
+            ).fetchone()
+        return self._decode_coding_submission(dict(row))
+
+    def list_coding_records(self, user_id: str) -> list[dict]:
+        """读取当前用户的编程练习记录。"""
+        with self._session() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                  s.session_id,
+                  s.question_id,
+                  q.title,
+                  q.difficulty,
+                  s.status,
+                  s.last_language,
+                  s.last_opened_at,
+                  s.created_at,
+                  (
+                    SELECT status
+                    FROM coding_submissions sub
+                    WHERE sub.session_id = s.session_id
+                    ORDER BY sub.created_at DESC, sub.submission_id DESC
+                    LIMIT 1
+                  ) AS latest_submission_status
+                FROM coding_sessions s
+                JOIN coding_questions q ON q.question_id = s.question_id
+                WHERE s.user_id = ?
+                ORDER BY s.updated_at DESC, s.session_id DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def _decode_coding_question(self, item: dict) -> dict:
+        """解析编程题 JSON 字段。"""
+        item["topic_tags"] = self._safe_json_loads(item.get("topic_tags"), [])
+        item["sample_cases"] = self._safe_json_loads(item.get("sample_cases"), [])
+        item["judge_cases"] = self._safe_json_loads(item.get("judge_cases"), [])
+        item["self_test_case"] = self._safe_json_loads(item.get("self_test_case"), {})
+        item["starter_codes"] = self._safe_json_loads(item.get("starter_codes"), {})
+        item["source"] = self._safe_json_loads(item.get("source"), {})
+        return item
+
+    def _decode_coding_draft(self, item: dict) -> dict:
+        """解析编程练习草稿 JSON 字段。"""
+        item["last_result_payload"] = self._safe_json_loads(item.get("last_result_payload"), {})
+        return item
+
+    def _decode_coding_submission(self, item: dict) -> dict:
+        """解析编程练习提交 JSON 字段。"""
+        item["result_payload"] = self._safe_json_loads(item.get("result_payload"), {})
+        return item
 
     def create_jd(
         self,

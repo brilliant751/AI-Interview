@@ -90,6 +90,7 @@ export function AppLayout(props: { children: ReactNode }) {
     { key: '/overview', icon: <HomeOutlined />, label: <Link to="/overview">首页概览</Link> },
     { key: '/interview', icon: <FormOutlined />, label: <Link to="/interview">AI 面试</Link> },
     { key: '/practice', icon: <ReadOutlined />, label: <Link to="/practice">题库练习</Link> },
+    { key: '/coding-practice', icon: <ReadOutlined />, label: <Link to="/coding-practice">编程练习</Link> },
     { key: '/history', icon: <ScheduleOutlined />, label: <Link to="/history">面试记录</Link> },
     { key: '/report', icon: <FileTextOutlined />, label: <Link to="/report">我的报告</Link> },
     { key: '/jobs', icon: <BookOutlined />, label: <Link to="/jobs">岗位库</Link> },
