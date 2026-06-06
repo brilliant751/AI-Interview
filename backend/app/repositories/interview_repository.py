@@ -767,7 +767,7 @@ class InterviewRepository:
         scheduled_start_at = str(payload.get("scheduled_start_at") or "").strip() or None
         now_text = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         started_at = scheduled_start_at or now_text
-        duration_updated_at = now_text if status == "ACTIVE" else None
+        duration_updated_at = started_at if status != "ACTIVE" else now_text
         with self._session() as conn:
             conn.execute(
                 """
