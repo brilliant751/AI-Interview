@@ -358,8 +358,8 @@ export interface InterviewStatusResponse {
   duration_updated_at?: string
 }
 
-/** 预约面试条目。 */
-export interface InterviewScheduleItem {
+/** 面试会话级预约条目。 */
+export interface ScheduledInterviewItem {
   interview_id: string
   session_name?: string
   resume_id: string
@@ -373,12 +373,12 @@ export interface InterviewScheduleItem {
   start_available: boolean
 }
 
-/** 预约面试列表响应。 */
-export interface InterviewScheduleListResponse {
-  items: InterviewScheduleItem[]
+/** 面试会话级预约列表响应。 */
+export interface ScheduledInterviewListResponse {
+  items: ScheduledInterviewItem[]
 }
 
-/** 开始预约面试响应。 */
+/** 开始已预约面试会话响应。 */
 export interface StartScheduledInterviewResponse {
   interview_id: string
   status: 'ACTIVE'
@@ -595,13 +595,13 @@ export async function fetchInterviewPlayback(interviewId: string): Promise<Inter
   return data
 }
 
-/** 查询预约面试列表。 */
-export async function fetchInterviewSchedules(params: {
+/** 查询面试会话级预约列表。 */
+export async function fetchScheduledInterviews(params: {
   scheduled_from?: string
   scheduled_to?: string
   statuses?: string[]
-}): Promise<InterviewScheduleListResponse> {
-  const { data } = await apiClient.get<InterviewScheduleListResponse>('/interviews/schedules', {
+}): Promise<ScheduledInterviewListResponse> {
+  const { data } = await apiClient.get<ScheduledInterviewListResponse>('/interviews/schedules', {
     params: {
       scheduled_from: params.scheduled_from,
       scheduled_to: params.scheduled_to,

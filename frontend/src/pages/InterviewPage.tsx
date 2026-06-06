@@ -14,6 +14,7 @@ import {
   fetchHistory,
   fetchInterviewPlayback,
   fetchInterviewSchedules,
+  fetchScheduledInterviews,
   fetchJds,
   fetchTurnJobResult,
   fetchInterviewStatus,
@@ -568,7 +569,7 @@ export function InterviewPage() {
   const scheduleQuery = useQuery({
     queryKey: ['interview-schedules', calendarValue.format('YYYY-MM')],
     queryFn: () =>
-      fetchInterviewSchedules({
+      fetchScheduledInterviews({
         scheduled_from: calendarValue.startOf('month').toDate().toISOString(),
         scheduled_to: calendarValue.endOf('month').toDate().toISOString(),
         statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],

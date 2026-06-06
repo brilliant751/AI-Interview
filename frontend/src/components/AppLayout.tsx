@@ -18,7 +18,7 @@ import type { MenuProps } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
-import { fetchInterviewSchedules } from '../api/interview'
+import { fetchScheduledInterviews } from '../api/interview'
 import { useAuthStore } from '../stores/authStore'
 
 const { Header, Content, Sider } = Layout
@@ -50,7 +50,7 @@ export function AppLayout(props: { children: ReactNode }) {
   const todayScheduleQuery = useQuery({
     queryKey: ['today-interview-schedules', isAuthenticated],
     queryFn: () =>
-      fetchInterviewSchedules({
+      fetchScheduledInterviews({
         ...buildTodayRange(),
         statuses: ['SCHEDULED', 'ACTIVE', 'PAUSED'],
       }),
