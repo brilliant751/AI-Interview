@@ -8,6 +8,7 @@ import tempfile
 import time
 import unittest
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi.testclient import TestClient
 
@@ -277,8 +278,12 @@ class InterviewFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(200, list_resp.status_code)
-        self.assertTrue(any(item["interview_id"] == interview_id for item in list_resp.json()["items"]))
-        target = next(item for item in list_resp.json()["items"] if item["interview_id"] == interview_id)
+        self.assertTrue(
+            any(item["interview_id"] == interview_id for item in list_resp.json()["items"])
+        )
+        target = next(
+            item for item in list_resp.json()["items"] if item["interview_id"] == interview_id
+        )
         self.assertEqual("SCHEDULED", target["status"])
         self.assertFalse(target["start_available"])
         self.assertTrue(target["scheduled_start_at"])
@@ -287,7 +292,10 @@ class InterviewFlowTestCase(unittest.TestCase):
     def test_schedule_cannot_start_before_time_but_can_start_when_due(self) -> None:
         """验证预约面试未到时间不可开始，到点后可开始。"""
         interview_id, _scheduled_at = self._create_scheduled_interview(minutes_from_now=20)
-        early_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        early_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/start",
+            headers=self.user_headers,
+        )
         self.assertEqual(409, early_resp.status_code)
         self.assertEqual("INTERVIEW_409_NOT_READY", early_resp.json()["error"]["code"])
 
@@ -302,7 +310,10 @@ class InterviewFlowTestCase(unittest.TestCase):
                 (interview_id,),
             )
 
-        start_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        start_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/start",
+            headers=self.user_headers,
+        )
         self.assertEqual(200, start_resp.status_code)
         self.assertEqual("ACTIVE", start_resp.json()["status"])
         self.assertEqual(interview_id, start_resp.json()["interview_id"])
