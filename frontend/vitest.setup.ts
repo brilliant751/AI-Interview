@@ -16,3 +16,14 @@ if (!window.matchMedia) {
     }),
   })
 }
+
+/** 兼容 axios 请求拦截器中的 randomUUID。 */
+if (!globalThis.crypto?.randomUUID) {
+  Object.defineProperty(globalThis, 'crypto', {
+    writable: true,
+    value: {
+      ...(globalThis.crypto ?? {}),
+      randomUUID: () => '00000000-0000-4000-8000-000000000000',
+    },
+  })
+}

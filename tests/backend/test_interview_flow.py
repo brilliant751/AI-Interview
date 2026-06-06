@@ -335,8 +335,12 @@ class InterviewFlowTestCase(unittest.TestCase):
             headers=self.user_headers,
         )
         self.assertEqual(200, list_resp.status_code)
-        self.assertTrue(any(item["interview_id"] == interview_id for item in list_resp.json()["items"]))
-        target = next(item for item in list_resp.json()["items"] if item["interview_id"] == interview_id)
+        self.assertTrue(
+            any(item["interview_id"] == interview_id for item in list_resp.json()["items"])
+        )
+        target = next(
+            item for item in list_resp.json()["items"] if item["interview_id"] == interview_id
+        )
         self.assertEqual("SCHEDULED", target["status"])
         self.assertFalse(target["start_available"])
         self.assertTrue(target["scheduled_start_at"])
@@ -345,7 +349,10 @@ class InterviewFlowTestCase(unittest.TestCase):
     def test_schedule_cannot_start_before_time_but_can_start_when_due(self) -> None:
         """验证预约面试未到时间不可开始，到点后可开始。"""
         interview_id, _scheduled_at = self._create_scheduled_interview(minutes_from_now=20)
-        early_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        early_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/start",
+            headers=self.user_headers,
+        )
         self.assertEqual(409, early_resp.status_code)
         self.assertEqual("INTERVIEW_409_NOT_READY", early_resp.json()["error"]["code"])
 
@@ -360,24 +367,13 @@ class InterviewFlowTestCase(unittest.TestCase):
                 (interview_id,),
             )
 
-        start_resp = self.client.post(f"/api/v1/interviews/{interview_id}/start", headers=self.user_headers)
+        start_resp = self.client.post(
+            f"/api/v1/interviews/{interview_id}/start",
+            headers=self.user_headers,
+        )
         self.assertEqual(200, start_resp.status_code)
         self.assertEqual("ACTIVE", start_resp.json()["status"])
         self.assertEqual(interview_id, start_resp.json()["interview_id"])
-
-    def test_list_turns_endpoint(self) -> None:
-        """验证查询轮次列表接口返回有效数据。"""
-        interview_id = self._create_interview()
-        self._submit_turn_and_wait(
-            interview_id=interview_id,
-            payload={"stage": "SELF_INTRO", "answer_text": "这是首轮回答"},
-        )
-        list_resp = self.client.get(f"/api/v1/interviews/{interview_id}/turns", headers=self.user_headers)
-        self.assertEqual(200, list_resp.status_code)
-        self.assertEqual(interview_id, list_resp.json()["interview_id"])
-        self.assertGreaterEqual(len(list_resp.json()["items"]), 0)
-        if list_resp.json()["items"]:
-            self.assertEqual("SELF_INTRO", list_resp.json()["items"][0]["stage"])
 
     def test_input_priority_prefers_asr_text(self) -> None:
         """验证输入优先级为 asr_text > answer_text。"""

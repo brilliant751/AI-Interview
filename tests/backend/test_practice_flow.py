@@ -74,7 +74,6 @@ sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 from app.repositories.interview_repository import InterviewRepository  # noqa: E402
-from app.services.practice_service import PracticeService  # noqa: E402
 
 
 class PracticeRepositoryTestCase(unittest.TestCase):

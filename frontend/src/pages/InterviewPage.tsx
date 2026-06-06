@@ -226,13 +226,10 @@ export function InterviewPage() {
     resumeId,
     currentStage,
     currentQuestion,
-    liveScore,
-    followUpCount,
     inputMode,
     outputMode,
     ttsAudioUrl,
     pipelineMeta,
-    generationMode,
     providerHealth,
     updateTurnResult,
     setProviderHealth,
@@ -1157,7 +1154,6 @@ export function InterviewPage() {
     startCountdownRecording(true)
   }, [buildQuestionKey, currentQuestion, currentStage, inputMode, interviewId, outputMode, pipelineMeta?.trace_id, startCountdownRecording, ttsAudioUrl])
 
-  const recordingProgressPercent = Math.round((recordingElapsedSeconds / MAX_RECORDING_SECONDS) * 100)
   const formatDuration = (seconds: number) => {
     const safeSeconds = Math.max(0, seconds)
     const minute = Math.floor(safeSeconds / 60)

@@ -1,5 +1,8 @@
 import { defineConfig } from '@playwright/test'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** Playwright 最小可运行配置。 */
 export default defineConfig({
@@ -14,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173',
-    cwd: path.resolve(__dirname),
+    cwd: path.resolve(dirname),
     port: 4173,
     reuseExistingServer: true,
   },
