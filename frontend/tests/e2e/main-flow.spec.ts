@@ -72,11 +72,38 @@ test('main flow should work with mocked backend', async ({ page }) => {
         contentType: 'application/json',
         body: JSON.stringify({
           interview_id: 'interview-001',
-          stage: 'TECHNICAL',
-          next_question: '介绍一次你排查慢查询的过程。',
-          follow_up_count: 1,
-          live_score: 88,
-          output_mode: 'text',
+          job_id: 'turn-job-001',
+          status: 'PROCESSING',
+        }),
+      })
+      return
+    }
+
+    if (method === 'GET' && url.includes('/api/v1/interviews/interview-001/turn-jobs/turn-job-001')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          interview_id: 'interview-001',
+          job_id: 'turn-job-001',
+          status: 'READY',
+          result: {
+            interview_id: 'interview-001',
+            stage: 'TECHNICAL',
+            next_question: '介绍一次你排查慢查询的过程。',
+            follow_up_count: 1,
+            live_score: 88,
+            output_mode: 'voice',
+            pipeline_meta: {
+              input_source: 'TEXT',
+              providers: { llm: 'mock' },
+              provider_status: { asr: 'UP', llm: 'UP', tts: 'UP' },
+              degrade_flags: [],
+              trace_id: 'trace-e2e-001',
+              latency_ms: 20,
+              generation_mode: 'mock',
+            },
+          },
         }),
       })
       return
@@ -147,6 +174,15 @@ test('main flow should work with mocked backend', async ({ page }) => {
           strengths: ['表达清晰'],
           weaknesses: ['深度不足'],
           suggestions: ['补充性能调优案例'],
+          dimension_scores: [
+            { dimension: '技术深度', capability_score: 4, match_score: 4, confidence: 'high', evidence: '回答能覆盖后端优化' },
+            { dimension: '表达逻辑', capability_score: 4, match_score: 3, confidence: 'medium', evidence: '表达清晰' },
+            { dimension: '岗位匹配', capability_score: 4, match_score: 4, confidence: 'high', evidence: '后端经验匹配' },
+          ],
+          jd_resume_alignment: [],
+          question_deep_dives: [],
+          key_risks: [],
+          final_recommendation: '建议继续补充性能调优案例。',
         }),
       })
       return
@@ -208,20 +244,19 @@ test('main flow should work with mocked backend', async ({ page }) => {
   await expect(page).toHaveURL(/\/interview$/)
   await expect(page.getByText('面试大厅')).toBeVisible()
 
-  await expect(page.getByRole('button', { name: '创建面试' })).toBeVisible()
-  await page.getByRole('button', { name: '创建面试' }).click()
+  await expect(page.getByRole('button', { name: '开始新面试' })).toBeVisible()
+  await page.getByRole('button', { name: '开始新面试' }).click()
   const createModal = page.getByRole('dialog', { name: '创建面试' })
+  await createModal.getByPlaceholder('例如：Web前端场景专项').fill('Java 后端模拟面试')
   await createModal.locator('label').filter({ hasText: '文本' }).nth(0).click()
-  await createModal.locator('label').filter({ hasText: '文本' }).nth(1).click()
   await expect(page.getByRole('button', { name: '创建会话' })).toBeVisible()
   await page.getByRole('button', { name: '创建会话' }).click()
   await expect(page).toHaveURL(/\/interview\/interview-001$/)
-  await expect(page.getByText('请做一个简短自我介绍。')).toBeVisible()
+  await expect(page.getByText('语音题目已就绪')).toBeVisible()
 
   await page.getByPlaceholder('输入你的回答').fill('我负责后端开发与性能优化。')
   await page.getByRole('button', { name: '提交回答' }).click()
-  await expect(page.getByText('阶段：TECHNICAL')).toBeVisible()
-  await expect(page.getByText('实时分：88')).toBeVisible()
+  await expect(page.getByText('TECHNICAL')).toBeVisible()
 
   await page.getByRole('button', { name: '⋮' }).click()
   await page.getByText('结束面试').click()
@@ -229,7 +264,7 @@ test('main flow should work with mocked backend', async ({ page }) => {
   await expect(page.getByText('状态：READY')).toBeVisible()
   await expect(page.getByText('总分：85')).toBeVisible()
 
-  await page.getByRole('link', { name: '历史记录' }).click()
+  await page.getByRole('link', { name: '面试记录' }).click()
   await expect(page).toHaveURL(/\/history$/)
   await expect(page.getByText('interview-001')).toBeVisible()
 })

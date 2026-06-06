@@ -13,7 +13,7 @@ AI 模拟面试平台。
 - Node.js 18+
 - npm 9+
 
-## 一键启动
+## 一键启动（旧脚本，继续保留）
 
 在仓库根目录执行：
 
@@ -35,6 +35,65 @@ bash ./start.sh
 - 前端：`http://localhost:5173`
 
 按 `Ctrl+C` 可同时停止两个服务。
+
+旧脚本仍适合 macOS/Linux 本地开发和课程演示环境，项目会继续保留：
+
+- `start.sh`：旧的一键启动脚本，同时启动后端和前端。
+- `backend-start.sh`：旧的后端单独启动脚本，默认后端端口 `8000`。
+- `frontend-start.sh`：旧的前端单独启动脚本，默认前端端口 `5173`。
+
+## 启动脚本说明
+
+### 新增跨平台脚本（推荐）
+
+新增脚本放在 `scripts/` 目录，与旧脚本区分清楚，便于在不同系统和 CI 中使用。
+
+macOS/Linux 推荐：
+
+```bash
+bash scripts/start-unix.sh
+```
+
+Windows PowerShell 推荐：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1
+```
+
+Windows CMD 简化入口：
+
+```cmd
+scripts\start-windows.cmd
+```
+
+新增启动脚本会自动：
+
+- 识别仓库根目录。
+- 检查 Python 3.11+、Node.js 18+、npm 9+。
+- 创建或复用后端虚拟环境。
+- 安装 `backend/requirements.txt`。
+- 前端优先执行 `npm ci`，无 lock 文件时执行 `npm install`。
+- 在数据库不存在时初始化题库与知识库数据。
+- 使用 `PYTHONPATH=backend python -m uvicorn app.main:app` 启动后端。
+- 使用 `npm run dev` 启动前端，并注入 `VITE_API_BASE`。
+- `Ctrl+C` 后停止前后端子进程。
+- 本地模型服务不可用时只输出提示，不阻断启动。
+
+### 常用环境变量
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `BACKEND_PORT` | `18500`（新跨平台脚本和 `start.sh`） | 后端端口。`backend-start.sh` 默认 `8000`。 |
+| `FRONTEND_PORT` | `5173` | 前端端口。 |
+| `START_FRONTEND` | `1` | 设为 `0` 时只启动后端。 |
+| `BACKEND_RELOAD` | `0` | 设为 `1` 时后端开启 uvicorn reload。 |
+| `VITE_API_BASE` | `http://localhost:${BACKEND_PORT}/api/v1` | 前端请求后端 API 的地址。 |
+| `BACKEND_VENV` | 仓库根目录 `.venv` | 后端虚拟环境路径。 |
+| `SKIP_INSTALL` | `0` | 设为 `1` 时跳过依赖安装。 |
+| `SKIP_DATA_INIT` | `0` | 设为 `1` 时跳过数据初始化。 |
+| `AI_INTERVIEW_LLM_PROVIDER` | `mock` | LLM provider，可配置 `mock/openai/ollama`。 |
+| `AI_INTERVIEW_ASR_PROVIDER` | `mock` | ASR provider，可配置 `mock/openai/funasr/paddlespeech`。 |
+| `AI_INTERVIEW_TTS_PROVIDER` | `mock` | TTS provider，可配置 `mock/openai/paddlespeech`。 |
 
 ## 安装依赖
 
@@ -110,20 +169,101 @@ VITE_API_BASE=http://localhost:8000/api/v1 npm run dev
 VITE_API_BASE=http://localhost:18500/api/v1
 ```
 
-## 启动脚本环境变量
-
-- `BACKEND_PORT`：后端端口（`start.sh` 默认 `18500`，`backend-start.sh` 默认 `8000`）
-- `FRONTEND_PORT`：前端端口，默认 `5173`
-- `START_FRONTEND`：是否启动前端，默认 `1`（可设为 `0` 只启动后端）
-- `BACKEND_RELOAD`：是否开启后端自动重载，默认 `0`
-- `BACKEND_VENV`：后端虚拟环境路径，默认仓库根目录下 `.venv`
-
 ## 常用检查
 
 - 后端接口文档：`http://localhost:18500/docs`（使用 `start.sh`）
 - 前端页面：`http://localhost:5173`
 - OpenAPI 文件：`openapi/openapi.yaml`
 - Postman 集合：`postman/AI-Interview.postman_collection.json`
+
+## 测试与质量检查
+
+### 一键测试脚本
+
+macOS/Linux：
+
+```bash
+bash scripts/test-unix.sh
+```
+
+Windows PowerShell：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\test-windows.ps1
+```
+
+Windows CMD：
+
+```cmd
+scripts\test-windows.cmd
+```
+
+测试脚本支持以下环境变量：
+
+| 变量 | 默认值 | 说明 |
+| --- | --- | --- |
+| `RUN_BACKEND_TESTS` | `1` | 是否运行后端 pytest。 |
+| `RUN_FRONTEND_TESTS` | `1` | 是否运行前端 Vitest 和 build。 |
+| `RUN_E2E` | `1` | 是否运行 Playwright E2E。 |
+| `RUN_LINT` | `1` | 是否运行 Ruff 和 ESLint。 |
+| `SKIP_INSTALL` | `0` | 设为 `1` 时跳过依赖安装。 |
+| `BACKEND_REQUIREMENTS` | `backend/requirements-ci.txt` | 测试脚本默认使用轻量 CI 依赖集。 |
+
+后端单独检查：
+
+```bash
+cd backend
+python -m pip install -r requirements-ci.txt
+cd ..
+python -m ruff check backend tests
+python -m pytest tests/backend
+```
+
+前端单独检查：
+
+```bash
+cd frontend
+npm ci
+npm run lint
+npm run test
+npm run build
+npm run e2e
+```
+
+Playwright 如提示浏览器未安装：
+
+```bash
+cd frontend
+npx playwright install --with-deps chromium
+```
+
+说明：`backend/requirements.txt` 保留完整本地能力依赖，包括 Ollama/FunASR/PaddleSpeech 等相关包；`backend/requirements-ci.txt` 用于 CI 和普通单元测试，避免因本地大模型、GPU 或外部服务不可用导致质量门禁不稳定。
+
+## GitHub Actions CI
+
+`.github/workflows/ci.yml` 会在以下场景触发：
+
+- push 到 `main`。
+- pull request 到 `main`。
+- 手动 `workflow_dispatch`。
+
+CI 当前包含：
+
+- 后端质量门禁：安装 `backend/requirements-ci.txt`、shell 语法检查、数据脚本 dry-run、`ruff check backend tests`、`pytest tests/backend`。
+- 前端质量门禁：`npm ci`、`npm run lint`、`npm run test`、`npm run build`、安装 Chromium 并运行 `npm run e2e`。
+- Windows 脚本 smoke：解析 PowerShell 脚本，并以跳过安装/检查的方式验证测试脚本入口可执行。
+
+CI 不需要任何真实密钥，也不要求 `AI_INTERVIEW_OPENAI_API_KEY`。默认 provider 使用 `mock`，本地模型服务不可用不会导致 CI 失败。Playwright 失败时会上传 `frontend/playwright-report` 和 `frontend/test-results` artifact，方便查看截图、trace 和错误日志。
+
+## 故障排查
+
+- Python 版本不满足：安装 Python 3.11+，或设置 `PYTHON_BIN` 指向正确解释器。
+- Node/npm 版本不满足：安装 Node.js 18+ 和 npm 9+，推荐使用 Node 20。
+- Windows PowerShell 执行策略限制：使用 `powershell -ExecutionPolicy Bypass -File .\scripts\start-windows.ps1`。
+- Playwright 浏览器未安装：执行 `cd frontend && npx playwright install --with-deps chromium`。
+- 本地模型服务不可用：默认 `mock` provider 可运行完整主流程；如使用 `ollama/funasr/paddlespeech`，请先启动或安装对应服务/SDK。健康检查接口为 `/api/v1/admin/providers/health`。
+- 端口占用：设置 `BACKEND_PORT` 或 `FRONTEND_PORT`，例如 `BACKEND_PORT=18501 bash scripts/start-unix.sh`。
+- 依赖安装过慢：本地完整启动使用 `backend/requirements.txt`；CI 和测试可使用 `backend/requirements-ci.txt`。
 
 ## 题库管理格式要求
 

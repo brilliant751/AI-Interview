@@ -8,8 +8,6 @@ import unittest
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 
-import sys
-
 sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
 from app.core.errors import ApiError  # noqa: E402
