@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { beforeAll, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest'
 
 import { InterviewPage } from './InterviewPage'
 
@@ -81,6 +81,12 @@ beforeAll(() => {
   })
 })
 
+afterEach(() => {
+  cleanup()
+  vi.clearAllTimers()
+  vi.useRealTimers()
+})
+
 /** 创建测试用 QueryClient。 */
 function createTestQueryClient() {
   return new QueryClient({
@@ -113,5 +119,17 @@ describe('InterviewPage design', () => {
     expect(screen.getByText('新建模拟面试')).toBeInTheDocument()
     expect(screen.getAllByText('继续暂停面试').length).toBeGreaterThan(0)
     expect(await screen.findByText('暂无暂停中的面试，可点击“创建面试”开始。')).toBeInTheDocument()
+  })
+
+  test('should render focused interview workspace sections', async () => {
+    vi.useFakeTimers()
+
+    renderInterviewPage('/interview/interview-001')
+
+    expect(screen.getByText('模拟面试工作台')).toBeInTheDocument()
+    expect(screen.getByText('当前问题')).toBeInTheDocument()
+    expect(screen.getByText('组织回答')).toBeInTheDocument()
+    expect(screen.getByText('面试官提问')).toBeInTheDocument()
+    expect(screen.getByText('回答轨迹')).toBeInTheDocument()
   })
 })
