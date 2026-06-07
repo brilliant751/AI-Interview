@@ -41,6 +41,8 @@ describe('HomePage', () => {
     expect(screen.getByText('常用入口')).toBeInTheDocument()
     expect(screen.getAllByText('模拟面试').length).toBeGreaterThan(0)
     expect(screen.queryByText(/AI 驱动|智能赋能|未来感/)).not.toBeInTheDocument()
+    expect(screen.queryByText('上传简历，选择岗位，完成一轮模拟面试，再根据记录复盘。页面只保留常用入口和准备路径。')).not.toBeInTheDocument()
+    expect(screen.queryByText('进入大厅，创建或恢复一场面试。')).not.toBeInTheDocument()
   })
 
   test('should point primary action to interview when authenticated', () => {

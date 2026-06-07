@@ -115,10 +115,11 @@ describe('InterviewPage design', () => {
     renderInterviewPage('/interview')
 
     expect(screen.getByText('面试中心')).toBeInTheDocument()
-    expect(screen.getByText('从简历出发，快速进入一场结构化模拟面试。')).toBeInTheDocument()
     expect(screen.getByText('新建模拟面试')).toBeInTheDocument()
     expect(screen.getAllByText('继续暂停面试').length).toBeGreaterThan(0)
     expect(await screen.findByText('暂无暂停中的面试，可点击“创建面试”开始。')).toBeInTheDocument()
+    expect(screen.queryByText('从简历出发，快速进入一场结构化模拟面试。')).not.toBeInTheDocument()
+    expect(screen.queryByText('优先恢复未完成场次，保持面试上下文连续。')).not.toBeInTheDocument()
   })
 
   test('should render focused interview workspace sections', async () => {
@@ -131,5 +132,7 @@ describe('InterviewPage design', () => {
     expect(screen.getByText('组织回答')).toBeInTheDocument()
     expect(screen.getByText('面试官提问')).toBeInTheDocument()
     expect(screen.getByText('回答轨迹')).toBeInTheDocument()
+    expect(screen.queryByText('保持节奏，围绕当前问题完成一轮高质量回答。')).not.toBeInTheDocument()
+    expect(screen.queryByText('回答建议先给结论，再补充项目经历、技术细节和复盘。')).not.toBeInTheDocument()
   })
 })

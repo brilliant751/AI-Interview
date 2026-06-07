@@ -4,38 +4,23 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 
 const preparationSteps = [
-  {
-    title: '整理简历',
-    description: '上传简历，保留一份可复用的面试上下文。',
-  },
-  {
-    title: '选择岗位',
-    description: '按目标岗位和难度，确定本轮准备范围。',
-  },
-  {
-    title: '模拟作答',
-    description: '围绕当前问题回答，保留每一轮记录。',
-  },
-  {
-    title: '复盘报告',
-    description: '回看历史记录，整理下一次要改的地方。',
-  },
+  { title: '整理简历' },
+  { title: '选择岗位' },
+  { title: '模拟作答' },
+  { title: '复盘报告' },
 ]
 
 const entryCards = [
   {
     title: '模拟面试',
-    description: '进入大厅，创建或恢复一场面试。',
     to: '/interview',
   },
   {
     title: '题库练习',
-    description: '按方向练习，补齐薄弱题型。',
     to: '/practice',
   },
   {
     title: '历史记录',
-    description: '集中查看面试和练习结果。',
     to: '/history',
   },
 ]
@@ -54,9 +39,6 @@ export function HomePage() {
                 <Typography.Title level={1} style={{ margin: 0 }}>
                   面试准备，从流程开始
                 </Typography.Title>
-                <Typography.Paragraph style={{ margin: 0, fontSize: 16, maxWidth: 660 }} type="secondary">
-                  上传简历，选择岗位，完成一轮模拟面试，再根据记录复盘。页面只保留常用入口和准备路径。
-                </Typography.Paragraph>
               </Space>
               <Space wrap>
                 <Button type="primary" size="large">
@@ -86,7 +68,6 @@ export function HomePage() {
                     <Typography.Text strong>{index + 1}</Typography.Text>
                     <Space direction="vertical" size={2}>
                       <Typography.Text strong>{item.title}</Typography.Text>
-                      <Typography.Text type="secondary">{item.description}</Typography.Text>
                     </Space>
                   </div>
                 ))}
@@ -109,7 +90,6 @@ export function HomePage() {
                   <Typography.Title level={4} style={{ margin: 0 }}>
                     {item.title}
                   </Typography.Title>
-                  <Typography.Text type="secondary">{item.description}</Typography.Text>
                 </Space>
               </Card>
             </Col>
@@ -128,9 +108,7 @@ export function HomePage() {
                 title={item.title}
                 extra={<Link to={isAuthenticated ? item.to : '/login'}>进入</Link>}
                 style={{ height: '100%' }}
-              >
-                <Typography.Text type="secondary">{item.description}</Typography.Text>
-              </Card>
+              />
             </Col>
           ))}
         </Row>
