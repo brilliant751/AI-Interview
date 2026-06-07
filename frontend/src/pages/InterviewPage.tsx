@@ -13,7 +13,6 @@ import {
   createInterview,
   fetchHistory,
   fetchInterviewPlayback,
-  fetchInterviewSchedules,
   fetchScheduledInterviews,
   fetchJds,
   fetchTurnJobResult,
@@ -27,6 +26,7 @@ import {
   submitAudioTurn,
   submitTurn,
 } from '../api/interview'
+import { useDeadlineCountdown } from '../hooks/useDeadlineCountdown'
 import { useInterviewStore } from '../stores/interviewStore'
 
 /** 面试答题页面。 */
@@ -44,8 +44,6 @@ export function InterviewPage() {
   const [answer, setAnswer] = useState('')
   const [audioFile, setAudioFile] = useState<File | null>(null)
   const [recording, setRecording] = useState(false)
-  const [countdown, setCountdown] = useState(0)
-  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [resumePickerOpen, setResumePickerOpen] = useState(false)
   const [jdPickerOpen, setJdPickerOpen] = useState(false)
@@ -58,10 +56,6 @@ export function InterviewPage() {
   const [resumingInterviewId, setResumingInterviewId] = useState('')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const countdownTimerRef = useRef<number | null>(null)
-  const recordingProgressTimerRef = useRef<number | null>(null)
-  const recordingLimitTimerRef = useRef<number | null>(null)
-  const textAnswerTimerRef = useRef<number | null>(null)
   const suppressRecorderStopRef = useRef(false)
   const submitAfterStopRef = useRef(false)
   const lastQuestionKeyRef = useRef('')
@@ -70,7 +64,6 @@ export function InterviewPage() {
   const audioContextRef = useRef<AudioContext | null>(null)
   const lastRoundQuestionKeyRef = useRef('')
   const [questionRound, setQuestionRound] = useState(1)
-  const [textAnswerRemainingSeconds, setTextAnswerRemainingSeconds] = useState(MAX_TEXT_ANSWER_SECONDS)
   const [interviewElapsedSeconds, setInterviewElapsedSeconds] = useState(0)
   const [audioInputDevices, setAudioInputDevices] = useState<Array<{ label: string; value: string }>>([])
   const [selectedAudioInputId, setSelectedAudioInputId] = useState('')
@@ -241,6 +234,37 @@ export function InterviewPage() {
   const interviewId = routeInterviewId || ''
   /** 生成当前题目的稳定 key，避免受实时分/追问次数轮询抖动影响。 */
   const buildQuestionKey = useCallback(() => pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`, [currentQuestion, currentStage, pipelineMeta?.trace_id])
+  const {
+    remainingSeconds: textAnswerRemainingSeconds,
+    start: startTextAnswerCountdown,
+    stop: stopTextAnswerCountdown,
+  } = useDeadlineCountdown({ initialSeconds: MAX_TEXT_ANSWER_SECONDS })
+  const {
+    remainingSeconds: countdown,
+    start: startVoiceAutoRecordCountdown,
+    stop: stopVoiceAutoRecordCountdown,
+    isRunning: isVoiceAutoRecordCountdownRunning,
+  } = useDeadlineCountdown({
+    initialSeconds: AUTO_RECORD_COUNTDOWN_SECONDS,
+    onExpire: () => {
+      void startRecording()
+    },
+  })
+  const {
+    remainingSeconds: recordingLimitRemainingSeconds,
+    start: startRecordingLimitCountdown,
+    stop: stopRecordingLimitCountdown,
+  } = useDeadlineCountdown({
+    initialSeconds: MAX_RECORDING_SECONDS,
+    onExpire: () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        submitAfterStopRef.current = true
+        message.warning('录音已达到 3 分钟上限，已自动提交')
+        stopRecording()
+      }
+    },
+  })
+  const recordingRemainingSeconds = recording ? recordingLimitRemainingSeconds : MAX_RECORDING_SECONDS
 
   /** 面试页主动拉取 provider 健康状态，避免仅依赖准备页缓存。 */
   const healthQuery = useQuery({
@@ -348,18 +372,6 @@ export function InterviewPage() {
       if (questionStreamTimerRef.current !== null) {
         window.clearInterval(questionStreamTimerRef.current)
       }
-      if (countdownTimerRef.current !== null) {
-        window.clearInterval(countdownTimerRef.current)
-      }
-      if (recordingLimitTimerRef.current !== null) {
-        window.clearTimeout(recordingLimitTimerRef.current)
-      }
-      if (recordingProgressTimerRef.current !== null) {
-        window.clearInterval(recordingProgressTimerRef.current)
-      }
-      if (textAnswerTimerRef.current !== null) {
-        window.clearInterval(textAnswerTimerRef.current)
-      }
       if (audioContextRef.current) {
         void audioContextRef.current.close()
       }
@@ -399,25 +411,10 @@ export function InterviewPage() {
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
   const resetRoundRuntimeState = () => {
-    if (countdownTimerRef.current !== null) {
-      window.clearInterval(countdownTimerRef.current)
-      countdownTimerRef.current = null
-    }
-    if (recordingLimitTimerRef.current !== null) {
-      window.clearTimeout(recordingLimitTimerRef.current)
-      recordingLimitTimerRef.current = null
-    }
-    if (recordingProgressTimerRef.current !== null) {
-      window.clearInterval(recordingProgressTimerRef.current)
-      recordingProgressTimerRef.current = null
-    }
-    if (textAnswerTimerRef.current !== null) {
-      window.clearInterval(textAnswerTimerRef.current)
-      textAnswerTimerRef.current = null
-    }
-    setCountdown(0)
+    stopVoiceAutoRecordCountdown(0)
+    stopRecordingLimitCountdown(0)
+    stopTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
     setRecording(false)
-    setRecordingElapsedSeconds(0)
     setAudioFile(null)
     setAnswer('')
     submitAfterStopRef.current = false
@@ -433,10 +430,7 @@ export function InterviewPage() {
 
   useEffect(() => {
     if (inputMode !== 'text' || !interviewId || !currentQuestion || currentStage === 'END') {
-      if (textAnswerTimerRef.current !== null) {
-        window.clearInterval(textAnswerTimerRef.current)
-        textAnswerTimerRef.current = null
-      }
+      stopTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
       return
     }
     const questionKey = pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
@@ -444,23 +438,8 @@ export function InterviewPage() {
       return
     }
     lastTextQuestionKeyRef.current = questionKey
-    setTextAnswerRemainingSeconds(MAX_TEXT_ANSWER_SECONDS)
-    if (textAnswerTimerRef.current !== null) {
-      window.clearInterval(textAnswerTimerRef.current)
-    }
-    textAnswerTimerRef.current = window.setInterval(() => {
-      setTextAnswerRemainingSeconds((previous) => {
-        if (previous <= 1) {
-          if (textAnswerTimerRef.current !== null) {
-            window.clearInterval(textAnswerTimerRef.current)
-            textAnswerTimerRef.current = null
-          }
-          return 0
-        }
-        return previous - 1
-      })
-    }, 1000)
-  }, [inputMode, interviewId, currentQuestion, currentStage, pipelineMeta?.trace_id])
+    startTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
+  }, [inputMode, interviewId, currentQuestion, currentStage, pipelineMeta?.trace_id, startTextAnswerCountdown, stopTextAnswerCountdown])
 
   useEffect(() => {
     const durationSeconds = Number(interviewStatusQuery.data?.duration_seconds ?? playbackQuery.data?.meta.duration_seconds ?? 0)
@@ -915,20 +894,8 @@ export function InterviewPage() {
 
   /** 停止录音并收集音频文件。 */
   const stopRecording = () => {
-    if (countdownTimerRef.current !== null) {
-      window.clearInterval(countdownTimerRef.current)
-      countdownTimerRef.current = null
-      setCountdown(0)
-    }
-    if (recordingLimitTimerRef.current !== null) {
-      window.clearTimeout(recordingLimitTimerRef.current)
-      recordingLimitTimerRef.current = null
-    }
-    if (recordingProgressTimerRef.current !== null) {
-      window.clearInterval(recordingProgressTimerRef.current)
-      recordingProgressTimerRef.current = null
-    }
-    setRecordingElapsedSeconds(0)
+    stopVoiceAutoRecordCountdown(0)
+    stopRecordingLimitCountdown(0)
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
       setRecording(false)
       return
@@ -938,11 +905,8 @@ export function InterviewPage() {
 
   /** 启动浏览器麦克风录音。 */
   const startRecording = async () => {
-    if (countdownTimerRef.current !== null) {
-      window.clearInterval(countdownTimerRef.current)
-      countdownTimerRef.current = null
-      setCountdown(0)
-    }
+    stopVoiceAutoRecordCountdown(0)
+    stopRecordingLimitCountdown(0)
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: selectedAudioInputId ? { deviceId: { exact: selectedAudioInputId } } : true,
@@ -963,15 +927,7 @@ export function InterviewPage() {
           setRecording(false)
           return
         }
-        if (recordingLimitTimerRef.current !== null) {
-          window.clearTimeout(recordingLimitTimerRef.current)
-          recordingLimitTimerRef.current = null
-        }
-        if (recordingProgressTimerRef.current !== null) {
-          window.clearInterval(recordingProgressTimerRef.current)
-          recordingProgressTimerRef.current = null
-        }
-        setRecordingElapsedSeconds(0)
+        stopRecordingLimitCountdown(0)
         const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' })
         if (blob.size > 0) {
           const file = buildRecordedAudioFile(blob)
@@ -990,19 +946,9 @@ export function InterviewPage() {
         setRecording(false)
       }
       mediaRecorder.start()
-      setRecordingElapsedSeconds(0)
       setRecording(true)
       message.success('开始录音')
-      recordingProgressTimerRef.current = window.setInterval(() => {
-        setRecordingElapsedSeconds((previous) => Math.min(previous + 1, MAX_RECORDING_SECONDS))
-      }, 1000)
-      recordingLimitTimerRef.current = window.setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-          submitAfterStopRef.current = true
-          message.warning('录音已达到 3 分钟上限，已自动提交')
-          stopRecording()
-        }
-      }, MAX_RECORDING_SECONDS * 1000)
+      startRecordingLimitCountdown(MAX_RECORDING_SECONDS)
     } catch {
       if (selectedAudioInputId) {
         try {
@@ -1023,15 +969,7 @@ export function InterviewPage() {
               setRecording(false)
               return
             }
-            if (recordingLimitTimerRef.current !== null) {
-              window.clearTimeout(recordingLimitTimerRef.current)
-              recordingLimitTimerRef.current = null
-            }
-            if (recordingProgressTimerRef.current !== null) {
-              window.clearInterval(recordingProgressTimerRef.current)
-              recordingProgressTimerRef.current = null
-            }
-            setRecordingElapsedSeconds(0)
+            stopRecordingLimitCountdown(0)
             const blob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || 'audio/webm' })
             if (blob.size > 0) {
               const file = buildRecordedAudioFile(blob)
@@ -1050,19 +988,9 @@ export function InterviewPage() {
             setRecording(false)
           }
           mediaRecorder.start()
-          setRecordingElapsedSeconds(0)
           setRecording(true)
           message.warning('所选麦克风不可用，已切换到系统默认麦克风')
-          recordingProgressTimerRef.current = window.setInterval(() => {
-            setRecordingElapsedSeconds((previous) => Math.min(previous + 1, MAX_RECORDING_SECONDS))
-          }, 1000)
-          recordingLimitTimerRef.current = window.setTimeout(() => {
-            if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-              submitAfterStopRef.current = true
-              message.warning('录音已达到 3 分钟上限，已自动提交')
-              stopRecording()
-            }
-          }, MAX_RECORDING_SECONDS * 1000)
+          startRecordingLimitCountdown(MAX_RECORDING_SECONDS)
           return
         } catch {
           // 降级失败时沿用统一报错提示
@@ -1100,32 +1028,24 @@ export function InterviewPage() {
 
   /** 执行 10 秒倒计时并在结束后自动开始录音。 */
   const startCountdownRecording = useCallback((force: boolean = false) => {
-    if (!force && (recording || countdown > 0 || submitMutation.isPending || currentStage === 'END')) {
+    if (!force && (recording || isVoiceAutoRecordCountdownRunning() || submitMutation.isPending || currentStage === 'END')) {
       return
     }
     if (force && mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       stopRecording()
     }
-    if (countdownTimerRef.current !== null) {
-      window.clearInterval(countdownTimerRef.current)
-    }
-    setRecordingElapsedSeconds(0)
-    setCountdown(AUTO_RECORD_COUNTDOWN_SECONDS)
+    stopRecordingLimitCountdown(0)
     playCountdownBeep()
-    countdownTimerRef.current = window.setInterval(() => {
-      setCountdown((previous) => {
-        if (previous <= 1) {
-          if (countdownTimerRef.current !== null) {
-            window.clearInterval(countdownTimerRef.current)
-          }
-          countdownTimerRef.current = null
-          void startRecording()
-          return 0
-        }
-        return previous - 1
-      })
-    }, 1000)
-  }, [AUTO_RECORD_COUNTDOWN_SECONDS, countdown, currentStage, recording, submitMutation.isPending])
+    startVoiceAutoRecordCountdown(AUTO_RECORD_COUNTDOWN_SECONDS)
+  }, [
+    AUTO_RECORD_COUNTDOWN_SECONDS,
+    currentStage,
+    isVoiceAutoRecordCountdownRunning,
+    recording,
+    startVoiceAutoRecordCountdown,
+    stopRecordingLimitCountdown,
+    submitMutation.isPending,
+  ])
 
   /** 新题目出现时，语音输入自动倒计时 10 秒开始录音。 */
   useEffect(() => {
@@ -1140,11 +1060,7 @@ export function InterviewPage() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       stopRecording()
     }
-    if (recordingProgressTimerRef.current !== null) {
-      window.clearInterval(recordingProgressTimerRef.current)
-      recordingProgressTimerRef.current = null
-    }
-    setRecordingElapsedSeconds(0)
+    stopRecordingLimitCountdown(0)
     setAudioFile(null)
     if (outputMode === 'voice' && ttsAudioUrl) {
       pendingCountdownQuestionKeyRef.current = questionKey
@@ -2201,7 +2117,7 @@ export function InterviewPage() {
                 {submitMutation.isPending
                   ? '请稍等...'
                   : recording
-                    ? `录音中，点击结束回答 ${formatDuration(MAX_RECORDING_SECONDS - recordingElapsedSeconds)}`
+                    ? `录音中，点击结束回答 ${formatDuration(recordingRemainingSeconds)}`
                     : countdown > 0
                       ? `思考 ${countdown}s 后作答`
                       : '点击马上开始作答'}
