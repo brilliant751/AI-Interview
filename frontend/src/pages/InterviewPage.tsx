@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Empty, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import dayjs, { type Dayjs } from 'dayjs'
 import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
@@ -1107,11 +1107,11 @@ export function InterviewPage() {
     const pausedItems = pausedQuery.data?.items ?? []
     const pausedCount = pausedItems.length
     const resumedAtText = pausedItems[0]?.started_at ? formatDateTime(pausedItems[0].started_at) : '--'
-    const quickStartRoles: Array<{ key: string; title: string; subtitle: string; icon: LucideIcon }> = [
-      { key: 'web', title: 'Web 前端工程师', subtitle: '项目表达 / 性能优化 / 工程化', icon: Code2 },
-      { key: 'java', title: 'Java 后端工程师', subtitle: '并发 / 系统设计 / 数据库', icon: Database },
-      { key: 'pm', title: '产品经理', subtitle: '需求分析 / 指标拆解 / 场景沟通', icon: BriefcaseBusiness },
-      { key: 'test', title: '测试工程师', subtitle: '测试策略 / 缺陷追踪 / 质量门禁', icon: ShieldCheck },
+    const quickStartRoles: Array<{ key: string; title: string; icon: LucideIcon }> = [
+      { key: 'web', title: 'Web 前端工程师', icon: Code2 },
+      { key: 'java', title: 'Java 后端工程师', icon: Database },
+      { key: 'pm', title: '产品经理', icon: BriefcaseBusiness },
+      { key: 'test', title: '测试工程师', icon: ShieldCheck },
     ]
     const roleColorMap: Record<string, string> = {
       web: 'blue',
@@ -1163,16 +1163,13 @@ export function InterviewPage() {
           }}
         >
           <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} xl={16}>
-              <Typography.Title level={3} style={{ marginTop: 0 }}>
-                面试大厅
+            <Col xs={24} xl={16} className="interview-lobby-hero-main">
+              <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 0 }}>
+                面试中心
               </Typography.Title>
-              <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
-                开始新的模拟面试，或继续上次未完成会话。建议优先练习项目表达和技术方案讲解。
-              </Typography.Paragraph>
               <Space wrap className="interview-lobby-actions">
                 <Button className="interview-lobby-btn-primary" type="primary" size="large" icon={<Play size={16} />} onClick={() => setCreateModalOpen(true)}>
-                  开始新面试
+                  创建面试
                 </Button>
                 <Button className="interview-lobby-btn-secondary" size="large" icon={<Upload size={16} />} onClick={() => navigate('/resumes')}>
                   上传/管理简历
@@ -1206,29 +1203,37 @@ export function InterviewPage() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space align="start" size={10}>
-                <div className="interview-lobby-icon-wrap blue"><CirclePause size={18} /></div>
-                <Statistic title="暂停中的面试" value={pausedCount} suffix="场" />
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap blue"><Play size={18} /></div>
+                  <Typography.Title level={4} style={{ margin: 0 }}>新建模拟面试</Typography.Title>
+                </Space>
+                <Button type="primary" onClick={() => setCreateModalOpen(true)}>
+                  开始配置
+                </Button>
               </Space>
             </Card>
           </Col>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space align="start" size={10}>
-                <div className="interview-lobby-icon-wrap violet"><Mic size={18} /></div>
-                <Statistic title="语音答题时长上限" value={MAX_RECORDING_SECONDS} suffix="秒/题" />
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap violet"><CirclePause size={18} /></div>
+                  <Typography.Title level={4} style={{ margin: 0 }}>继续暂停面试</Typography.Title>
+                </Space>
+                <Statistic title="可继续" value={pausedCount} suffix="场" />
               </Space>
             </Card>
           </Col>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
                 <Space align="start" size={10}>
                   <div className="interview-lobby-icon-wrap green"><FileText size={18} /></div>
-                  <Typography.Text type="secondary">文本答题剩余建议</Typography.Text>
+                  <Typography.Title level={4} style={{ margin: 0 }}>复盘历史记录</Typography.Title>
                 </Space>
-                <Progress percent={Math.round((textAnswerRemainingSeconds / MAX_TEXT_ANSWER_SECONDS) * 100)} />
+                <Button onClick={() => navigate('/history')}>查看历史</Button>
               </Space>
             </Card>
           </Col>
@@ -1252,7 +1257,6 @@ export function InterviewPage() {
                       <div className="interview-lobby-icon-wrap soft"><item.icon size={16} /></div>
                       <Typography.Text strong>{item.title}</Typography.Text>
                     </Space>
-                    <Typography.Text type="secondary">{item.subtitle}</Typography.Text>
                     <Button
                       className="interview-lobby-role-btn"
                       type="primary"
@@ -1306,7 +1310,7 @@ export function InterviewPage() {
               }
             >
               {selectedScheduleItems.length === 0 ? (
-                <Typography.Text type="secondary">这一天还没有预约面试，可以直接新建。</Typography.Text>
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无预约面试" />
               ) : (
                 <Space direction="vertical" size={12} style={{ width: '100%' }}>
                   {selectedScheduleItems.map((item) => (
@@ -1354,11 +1358,18 @@ export function InterviewPage() {
           </Col>
         </Row>
 
-        <Card className="interview-lobby-section-card" title="继续上次面试">
+        <Card className="interview-lobby-section-card" title="继续暂停面试">
           {pausedQuery.isLoading ? (
             <Typography.Text type="secondary">正在加载暂停中的会话...</Typography.Text>
           ) : pausedItems.length === 0 ? (
-            <Typography.Text type="secondary">暂无暂停中的面试，可点击“开始新面试”创建。</Typography.Text>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无暂停中的面试，可点击“创建面试”开始。"
+            >
+              <Button type="primary" onClick={() => setCreateModalOpen(true)}>
+                立即创建面试
+              </Button>
+            </Empty>
           ) : (
             <Row gutter={[12, 12]}>
               {pausedItems.map((row) => (

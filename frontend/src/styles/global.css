@@ -59,6 +59,14 @@ body,
   line-height: 1.75;
 }
 
+.interview-lobby-hero-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 30px;
+  min-height: 210px;
+}
+
 .interview-lobby-actions .ant-btn {
   min-width: 148px;
   height: 46px;
@@ -110,6 +118,20 @@ body,
 
 .interview-lobby-kpi-card .ant-progress .ant-progress-bg {
   background: linear-gradient(90deg, #2dbb4f, #4bcf68);
+}
+
+.interview-lobby-entry-card,
+.interview-lobby-entry-card > .ant-card-body,
+.interview-lobby-entry-card > .ant-card-body > .ant-space {
+  height: 100%;
+}
+
+.interview-lobby-entry-card {
+  min-height: 190px;
+}
+
+.interview-lobby-entry-card > .ant-card-body > .ant-space {
+  justify-content: space-between;
 }
 
 .interview-lobby-health-summary {
