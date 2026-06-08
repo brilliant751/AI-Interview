@@ -1810,25 +1810,41 @@ export function InterviewPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: isDesktopWide
-          ? historyCollapsed
-            ? 'minmax(220px, 1fr) minmax(0, 3fr)'
-            : 'minmax(220px, 2fr) minmax(0, 4fr) minmax(220px, 2fr)'
-          : isTabletUp
-            ? 'minmax(220px, 1fr) minmax(0, 2fr)'
-            : 'minmax(0, 1fr)',
-        gap: 16,
-        width: '100%',
-        height: '100%',
-        minHeight: 0,
-        transition: 'grid-template-columns 0.2s ease',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', height: '100%', minHeight: 0 }}>
+      <Card styles={{ body: { padding: 18 } }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography.Title level={3} style={{ margin: 0 }}>
+            模拟面试工作台
+          </Typography.Title>
+          <Space wrap>
+            <Tag color="blue">阶段：{currentStage}</Tag>
+            <Tag color="cyan">输入：{inputMode}</Tag>
+            <Tag color="green">输出：{outputMode}</Tag>
+            <Tag color="gold">追问：{interviewStatusQuery.data?.follow_up_count ?? 0}</Tag>
+            <Tag color="purple">第 {questionRound} 轮</Tag>
+          </Space>
+        </div>
+      </Card>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isDesktopWide
+            ? historyCollapsed
+              ? 'minmax(240px, 0.9fr) minmax(0, 3fr)'
+              : 'minmax(240px, 1fr) minmax(420px, 2.4fr) minmax(260px, 1fr)'
+            : isTabletUp
+              ? 'minmax(240px, 1fr) minmax(0, 2fr)'
+              : 'minmax(0, 1fr)',
+          gap: 16,
+          width: '100%',
+          flex: 1,
+          minHeight: 0,
+          transition: 'grid-template-columns 0.2s ease',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+      >
       <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
         {/* <Card title="会话信息">
           <Space wrap>
@@ -1954,7 +1970,7 @@ export function InterviewPage() {
         }}
       >
         <Card
-          title="问题区"
+          title="当前问题"
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
           bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           extra={
@@ -2083,11 +2099,15 @@ export function InterviewPage() {
               )}
             </Space>
           ) : (
-            <Typography.Paragraph style={{ marginBottom: 0 }}>{currentQuestion || '等待题目生成...'}</Typography.Paragraph>
+              <div style={{ border: '1px solid #f0f0f0', borderRadius: 14, padding: 18 }}>
+                <Typography.Paragraph style={{ marginBottom: 0, fontSize: 18, lineHeight: 1.7 }}>
+                  {currentQuestion || '等待题目生成...'}
+                </Typography.Paragraph>
+              </div>
           )}
         </Card>
 
-        <Card title="回答区" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        <Card title="组织回答" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {inputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Text>本题目语音作答</Typography.Text>
@@ -2106,9 +2126,6 @@ export function InterviewPage() {
                 style={{
                   height: 54,
                   borderRadius: 28,
-                  background: '#b9e0db',
-                  borderColor: '#b9e0db',
-                  color: '#ffffff',
                   fontWeight: 600,
                 }}
                 loading={submitMutation.isPending}
@@ -2149,14 +2166,14 @@ export function InterviewPage() {
                 剩余作答时间：{formatDuration(textAnswerRemainingSeconds)}
               </Typography.Text>
               <Input.TextArea
-                rows={6}
+                rows={9}
                 value={answer}
                 onChange={(event) => setAnswer(event.target.value)}
                 placeholder="输入你的回答"
               />
             </Space>
           )}
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: inputMode !== 'voice' ? 'center' : 'flex-start' }}>
+          <div style={{ marginTop: 14, display: 'flex', justifyContent: inputMode !== 'voice' ? 'flex-end' : 'flex-start' }}>
             {inputMode !== 'voice' ? (
               <Button
                 type="primary"
@@ -2178,12 +2195,12 @@ export function InterviewPage() {
       {!historyCollapsed ? (
         <div style={{ minWidth: 0, height: '100%', minHeight: 0, overflow: 'hidden' }}>
           <Card
-            title="历史记录"
+            title="回答轨迹"
             style={{ height: '100%' }}
             bodyStyle={{ padding: 12, height: 'calc(100% - 57px)', overflowY: 'auto', overflowX: 'hidden' }}
           >
             {sortedTurns.length === 0 ? (
-              <Typography.Text type="secondary">当前还没有历史轮次，完成一轮后会显示在这里。</Typography.Text>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无历史轮次" />
             ) : (
               <Space direction="vertical" size={12} style={{ width: '100%' }}>
                 {sortedTurns.map((turn) => (
@@ -2193,8 +2210,7 @@ export function InterviewPage() {
                       style={{
                         alignSelf: 'flex-start',
                         maxWidth: '95%',
-                        background: '#f6faff',
-                        border: '1px solid #d9ecff',
+                        border: '1px solid #f0f0f0',
                         borderRadius: 12,
                         padding: '8px 10px',
                         whiteSpace: 'pre-wrap',
@@ -2208,8 +2224,7 @@ export function InterviewPage() {
                       style={{
                         alignSelf: 'flex-end',
                         maxWidth: '95%',
-                        background: '#f6fff8',
-                        border: '1px solid #dcf3e4',
+                        border: '1px solid #f0f0f0',
                         borderRadius: 12,
                         padding: '8px 10px',
                         whiteSpace: 'pre-wrap',
@@ -2292,6 +2307,7 @@ export function InterviewPage() {
           </Space>
         )}
       </Modal>
+      </div>
     </div>
   )
 }
