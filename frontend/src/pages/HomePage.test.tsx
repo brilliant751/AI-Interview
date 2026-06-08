@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest'
 
@@ -24,6 +24,7 @@ describe('HomePage', () => {
   })
 
   afterEach(() => {
+    cleanup()
     act(() => {
       useAuthStore.getState().clearSession()
     })

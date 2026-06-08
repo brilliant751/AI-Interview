@@ -174,6 +174,9 @@ export function AppLayout(props: { children: ReactNode }) {
         ) : (
           <Space size={10}>
             <Button type="link">
+              <Link to="/">首页</Link>
+            </Button>
+            <Button type="link">
               <Link to="/login">登录</Link>
             </Button>
             <Button>

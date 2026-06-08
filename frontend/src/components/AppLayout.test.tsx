@@ -9,14 +9,47 @@ import { useAuthStore } from '../stores/authStore'
 const mockFetchInterviewSchedules = vi.fn()
 
 vi.mock('../api/interview', () => ({
-  fetchInterviewSchedules: (...args: unknown[]) => mockFetchInterviewSchedules(...args),
+  fetchScheduledInterviews: (...args: unknown[]) => mockFetchInterviewSchedules(...args),
 }))
 
 /** AppLayout 渲染测试。 */
 describe('AppLayout', () => {
   beforeEach(() => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+  })
+
+  beforeEach(() => {
     vi.clearAllMocks()
+    useAuthStore.getState().clearSession()
     mockFetchInterviewSchedules.mockResolvedValue({ items: [] })
+  })
+
+  test('should render public home link when unauthenticated', () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <AppLayout>
+            <div>content</div>
+          </AppLayout>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByText('首页')).toBeInTheDocument()
+    expect(screen.getByText('登录')).toBeInTheDocument()
+    expect(screen.getByText('注册')).toBeInTheDocument()
   })
 
   test('should render navigation labels', () => {
