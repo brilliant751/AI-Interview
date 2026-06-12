@@ -202,6 +202,8 @@ export function AppLayout(props: { children: ReactNode }) {
           </Sider>
         ) : null}
         <Content
+          role="main"
+          aria-label={isAuthenticated ? 'Authenticated page content' : 'Public page content'}
           style={{
             padding: isMobile ? '14px 10px' : '24px 16px',
             maxWidth: 1380,
