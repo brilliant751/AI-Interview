@@ -256,7 +256,7 @@ test('main flow should work with mocked backend', async ({ page }) => {
 
   await page.getByPlaceholder('输入你的回答').fill('我负责后端开发与性能优化。')
   await page.getByRole('button', { name: '提交回答' }).click()
-  await expect(page.getByText('TECHNICAL')).toBeVisible()
+  await expect(page.getByText('阶段：TECHNICAL')).toBeVisible()
 
   await page.getByRole('button', { name: '⋮' }).click()
   await page.getByText('结束面试').click()
