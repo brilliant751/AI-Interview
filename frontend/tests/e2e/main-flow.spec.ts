@@ -242,10 +242,10 @@ test('main flow should work with mocked backend', async ({ page }) => {
   await page.getByRole('button', { name: '上传简历' }).click()
   await page.getByRole('button', { name: '去面试' }).click()
   await expect(page).toHaveURL(/\/interview$/)
-  await expect(page.getByText('面试大厅')).toBeVisible()
+  await expect(page.getByText('面试中心')).toBeVisible()
 
-  await expect(page.getByRole('button', { name: '开始新面试' })).toBeVisible()
-  await page.getByRole('button', { name: '开始新面试' }).click()
+  await expect(page.getByRole('button', { name: '开始配置' })).toBeVisible()
+  await page.getByRole('button', { name: '开始配置' }).click()
   const createModal = page.getByRole('dialog', { name: '创建面试' })
   await createModal.getByPlaceholder('例如：Web前端场景专项').fill('Java 后端模拟面试')
   await createModal.locator('label').filter({ hasText: '文本' }).nth(0).click()
@@ -256,7 +256,7 @@ test('main flow should work with mocked backend', async ({ page }) => {
 
   await page.getByPlaceholder('输入你的回答').fill('我负责后端开发与性能优化。')
   await page.getByRole('button', { name: '提交回答' }).click()
-  await expect(page.getByText('TECHNICAL')).toBeVisible()
+  await expect(page.getByText('阶段：TECHNICAL')).toBeVisible()
 
   await page.getByRole('button', { name: '⋮' }).click()
   await page.getByText('结束面试').click()

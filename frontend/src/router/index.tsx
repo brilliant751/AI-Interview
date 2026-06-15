@@ -7,6 +7,7 @@ import { CodingPracticeListPage } from '../pages/CodingPracticeListPage'
 import { CodingPracticeSessionPage } from '../pages/CodingPracticeSessionPage'
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage'
 import { HistoryPage } from '../pages/HistoryPage'
+import { HomePage } from '../pages/HomePage'
 import { HomeOverviewPage } from '../pages/HomeOverviewPage'
 import { InterviewPage } from '../pages/InterviewPage'
 import { InterviewPlaybackPage } from '../pages/InterviewPlaybackPage'
@@ -44,13 +45,11 @@ function AdminRoute(props: { children: JSX.Element }) {
 
 /** 应用路由入口组件。 */
 export function AppRouter() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-
   return (
     <BrowserRouter>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />} />
+          <Route path="/" element={<HomePage />} />
           <Route
             path="/overview"
             element={

@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarOutlined, ClockCircleOutlined, FilePdfOutlined, FlagOutlined, HourglassOutlined, RedoOutlined, UnorderedListOutlined, UserOutlined } from '@ant-design/icons'
-import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Form, Grid, Input, Modal, Progress, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
+import { Badge, Button, Calendar, Card, Checkbox, Col, Dropdown, Empty, Form, Grid, Input, Modal, Radio, Row, Select, Space, Statistic, Switch, Table, Tag, Tooltip, Typography, message } from 'antd'
 import { AxiosError } from 'axios'
 import dayjs, { type Dayjs } from 'dayjs'
-import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Mic, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
+import { Activity, ArrowRight, BriefcaseBusiness, CalendarClock, ChevronDown, ChevronUp, CirclePause, Code2, Database, FileText, Play, ShieldCheck, Upload, type LucideIcon } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -1107,11 +1107,11 @@ export function InterviewPage() {
     const pausedItems = pausedQuery.data?.items ?? []
     const pausedCount = pausedItems.length
     const resumedAtText = pausedItems[0]?.started_at ? formatDateTime(pausedItems[0].started_at) : '--'
-    const quickStartRoles: Array<{ key: string; title: string; subtitle: string; icon: LucideIcon }> = [
-      { key: 'web', title: 'Web 前端工程师', subtitle: '项目表达 / 性能优化 / 工程化', icon: Code2 },
-      { key: 'java', title: 'Java 后端工程师', subtitle: '并发 / 系统设计 / 数据库', icon: Database },
-      { key: 'pm', title: '产品经理', subtitle: '需求分析 / 指标拆解 / 场景沟通', icon: BriefcaseBusiness },
-      { key: 'test', title: '测试工程师', subtitle: '测试策略 / 缺陷追踪 / 质量门禁', icon: ShieldCheck },
+    const quickStartRoles: Array<{ key: string; title: string; icon: LucideIcon }> = [
+      { key: 'web', title: 'Web 前端工程师', icon: Code2 },
+      { key: 'java', title: 'Java 后端工程师', icon: Database },
+      { key: 'pm', title: '产品经理', icon: BriefcaseBusiness },
+      { key: 'test', title: '测试工程师', icon: ShieldCheck },
     ]
     const roleColorMap: Record<string, string> = {
       web: 'blue',
@@ -1163,16 +1163,13 @@ export function InterviewPage() {
           }}
         >
           <Row gutter={[16, 16]} align="middle">
-            <Col xs={24} xl={16}>
-              <Typography.Title level={3} style={{ marginTop: 0 }}>
-                面试大厅
+            <Col xs={24} xl={16} className="interview-lobby-hero-main">
+              <Typography.Title level={2} style={{ marginTop: 0, marginBottom: 0 }}>
+                面试中心
               </Typography.Title>
-              <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
-                开始新的模拟面试，或继续上次未完成会话。建议优先练习项目表达和技术方案讲解。
-              </Typography.Paragraph>
               <Space wrap className="interview-lobby-actions">
                 <Button className="interview-lobby-btn-primary" type="primary" size="large" icon={<Play size={16} />} onClick={() => setCreateModalOpen(true)}>
-                  开始新面试
+                  创建面试
                 </Button>
                 <Button className="interview-lobby-btn-secondary" size="large" icon={<Upload size={16} />} onClick={() => navigate('/resumes')}>
                   上传/管理简历
@@ -1206,29 +1203,37 @@ export function InterviewPage() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space align="start" size={10}>
-                <div className="interview-lobby-icon-wrap blue"><CirclePause size={18} /></div>
-                <Statistic title="暂停中的面试" value={pausedCount} suffix="场" />
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap blue"><Play size={18} /></div>
+                  <Typography.Title level={4} style={{ margin: 0 }}>新建模拟面试</Typography.Title>
+                </Space>
+                <Button type="primary" onClick={() => setCreateModalOpen(true)}>
+                  开始配置
+                </Button>
               </Space>
             </Card>
           </Col>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space align="start" size={10}>
-                <div className="interview-lobby-icon-wrap violet"><Mic size={18} /></div>
-                <Statistic title="语音答题时长上限" value={MAX_RECORDING_SECONDS} suffix="秒/题" />
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                <Space align="start" size={10}>
+                  <div className="interview-lobby-icon-wrap violet"><CirclePause size={18} /></div>
+                  <Typography.Title level={4} style={{ margin: 0 }}>继续暂停面试</Typography.Title>
+                </Space>
+                <Statistic title="可继续" value={pausedCount} suffix="场" />
               </Space>
             </Card>
           </Col>
           <Col xs={24} xl={8}>
-            <Card className="interview-lobby-kpi-card">
-              <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            <Card className="interview-lobby-kpi-card interview-lobby-entry-card">
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
                 <Space align="start" size={10}>
                   <div className="interview-lobby-icon-wrap green"><FileText size={18} /></div>
-                  <Typography.Text type="secondary">文本答题剩余建议</Typography.Text>
+                  <Typography.Title level={4} style={{ margin: 0 }}>复盘历史记录</Typography.Title>
                 </Space>
-                <Progress percent={Math.round((textAnswerRemainingSeconds / MAX_TEXT_ANSWER_SECONDS) * 100)} />
+                <Button onClick={() => navigate('/history')}>查看历史</Button>
               </Space>
             </Card>
           </Col>
@@ -1252,7 +1257,6 @@ export function InterviewPage() {
                       <div className="interview-lobby-icon-wrap soft"><item.icon size={16} /></div>
                       <Typography.Text strong>{item.title}</Typography.Text>
                     </Space>
-                    <Typography.Text type="secondary">{item.subtitle}</Typography.Text>
                     <Button
                       className="interview-lobby-role-btn"
                       type="primary"
@@ -1306,7 +1310,7 @@ export function InterviewPage() {
               }
             >
               {selectedScheduleItems.length === 0 ? (
-                <Typography.Text type="secondary">这一天还没有预约面试，可以直接新建。</Typography.Text>
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无预约面试" />
               ) : (
                 <Space direction="vertical" size={12} style={{ width: '100%' }}>
                   {selectedScheduleItems.map((item) => (
@@ -1354,11 +1358,18 @@ export function InterviewPage() {
           </Col>
         </Row>
 
-        <Card className="interview-lobby-section-card" title="继续上次面试">
+        <Card className="interview-lobby-section-card" title="继续暂停面试">
           {pausedQuery.isLoading ? (
             <Typography.Text type="secondary">正在加载暂停中的会话...</Typography.Text>
           ) : pausedItems.length === 0 ? (
-            <Typography.Text type="secondary">暂无暂停中的面试，可点击“开始新面试”创建。</Typography.Text>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="暂无暂停中的面试，可点击“创建面试”开始。"
+            >
+              <Button type="primary" onClick={() => setCreateModalOpen(true)}>
+                立即创建面试
+              </Button>
+            </Empty>
           ) : (
             <Row gutter={[12, 12]}>
               {pausedItems.map((row) => (
@@ -1799,25 +1810,41 @@ export function InterviewPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: isDesktopWide
-          ? historyCollapsed
-            ? 'minmax(220px, 1fr) minmax(0, 3fr)'
-            : 'minmax(220px, 2fr) minmax(0, 4fr) minmax(220px, 2fr)'
-          : isTabletUp
-            ? 'minmax(220px, 1fr) minmax(0, 2fr)'
-            : 'minmax(0, 1fr)',
-        gap: 16,
-        width: '100%',
-        height: '100%',
-        minHeight: 0,
-        transition: 'grid-template-columns 0.2s ease',
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, width: '100%', height: '100%', minHeight: 0 }}>
+      <Card styles={{ body: { padding: 18 } }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <Typography.Title level={3} style={{ margin: 0 }}>
+            模拟面试工作台
+          </Typography.Title>
+          <Space wrap>
+            <Tag color="blue">阶段：{currentStage}</Tag>
+            <Tag color="cyan">输入：{inputMode}</Tag>
+            <Tag color="green">输出：{outputMode}</Tag>
+            <Tag color="gold">追问：{interviewStatusQuery.data?.follow_up_count ?? 0}</Tag>
+            <Tag color="purple">第 {questionRound} 轮</Tag>
+          </Space>
+        </div>
+      </Card>
+
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: isDesktopWide
+            ? historyCollapsed
+              ? 'minmax(240px, 0.9fr) minmax(0, 3fr)'
+              : 'minmax(240px, 1fr) minmax(420px, 2.4fr) minmax(260px, 1fr)'
+            : isTabletUp
+              ? 'minmax(240px, 1fr) minmax(0, 2fr)'
+              : 'minmax(0, 1fr)',
+          gap: 16,
+          width: '100%',
+          flex: 1,
+          minHeight: 0,
+          transition: 'grid-template-columns 0.2s ease',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
+        }}
+      >
       <Space direction="vertical" size={16} style={{ width: '100%', minWidth: 0, height: '100%', overflowY: 'auto', overflowX: 'hidden', paddingRight: 4 }}>
         {/* <Card title="会话信息">
           <Space wrap>
@@ -1943,7 +1970,7 @@ export function InterviewPage() {
         }}
       >
         <Card
-          title="问题区"
+          title="当前问题"
           style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
           bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           extra={
@@ -2072,11 +2099,15 @@ export function InterviewPage() {
               )}
             </Space>
           ) : (
-            <Typography.Paragraph style={{ marginBottom: 0 }}>{currentQuestion || '等待题目生成...'}</Typography.Paragraph>
+              <div style={{ border: '1px solid #f0f0f0', borderRadius: 14, padding: 18 }}>
+                <Typography.Paragraph style={{ marginBottom: 0, fontSize: 18, lineHeight: 1.7 }}>
+                  {currentQuestion || '等待题目生成...'}
+                </Typography.Paragraph>
+              </div>
           )}
         </Card>
 
-        <Card title="回答区" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
+        <Card title="组织回答" style={{ height: '100%', display: 'flex', flexDirection: 'column' }} bodyStyle={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
           {inputMode === 'voice' ? (
             <Space direction="vertical" style={{ width: '100%' }}>
               <Typography.Text>本题目语音作答</Typography.Text>
@@ -2095,9 +2126,6 @@ export function InterviewPage() {
                 style={{
                   height: 54,
                   borderRadius: 28,
-                  background: '#b9e0db',
-                  borderColor: '#b9e0db',
-                  color: '#ffffff',
                   fontWeight: 600,
                 }}
                 loading={submitMutation.isPending}
@@ -2138,14 +2166,14 @@ export function InterviewPage() {
                 剩余作答时间：{formatDuration(textAnswerRemainingSeconds)}
               </Typography.Text>
               <Input.TextArea
-                rows={6}
+                rows={9}
                 value={answer}
                 onChange={(event) => setAnswer(event.target.value)}
                 placeholder="输入你的回答"
               />
             </Space>
           )}
-          <div style={{ marginTop: 12, display: 'flex', justifyContent: inputMode !== 'voice' ? 'center' : 'flex-start' }}>
+          <div style={{ marginTop: 14, display: 'flex', justifyContent: inputMode !== 'voice' ? 'flex-end' : 'flex-start' }}>
             {inputMode !== 'voice' ? (
               <Button
                 type="primary"
@@ -2167,12 +2195,12 @@ export function InterviewPage() {
       {!historyCollapsed ? (
         <div style={{ minWidth: 0, height: '100%', minHeight: 0, overflow: 'hidden' }}>
           <Card
-            title="历史记录"
+            title="回答轨迹"
             style={{ height: '100%' }}
             bodyStyle={{ padding: 12, height: 'calc(100% - 57px)', overflowY: 'auto', overflowX: 'hidden' }}
           >
             {sortedTurns.length === 0 ? (
-              <Typography.Text type="secondary">当前还没有历史轮次，完成一轮后会显示在这里。</Typography.Text>
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无历史轮次" />
             ) : (
               <Space direction="vertical" size={12} style={{ width: '100%' }}>
                 {sortedTurns.map((turn) => (
@@ -2182,8 +2210,7 @@ export function InterviewPage() {
                       style={{
                         alignSelf: 'flex-start',
                         maxWidth: '95%',
-                        background: '#f6faff',
-                        border: '1px solid #d9ecff',
+                        border: '1px solid #f0f0f0',
                         borderRadius: 12,
                         padding: '8px 10px',
                         whiteSpace: 'pre-wrap',
@@ -2197,8 +2224,7 @@ export function InterviewPage() {
                       style={{
                         alignSelf: 'flex-end',
                         maxWidth: '95%',
-                        background: '#f6fff8',
-                        border: '1px solid #dcf3e4',
+                        border: '1px solid #f0f0f0',
                         borderRadius: 12,
                         padding: '8px 10px',
                         whiteSpace: 'pre-wrap',
@@ -2281,6 +2307,7 @@ export function InterviewPage() {
           </Space>
         )}
       </Modal>
+      </div>
     </div>
   )
 }
