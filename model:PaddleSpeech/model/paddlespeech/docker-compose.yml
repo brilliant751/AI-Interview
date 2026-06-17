@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  tts-api:
+    build: .
+    container_name: paddlespeech-tts-api
+    ports:
+      - "8000:8000"
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --workers 1
+    volumes:
+      - ./outputs:/app/outputs
+      - paddlespeech-cache:/root/.paddlespeech
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+
+volumes:
+  paddlespeech-cache:
