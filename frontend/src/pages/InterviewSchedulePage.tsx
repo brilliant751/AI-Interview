@@ -106,14 +106,14 @@ function getScheduleStatusText(status: string): string {
 /** 获取状态强调色。 */
 function getScheduleStatusAccent(status: string): string {
   const colorMap: Record<string, string> = {
-    scheduled: '#2563eb',
+    scheduled: '#1f7a3b',
     ready: '#16a34a',
     in_progress: '#d97706',
     completed: '#6b7280',
     missed: '#dc2626',
     cancelled: '#9ca3af',
   }
-  return colorMap[status] || '#2563eb'
+  return colorMap[status] || '#1f7a3b'
 }
 
 /** 面试预约页面。 */
@@ -424,7 +424,7 @@ export function InterviewSchedulePage() {
             variant="borderless"
             style={{
               borderRadius: 22,
-              background: index === 0 ? 'linear-gradient(180deg, #f5f9ff 0%, #ffffff 100%)' : '#ffffff',
+              background: index === 0 ? 'linear-gradient(180deg, #f3fbf0 0%, #ffffff 100%)' : '#ffffff',
               boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)',
             }}
             styles={{ body: { padding: 18 } }}

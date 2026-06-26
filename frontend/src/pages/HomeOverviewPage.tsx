@@ -43,10 +43,10 @@ export function HomeOverviewPage() {
   const scheduleGroups = groupSchedulesByDate((scheduleQuery.data?.items ?? []).filter((item) => !['completed', 'missed', 'cancelled'].includes(item.status)))
 
   const kpiItems: Array<{ key: string; title: string; value: string; note: string; icon: ReactNode; color: string }> = [
-    { key: 'score', title: '平均得分', value: '86 分', note: '较上次 +6 分', icon: <LineChartOutlined />, color: '#2d6bff' },
+    { key: 'score', title: '平均得分', value: '86 分', note: '较上次 +6 分', icon: <LineChartOutlined />, color: '#1f7a3b' },
     { key: 'finished', title: '完成面试', value: '12 场', note: '累计完成', icon: <CalendarOutlined />, color: '#16a34a' },
     { key: 'focus', title: '待提升能力', value: '项目表达', note: '优先提升方向', icon: <DotChartOutlined />, color: '#f59e0b' },
-    { key: 'weekly', title: '本周练习', value: '5 场', note: '较上周 +2 场', icon: <RocketOutlined />, color: '#7c3aed' },
+    { key: 'weekly', title: '本周练习', value: '5 场', note: '较上周 +2 场', icon: <RocketOutlined />, color: '#37b85a' },
   ]
 
   const recentRecords = [
@@ -93,21 +93,21 @@ export function HomeOverviewPage() {
                 </Space>
                 <Space style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Space>
-                    <SoundOutlined style={{ color: '#2563eb' }} />
+                    <SoundOutlined style={{ color: '#1f7a3b' }} />
                     <Typography.Text type="secondary">语音识别</Typography.Text>
                   </Space>
                   <Typography.Text>{health?.providers?.asr?.status === 'UP' ? '正常' : '异常'}</Typography.Text>
                 </Space>
                 <Space style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Space>
-                    <SafetyCertificateOutlined style={{ color: '#2563eb' }} />
+                    <SafetyCertificateOutlined style={{ color: '#1f7a3b' }} />
                     <Typography.Text type="secondary">模型服务</Typography.Text>
                   </Space>
                   <Typography.Text>{health?.providers?.llm?.status === 'UP' ? '正常' : '异常'}</Typography.Text>
                 </Space>
                 <Space style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Space>
-                    <SearchOutlined style={{ color: '#2563eb' }} />
+                    <SearchOutlined style={{ color: '#1f7a3b' }} />
                     <Typography.Text type="secondary">向量检索</Typography.Text>
                   </Space>
                   <Typography.Text>{health?.providers?.embed?.status === 'UP' ? '正常' : '异常'}</Typography.Text>
@@ -249,7 +249,7 @@ export function HomeOverviewPage() {
                 <Space direction="vertical" style={{ width: '100%', alignItems: 'center' }}>
                   <Progress type="circle" percent={86} format={(percent) => `${percent}分`} />
                   <Space size={6}>
-                    <RadarChartOutlined style={{ color: '#2d6bff' }} />
+                    <RadarChartOutlined style={{ color: '#1f7a3b' }} />
                     <Typography.Text type="secondary">综合得分</Typography.Text>
                   </Space>
                 </Space>
