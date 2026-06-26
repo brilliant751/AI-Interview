@@ -11,10 +11,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Badge, Button, Dropdown, Grid, Layout, Menu, Space, Typography, notification } from 'antd'
+import { Badge, Button, Dropdown, Layout, Menu, Space, Typography, notification } from 'antd'
 import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
@@ -25,8 +25,6 @@ const { Header, Content, Sider } = Layout
 
 /** 应用主布局。 */
 export function AppLayout(props: { children: ReactNode }) {
-  const screens = Grid.useBreakpoint()
-  const isMobile = !screens.md
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -56,7 +54,7 @@ export function AppLayout(props: { children: ReactNode }) {
     enabled: isAuthenticated,
     refetchInterval: isAuthenticated ? 60000 : false,
   })
-  const todayScheduleItems = todayScheduleQuery.data?.items ?? []
+  const todayScheduleItems = useMemo(() => todayScheduleQuery.data?.items ?? [], [todayScheduleQuery.data?.items])
   const todayPendingCount = todayScheduleItems.length
 
   useEffect(() => {

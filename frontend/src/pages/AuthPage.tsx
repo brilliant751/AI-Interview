@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { Button, Card, Form, Input, Segmented, Typography, message } from 'antd'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -61,10 +61,10 @@ export function AuthPage(props: { initialMode?: AuthMode }) {
     setMode(nextMode)
   }, [location.pathname, props.initialMode])
 
-  const switchMode = (nextMode: AuthMode) => {
+  const switchMode = useCallback((nextMode: AuthMode) => {
     setMode(nextMode)
     navigate(pathByMode[nextMode], { replace: true, state: location.state })
-  }
+  }, [location.state, navigate])
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -125,7 +125,7 @@ export function AuthPage(props: { initialMode?: AuthMode }) {
         ]}
       />
     ),
-    [mode],
+    [mode, switchMode],
   )
 
   return (

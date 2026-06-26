@@ -205,7 +205,7 @@ export function InterviewSchedulePage() {
   const todayKey = toDateKey(new Date())
   const selectedDateIsPast = isPastDateKey(selectedDateKey)
   const selectedDateDefaultTimePassed = isPastEveningDatetime(selectedDateKey)
-  const scheduleItems = scheduleListQuery.data?.items ?? []
+  const scheduleItems = useMemo(() => scheduleListQuery.data?.items ?? [], [scheduleListQuery.data?.items])
   const statCards = useMemo(
     () => [
       {
@@ -255,7 +255,7 @@ export function InterviewSchedulePage() {
       return
     }
     setSelectedDateKey(toDateKey(currentMonth))
-  }, [currentMonth, scheduleListQuery.data, schedulesByDate, selectedDateKey])
+  }, [currentMonth, scheduleListQuery.data, schedulesByDate, selectedDateKey, todayKey])
 
   const createMutation = useMutation({
     mutationFn: createInterviewSchedule,

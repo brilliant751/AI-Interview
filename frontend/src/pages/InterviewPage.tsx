@@ -95,7 +95,7 @@ export function InterviewPage() {
   const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
   const [createForm] = Form.useForm()
-  const parseBackendDate = (value?: string) => {
+  const parseBackendDate = useCallback((value?: string) => {
     if (!value) {
       return null
     }
@@ -106,7 +106,7 @@ export function InterviewPage() {
       return null
     }
     return parsed
-  }
+  }, [])
   /** 将表单中的本地日期时间转换为 ISO 字符串。 */
   const toScheduleIsoString = (value?: string) => {
     if (!value) {
@@ -119,7 +119,7 @@ export function InterviewPage() {
     return parsed.toISOString()
   }
   /** 按本地日期生成 YYYY-MM-DD key。 */
-  const buildDateKey = (value?: string) => {
+  const buildDateKey = useCallback((value?: string) => {
     const parsed = parseBackendDate(value)
     if (!parsed) {
       return ''
@@ -128,7 +128,7 @@ export function InterviewPage() {
     const month = String(parsed.getMonth() + 1).padStart(2, '0')
     const day = String(parsed.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
-  }
+  }, [parseBackendDate])
   /** 格式化预约开始时间。 */
   const formatScheduleDateTime = (value?: string) => {
     const parsed = parseBackendDate(value)
@@ -152,7 +152,7 @@ export function InterviewPage() {
     return code === 'ERR_CANCELED' || name === 'CanceledError' || messageText.includes('canceled')
   }
   /** 计算麦克风优先级：优先本机内建麦克风，弱化 iPhone 连续互通设备。 */
-  const scoreAudioInputLabel = (label: string) => {
+  const scoreAudioInputLabel = useCallback((label: string) => {
     const lowerLabel = label.toLowerCase()
     let score = 0
     if (lowerLabel.includes('iphone')) {
@@ -171,15 +171,15 @@ export function InterviewPage() {
       score += 10
     }
     return score
-  }
+  }, [])
   /** 从设备列表中挑选默认麦克风。 */
-  const pickPreferredAudioInputId = (devices: MediaDeviceInfo[]) => {
+  const pickPreferredAudioInputId = useCallback((devices: MediaDeviceInfo[]) => {
     if (devices.length === 0) {
       return ''
     }
     const sorted = [...devices].sort((left, right) => scoreAudioInputLabel(right.label) - scoreAudioInputLabel(left.label))
     return sorted[0].deviceId
-  }
+  }, [scoreAudioInputLabel])
   /** 刷新可用麦克风设备列表并更新默认选择。 */
   const refreshAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
@@ -198,7 +198,7 @@ export function InterviewPage() {
       }
       return pickPreferredAudioInputId(audioInputs)
     })
-  }, [])
+  }, [pickPreferredAudioInputId])
   /** 请求麦克风权限后刷新设备，用于拿到完整设备名称。 */
   const prepareAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -410,7 +410,7 @@ export function InterviewPage() {
   }, [currentQuestion, pipelineMeta?.trace_id, currentStage])
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
-  const resetRoundRuntimeState = () => {
+  const resetRoundRuntimeState = useCallback(() => {
     stopVoiceAutoRecordCountdown(0)
     stopRecordingLimitCountdown(0)
     stopTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
@@ -426,7 +426,7 @@ export function InterviewPage() {
       mediaRecorderRef.current.stop()
       mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
     }
-  }
+  }, [MAX_TEXT_ANSWER_SECONDS, stopRecordingLimitCountdown, stopTextAnswerCountdown, stopVoiceAutoRecordCountdown])
 
   useEffect(() => {
     if (inputMode !== 'text' || !interviewId || !currentQuestion || currentStage === 'END') {
@@ -493,7 +493,7 @@ export function InterviewPage() {
     }
     resetRoundRuntimeState()
     setResumeReplayTick((previous) => previous + 1)
-  }, [interviewId])
+  }, [interviewId, resetRoundRuntimeState])
 
   /** 进入语音模式时主动准备设备列表，并监听设备变化。 */
   useEffect(() => {
@@ -579,7 +579,7 @@ export function InterviewPage() {
     const current = items.find((item) => item.resume_id === resumeId)
     return current?.file_name || ''
   }, [resumeId, resumeQuery.data])
-  const scheduleItems = scheduleQuery.data?.items ?? []
+  const scheduleItems = useMemo(() => scheduleQuery.data?.items ?? [], [scheduleQuery.data?.items])
   const scheduleMap = useMemo(() => {
     const mapped = new Map<string, typeof scheduleItems>()
     scheduleItems.forEach((item) => {
@@ -589,7 +589,7 @@ export function InterviewPage() {
       mapped.set(key, currentItems)
     })
     return mapped
-  }, [scheduleItems])
+  }, [buildDateKey, scheduleItems])
   const selectedScheduleItems = useMemo(
     () => scheduleMap.get(selectedScheduleDate.format('YYYY-MM-DD')) ?? [],
     [scheduleMap, selectedScheduleDate],
@@ -893,7 +893,7 @@ export function InterviewPage() {
   }
 
   /** 停止录音并收集音频文件。 */
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     stopVoiceAutoRecordCountdown(0)
     stopRecordingLimitCountdown(0)
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
@@ -901,7 +901,7 @@ export function InterviewPage() {
       return
     }
     mediaRecorderRef.current.stop()
-  }
+  }, [stopRecordingLimitCountdown, stopVoiceAutoRecordCountdown])
 
   /** 启动浏览器麦克风录音。 */
   const startRecording = async () => {
