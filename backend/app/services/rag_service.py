@@ -14,6 +14,12 @@ from app.core.errors import kb_build_error
 from app.services.providers import OllamaProviderClient
 
 
+# RAGService 提供岗位相关材料检索：
+# 1. 优先使用 Chroma 向量库和 alias 文件定位当前岗位集合。
+# 2. 当配置允许 fallback 时，可使用 Hashing Trick 做轻量本地检索兜底。
+# 3. 统一返回 title/content/score/source_path/retrieval_mode，供提问和报告复用。
+# 4. embedding/provider 健康检查在这里聚合，便于管理端展示知识库状态。
+# 5. 检索层不关心用户身份，只根据 job_role 和回答文本返回上下文片段。
 def _tokenize(text: str) -> list[str]:
     """将文本切为中英文 token。"""
     return re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_]+", text.lower())

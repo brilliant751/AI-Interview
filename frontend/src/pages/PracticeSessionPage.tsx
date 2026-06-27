@@ -7,6 +7,12 @@ import { fetchPracticeSession, finishPracticeSession, submitPracticeAnswer } fro
 import { parseApiError } from '../api/client'
 import { usePracticeStore } from '../stores/practiceStore'
 
+// 题库练习作答页：
+// 1. 进入页面先根据 URL practiceId 拉取服务端会话快照。
+// 2. 当前题、已完成数和下一题都以后端响应为准。
+// 3. 提交后清空本地输入框，并用 applyAnswerResult 更新进度。
+// 4. 手动结束会话后刷新状态，避免继续提交已结束练习。
+
 /** 题库练习作答页。 */
 export function PracticeSessionPage() {
   const navigate = useNavigate()

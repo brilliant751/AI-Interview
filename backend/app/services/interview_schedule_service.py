@@ -13,6 +13,12 @@ from app.repositories.interview_repository import InterviewRepository
 from app.services.interview_service import InterviewService
 
 
+# 预约服务负责把“日历事件”和“面试会话”连接起来：
+# 1. 创建预约时先校验简历、JD、语气配置，再写入 schedule。
+# 2. 状态不是定时任务实时刷新，而是在查询详情/列表时按当前时间懒刷新。
+# 3. ready 状态表示已经进入可开始窗口，start 接口会真正创建或启动面试。
+# 4. 日历链接在服务端生成，保证 Google/Outlook 使用同一套标题和描述。
+# 5. 时间统一按 Asia/Shanghai 处理，避免前端本地时区差异影响预约判断。
 class InterviewScheduleService:
     """封装单次模拟面试预约能力。"""
 
@@ -54,6 +60,9 @@ class InterviewScheduleService:
 
     def _normalize_role_and_jd(self, payload: dict, user_id: str) -> tuple[str, str, str]:
         """校验岗位方向与 JD 并返回归一化信息。"""
+        # 岗位方向可以来自用户显式选择，也可以从 JD 中推导。
+        # 如果两者都存在，必须完全匹配，避免“Java JD + Web 面试方向”的错配。
+        # 系统预置 JD 允许所有用户使用，用户自建 JD 需要 owner 校验。
         jd_id = str(payload.get("jd_id") or "").strip()
         normalized_role = str(payload.get("job_role") or "").strip()
         jd_title = ""
@@ -90,6 +99,9 @@ class InterviewScheduleService:
 
     def _refresh_status_for_row(self, row: dict) -> dict:
         """根据当前时间懒刷新预约状态。"""
+        # 懒刷新可以避免引入额外定时任务：
+        # 用户查看列表/详情时顺手把 scheduled -> ready/missed 的状态推进到数据库。
+        # 终态和进行中状态不再刷新，防止覆盖取消、完成等用户或流程动作。
         status = str(row.get("status") or "")
         if status in {"completed", "cancelled", "in_progress", "missed"}:
             return row
@@ -122,6 +134,9 @@ class InterviewScheduleService:
 
     def _build_calendar_links(self, row: dict) -> dict[str, str]:
         """生成 Google Calendar 与 Outlook Web 直达链接。"""
+        # 第三方日历链接只拼标准 query，不依赖平台 SDK。
+        # Google 使用 UTC 的紧凑时间格式，Outlook 可以接受 ISO 字符串。
+        # 描述中放系统入口，让用户从外部日历能回到预约列表。
         start_at = self._parse_dt(str(row.get("scheduled_start_at") or ""))
         end_at = self._parse_dt(str(row.get("scheduled_end_at") or ""))
         title = self._build_schedule_title(row)

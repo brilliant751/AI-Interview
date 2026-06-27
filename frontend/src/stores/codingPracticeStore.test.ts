@@ -2,6 +2,13 @@ import { describe, expect, test } from 'vitest'
 
 import { useCodingPracticeStore } from './codingPracticeStore'
 
+// codingPracticeStore 测试说明：
+// 1. 验证进入题目后 session、question 和 activeLanguage 能正确写入。
+// 2. 验证本地 starter code 兜底，避免编辑器出现空白内容。
+// 3. 验证切换语言时不同语言草稿相互独立。
+// 4. 验证运行结果和 reset 行为不会污染下一道题。
+// 5. 这些测试不依赖 Monaco，只验证状态容器的纯逻辑。
+
 describe('codingPracticeStore', () => {
   test('stores session payload and injects local starter template', () => {
     useCodingPracticeStore.getState().reset()

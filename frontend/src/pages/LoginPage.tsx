@@ -6,6 +6,12 @@ import { login } from '../api/auth'
 import { parseApiError } from '../api/client'
 import { useAuthStore } from '../stores/authStore'
 
+// 登录页：
+// 1. 登录成功后把 token 和用户信息写入 authStore。
+// 2. 如果用户是从受保护路由跳转而来，优先回到原路径。
+// 3. 认证错误码会转成更友好的中文提示。
+// 4. 页面不直接操作 localStorage，持久化由 authStore 统一处理。
+
 /** 登录页面。 */
 export function LoginPage() {
   const navigate = useNavigate()

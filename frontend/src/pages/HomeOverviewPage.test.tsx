@@ -25,6 +25,13 @@ vi.mock('../api/interview', () => ({
   fetchInterviewSchedules: (params: unknown) => mockFetchInterviewSchedules(params),
 }))
 
+// HomeOverviewPage 测试说明：
+// 1. Provider health 和预约查询都通过 mock 注入，页面测试不依赖后端。
+// 2. QueryClient 设置 retry=false，避免失败用例被自动重试拉长时间。
+// 3. MemoryRouter 提供导航上下文，useNavigate 被替换为可断言的 mock。
+// 4. 这些用例验证首页关键指标、日历数据和快捷入口能正常渲染。
+// 5. 页面是多个数据源的聚合点，因此测试重点是“缺数据也不崩”。
+
 /** 渲染首页概览页。 */
 function renderPage() {
   const queryClient = new QueryClient({

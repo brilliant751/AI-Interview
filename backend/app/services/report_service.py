@@ -12,6 +12,12 @@ from app.services.providers import OllamaProviderClient, OpenAIProviderClient
 INTERVIEW_FIRST_QUESTION = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
 
 
+# ReportService 将面试轮次整理成结构化报告：
+# 1. 优先调用 LLM 生成优势、风险、建议和深挖分析。
+# 2. LLM 不可用时使用规则算法生成可解释的兜底报告。
+# 3. 12 维能力分使用回答长度、阶段分布、live_score 等稳定特征估算。
+# 4. 输出字段全部保持 JSON 字符串，兼容当前数据库 report 表结构。
+# 5. 报告侧不再推进面试状态，只读取轮次并写入最终报告内容。
 class ReportService:
     """聚合面试轮次并输出结构化报告。"""
 
@@ -72,6 +78,9 @@ class ReportService:
 
     def _calc_12d_scores(self, turns: list[dict]) -> dict[str, int]:
         """基于轮次数据计算 12 维能力分。"""
+        # 这里不是机器学习评分，而是可解释的启发式估算。
+        # live_score 表示每轮即时表现，阶段占比表示面试覆盖面，回答长度表示展开程度。
+        # 最终压缩到 1-5 档，便于报告 UI 展示雷达图或分项条。
         answers = [str(turn.get("answer_text") or "").strip() for turn in turns]
         scores = [int(turn.get("live_score") or 0) for turn in turns]
         avg_score = int(sum(scores) / max(len(scores), 1))
@@ -114,6 +123,8 @@ class ReportService:
 
     def _build_llm_schema(self) -> dict:
         """构建 LLM 输出 JSON Schema。"""
+        # 通过 JSON Schema 约束模型输出，减少解析失败和字段缺失。
+        # 如果 provider 不支持严格 schema，后续解析逻辑也会做兜底修正。
         return {
             "type": "object",
             "properties": {
@@ -215,6 +226,9 @@ class ReportService:
         precomputed_12d: dict[str, int],
     ) -> list[dict[str, str]]:
         """构建报告生成 Prompt 消息。"""
+        # 报告 prompt 控制输入规模，只截取前 8 轮和每轮前 400 字回答。
+        # 这样可以覆盖主要表现，同时避免长面试把上下文窗口全部占满。
+        # precomputed_12d 作为规则分数传入，要求 LLM 在结构化报告中参考稳定基线。
         jd_text = str((session or {}).get("jd_snapshot_content") or "")
         history_items = []
         question = INTERVIEW_FIRST_QUESTION
@@ -235,6 +249,8 @@ class ReportService:
             )
             question = next_question or question
         user_payload = {
+            # user_payload 使用 JSON 序列化传给模型。
+            # 这种结构比自然语言拼接更稳定，模型更容易按字段输出证据化报告。
             "job_role": str((session or {}).get("job_role") or ""),
             "difficulty": str((session or {}).get("difficulty") or ""),
             "jd_text": jd_text[:2400],
@@ -257,6 +273,9 @@ class ReportService:
 
     def _normalize_dimension_scores(self, llm_scores: list[dict], turns: list[dict]) -> list[dict]:
         """归一化维度评分并确保 12 维都存在。"""
+        # LLM 可能漏掉部分维度或输出越界分值。
+        # 这里用规则预计算分数补齐所有 12 个维度，并把分值限制在 1-5。
+        # confidence 默认取决于轮次数量，避免短面试报告显示过高置信度。
         confidence = self._confidence_level(turns)
         precomputed = self._calc_12d_scores(turns)
         mapped = {str(item.get("dimension") or ""): item for item in llm_scores}
@@ -278,6 +297,9 @@ class ReportService:
 
     def _fallback_report(self, turns: list[dict], session: dict | None = None, resume_text: str = "") -> dict:
         """规则回退报告生成。"""
+        # 当 LLM 不可用或解析失败时，仍然要给用户一份可读报告。
+        # 回退报告完全基于轮次分数、回答长度、阶段分布和 JD/简历 token 匹配。
+        # 其目标是“可解释、不断流程”，不是替代人工最终判断。
         raw_scores = [int(turn.get("live_score") or 0) for turn in turns]
         overall_score = int(sum(raw_scores) / len(raw_scores))
         confidence = self._confidence_level(turns)
@@ -304,6 +326,8 @@ class ReportService:
         question = INTERVIEW_FIRST_QUESTION
         deep_dives: list[dict] = []
         for index, turn in enumerate(turns[:3], start=1):
+            # 深挖分析最多取前三轮，避免回退报告过长。
+            # 每条分析都保留问题、回答摘要、命中率、深度等级和建议追问。
             stage = str(turn.get("stage") or "")
             answer = str(turn.get("answer_text") or "").strip()
             score = int(turn.get("live_score") or 0)
@@ -334,6 +358,8 @@ class ReportService:
         answer_text = " ".join(str(turn.get("answer_text") or "") for turn in turns).lower()
         alignment = []
         for token in jd_tokens or ["岗位关键能力"]:
+            # JD 对齐使用简单 token 命中规则。
+            # 未命中不代表候选人一定不具备能力，只表示当前回答中缺少证据。
             alignment.append(
                 {
                     "jd_skill": token,

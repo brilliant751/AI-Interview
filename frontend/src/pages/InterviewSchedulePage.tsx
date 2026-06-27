@@ -18,6 +18,13 @@ import { parseApiError } from '../api/client'
 import { useInterviewStore } from '../stores/interviewStore'
 import { buildCalendarDays, endOfMonth, groupSchedulesByDate, isSameMonth, startOfMonth, toDateKey } from '../utils/scheduleCalendar'
 
+// 面试预约页负责“创建、查看、取消、开始”四个动作：
+// 1. 月历视图按日期组织预约，列表/详情用同一份查询数据驱动。
+// 2. 创建预约前需要选择简历、岗位/JD、难度、输入输出模式和时长。
+// 3. ready 状态的预约可直接开始，成功后写入 interviewStore 并跳转面试页。
+// 4. 取消和开始都需要刷新列表，确保日历状态和详情弹窗一致。
+// 5. 日历下载链接来自后端，前端只负责触发下载。
+
 /** 格式化日期时间。 */
 function formatDateTime(value?: string): string {
   if (!value) return '--'

@@ -17,6 +17,12 @@ from app.api.v1.report import router as report_router
 from app.api.v1.resume import router as resume_router
 
 api_router = APIRouter(prefix="/api/v1")
+
+# v1 版本所有业务路由都在这里集中注册：
+# 1. 前端只需要记住统一前缀 /api/v1，后续模块扩展不会影响基础地址。
+# 2. 各模块仍然在自己的文件里维护 prefix 和 tag，便于生成 OpenAPI 文档。
+# 3. 注册顺序保持“账户/基础资料/业务流程/管理接口”的阅读顺序。
+# 4. 这里不做鉴权和业务判断，鉴权统一在具体路由的 Depends 中声明。
 api_router.include_router(auth_router)
 api_router.include_router(company_router)
 api_router.include_router(coding_practice_router)

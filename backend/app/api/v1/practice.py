@@ -25,6 +25,13 @@ from app.services.question_bank_service import QuestionBankService
 
 router = APIRouter(prefix="/practice", tags=["practice"])
 
+# 题库练习路由同时覆盖普通用户练习和管理员题库维护：
+# 1. 用户接口使用 require_user，只能访问自己的练习会话和记录。
+# 2. 管理接口使用 require_admin，用于上传材料、导入题库、查看导入任务。
+# 3. 文件上传仍由路由层接收，解析和导入任务交给 MaterialImportService。
+# 4. 题库 CRUD 经 QuestionBankService 处理，避免直接在接口中拼 Markdown 或 SQL。
+# 5. 响应统一包装成 Pydantic 模型，保证前端字段结构稳定。
+
 
 def get_service(request: Request) -> PracticeService:
     """从应用状态获取题库练习服务。"""

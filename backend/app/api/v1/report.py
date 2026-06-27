@@ -14,6 +14,13 @@ from app.services.report_worker import ReportWorker
 
 router = APIRouter(prefix="/report", tags=["report"])
 
+# 报告接口负责查询和补偿触发：
+# 1. 查询报告前先校验面试会话归属，防止通过 interview_id 读取他人报告。
+# 2. 报告可能仍在 GENERATING，因此没有记录时返回生成中状态而不是 404。
+# 3. 列表接口读取当前用户历史报告，前端用于“报告中心/历史记录”展示。
+# 4. 重新生成报告由 worker 异步执行，接口不阻塞等待 LLM 完成。
+# 5. 数据库存储的 JSON 字符串在路由层反序列化成响应模型需要的结构。
+
 
 def get_repo(request: Request) -> InterviewRepository:
     """从应用状态获取仓储对象。"""

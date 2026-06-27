@@ -16,6 +16,14 @@ sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
+# 认证主流程测试说明：
+# 1. 使用真实 FastAPI TestClient 覆盖 HTTP 层、服务层和数据库写入。
+# 2. 每个用例创建独立临时数据库，注册用户、刷新 token、登出互不影响。
+# 3. 关闭 dev static token，确保测试走正式 JWT 认证路径。
+# 4. reset token、refresh token 的过期和撤销行为需要通过端到端请求验证。
+# 5. 这些用例用于防止认证接口重构时破坏前端登录闭环。
+# 6. setUp/tearDown 手动进入 TestClient 生命周期，保证应用 lifespan 正常执行。
+
 
 class AuthFlowTestCase(unittest.TestCase):
     """验证注册、登录、刷新、登出与重置流程。"""

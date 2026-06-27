@@ -5,6 +5,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { register } from '../api/auth'
 import { parseApiError } from '../api/client'
 
+// 注册页：
+// 1. 只负责提交账号信息并展示后端校验结果。
+// 2. 注册成功后跳转登录页，由用户再完成登录获取 token。
+// 3. 表单校验覆盖昵称、邮箱和密码的基础规则，复杂唯一性由后端判断。
+
 /** 注册页面。 */
 export function RegisterPage() {
   const navigate = useNavigate()

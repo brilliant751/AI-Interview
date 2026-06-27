@@ -11,6 +11,11 @@ from app.core.config import get_settings
 from app.core.errors import ApiError
 
 
+# PaddleSpeechProviderClient 是本地 TTS SDK 适配器：
+# 1. 引擎惰性加载，避免应用启动阶段就下载或初始化大模型。
+# 2. aistudio_sdk 的兼容补丁集中放在这里，不污染 VoiceService。
+# 3. 生成的音频文件通过临时目录管理，调用结束后自动清理。
+# 4. SDK 异常统一转换为 TTS_UPSTREAM_FAILED，便于上层降级为文本输出。
 class PaddleSpeechProviderClient:
     """封装本地 PaddleSpeech 的语音合成调用。"""
 
@@ -35,6 +40,8 @@ class PaddleSpeechProviderClient:
 
     def _patch_aistudio_sdk_download(self) -> None:
         """兼容 aistudio_sdk 新版本缺失 download 符号的问题。"""
+        # 某些 PaddleSpeech 版本仍从 aistudio_sdk.hub 导入 download。
+        # 新版本 SDK 把实现移动到了 file_download，这里动态补一个兼容符号。
         try:
             import aistudio_sdk.hub as aistudio_hub  # type: ignore
         except Exception:

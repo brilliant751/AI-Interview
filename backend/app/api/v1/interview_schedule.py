@@ -23,6 +23,13 @@ from app.services.interview_schedule_service import InterviewScheduleService
 
 router = APIRouter(prefix="/interview-schedules", tags=["interview-schedules"])
 
+# 预约接口把“未来某个时间的面试”抽象为 schedule：
+# 1. 创建接口使用幂等键，避免网络重试产生多个相同预约。
+# 2. 列表和详情都会触发服务层懒刷新状态，前端拿到的是最新可操作状态。
+# 3. start 接口会把 ready 的预约推进为真实面试会话。
+# 4. calendar.ics 由服务端生成，确保下载日历与在线链接内容一致。
+# 5. 所有操作都绑定 user_id，用户不能查看或取消他人的预约。
+
 
 def get_repo(request: Request) -> InterviewRepository:
     """从应用状态获取仓储对象。"""

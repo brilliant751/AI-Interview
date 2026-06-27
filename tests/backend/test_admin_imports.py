@@ -20,6 +20,14 @@ _original_version = importlib_metadata.version
 _original_email_validator = sys.modules.get("email_validator")
 _original_pydantic_version = pydantic_networks.version
 
+# 管理端导入测试关注点：
+# 1. 验证管理员鉴权、幂等键和异步任务状态查询是否协同正确。
+# 2. 使用临时目录模拟材料导入，避免真实知识库或题库文件被测试覆盖。
+# 3. email_validator stub 用于精简测试依赖，避免 CI 环境缺包导致 FastAPI 初始化失败。
+# 4. 测试中会主动替换 pydantic 的版本探测函数，结束后需要恢复原始状态。
+# 5. 导入任务通常涉及后台协程，因此用轮询方式等待任务进入终态。
+# 6. 这些用例主要防止管理端按钮重复点击、权限绕过和任务报告丢失。
+
 
 def _patched_version(distribution_name: str) -> str:
     """为测试环境补齐 email-validator 版本元数据。"""

@@ -2,6 +2,13 @@ import { describe, expect, test } from 'vitest'
 
 import { usePracticeStore } from './practiceStore'
 
+// practiceStore 测试说明：
+// 1. 验证创建练习后会话快照能完整进入 store。
+// 2. 验证提交答案后 currentQuestion 会切换到后端返回的下一题。
+// 3. 验证完成状态和 completedCount 不由页面自行推算。
+// 4. reset 用来隔离每个测试用例，避免题目快照残留。
+// 5. 这些测试保护题库练习作答页的核心状态流。
+
 /** practiceStore 基础行为测试。 */
 describe('practiceStore', () => {
   test('stores session payload', () => {

@@ -6,6 +6,11 @@ from io import BytesIO
 from pathlib import Path
 
 
+# 简历解析服务只处理“文件字节 -> 纯文本”：
+# 1. API 层负责鉴权、落盘和数据库记录，这里不接触用户身份。
+# 2. PDF、DOCX、DOC 按扩展名分发，输出统一经过 _normalize_text 清洗。
+# 3. 解析结果会进入面试提问和报告，因此保留段落顺序比保留复杂格式更重要。
+# 4. 依赖库在具体解析方法内导入，未使用某种格式时不会提前加载相关包。
 class ResumeParseService:
     """负责将简历文件解析为可用于提问的纯文本。"""
 

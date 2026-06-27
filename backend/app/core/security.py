@@ -16,6 +16,13 @@ from app.core.errors import auth_error
 Role = Literal["user", "admin"]
 bearer_scheme = HTTPBearer(auto_error=False)
 
+# 鉴权模块的边界：
+# 1. 对外只暴露 require_user / require_admin 两个 FastAPI Depends。
+# 2. 正式路径使用 JWT access token，dev_static 只作为开发兼容开关存在。
+# 3. AuthContext 只包含 user_id、role、token_type，路由不直接解析 JWT payload。
+# 4. 所有认证失败统一走 auth_error，保证错误码和 HTTP 状态一致。
+# 5. require_admin 基于 require_user 叠加角色判断，避免重复写 token 解析逻辑。
+
 
 @dataclass
 class AuthContext:
@@ -30,6 +37,8 @@ def decode_access_token(token: str) -> AuthContext:
     """解码并校验访问令牌。"""
     settings = get_settings()
     try:
+        # 这里强制要求 sub、role、exp 三个字段。
+        # sub 用于用户归属校验，role 用于权限分流，exp 用于避免长期有效 token。
         payload = jwt.decode(
             token,
             settings.jwt_secret,
@@ -50,6 +59,9 @@ def decode_access_token(token: str) -> AuthContext:
 
 def _try_parse_dev_static_token(token: str) -> AuthContext | None:
     """在开发兼容模式下解析旧静态令牌。"""
+    # 旧版前端或 Postman 集合可能仍使用静态 token。
+    # 只有 dev 环境且显式打开 auth_enable_dev_static_token 时才允许该路径。
+    # 生产环境必须走 JWT，避免固定 token 带来的安全风险。
     settings = get_settings()
     if settings.app_env != "dev" or not settings.auth_enable_dev_static_token:
         return None

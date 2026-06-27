@@ -24,6 +24,13 @@ import { fetchProviderHealth } from '../api/admin'
 import { fetchInterviewSchedules } from '../api/interview'
 import { buildCalendarDays, groupSchedulesByDate, isSameMonth, startOfMonth, toDateKey } from '../utils/scheduleCalendar'
 
+// 首页概览聚合多个入口信息：
+// 1. provider health 展示当前 AI/语音/检索能力是否可用。
+// 2. 日历区域展示本月预约，帮助用户从首页进入即将开始的面试。
+// 3. 统计卡片和快捷入口提供面试、题库、报告等主流程导航。
+// 4. 页面以读为主，不在这里修改业务数据。
+// 5. 定时刷新 provider 状态，避免用户在服务异常时才到面试页发现问题。
+
 /** 首页概览页（mock 数据版）。 */
 export function HomeOverviewPage() {
   const navigate = useNavigate()

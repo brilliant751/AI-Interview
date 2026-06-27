@@ -1,4 +1,22 @@
+/*
+ * 全局样式说明：
+ * 1. 该文件主要服务 AI 面试大厅和通用页面视觉风格。
+ * 2. 颜色、阴影、圆角等基础 token 放在 :root，便于后续统一调整。
+ * 3. 组件样式尽量通过业务 class 限定作用域，避免影响 Ant Design 全局默认表现。
+ * 4. lobby 相关 class 只用于面试大厅，不直接耦合具体 React 状态。
+ * 5. hover/transition 只做轻量反馈，避免影响页面性能和可访问性。
+ * 6. CSS 注释不会改变运行逻辑，仅帮助维护者理解样式分区。
+ */
+
 :root {
+  /*
+   * 设计 token 区：
+   * --ai-primary 是主按钮和关键入口色；
+   * --ai-bg-soft 是页面柔和背景；
+   * --ai-card-border 控制卡片边界层次；
+   * --ai-shadow-sm/md 分别用于静态卡片和 hover 强调；
+   * --ai-radius-lg 统一大厅卡片圆角。
+   */
   font-family: "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
   color: #1f2937;
   --ai-primary: #2d6bff;
@@ -25,12 +43,20 @@ body,
 }
 
 .interview-lobby .ant-card {
+  /*
+   * 大厅内卡片统一视觉层级。
+   * 使用变量而不是硬编码，方便后续换主题时只改 :root。
+   */
   border-radius: var(--ai-radius-lg);
   border-color: var(--ai-card-border);
   box-shadow: var(--ai-shadow-sm);
 }
 
 .interview-lobby-hero {
+  /*
+   * Hero 区承担首页第一视觉。
+   * overflow hidden 用于裁剪右上角光晕，避免影响后续区域布局。
+   */
   overflow: hidden;
   position: relative;
 }
@@ -60,6 +86,10 @@ body,
 }
 
 .interview-lobby-actions .ant-btn {
+  /*
+   * 首页主操作按钮保持固定最小宽度和高度。
+   * 这样“开始面试”“上传简历”等不同文案不会造成按钮跳动。
+   */
   min-width: 148px;
   height: 46px;
   border-radius: 12px;
@@ -83,6 +113,10 @@ body,
 }
 
 .interview-lobby-mini-card {
+  /*
+   * mini card 用于展示轻量统计。
+   * 背景保留透明度，让它与 hero 背景融合但仍有边界。
+   */
   border-radius: 14px !important;
   background: rgba(255, 255, 255, 0.8);
 }
@@ -132,6 +166,10 @@ body,
 }
 
 .interview-lobby-role-card {
+  /*
+   * 岗位卡片是大厅主要选择入口。
+   * hover 时只改变位移、阴影和边框，避免文字或布局重排。
+   */
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   border: 1px solid #e6ecf9;
 }
@@ -151,6 +189,10 @@ body,
 }
 
 .interview-lobby-icon-wrap {
+  /*
+   * 图标容器固定尺寸，确保不同图标在卡片中对齐。
+   * 颜色变体通过额外 class 控制，避免为每张卡片写重复样式。
+   */
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -198,6 +240,10 @@ body,
 }
 
 .interview-lobby-resume-card {
+  /*
+   * 简历卡片用于展示最近简历和解析状态。
+   * hover 提供轻量反馈，但不改变卡片实际尺寸。
+   */
   border: 1px solid #e8eefb !important;
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }

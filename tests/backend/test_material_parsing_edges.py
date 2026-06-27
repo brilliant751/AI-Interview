@@ -6,6 +6,13 @@ import sys
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+# 材料解析边界测试说明：
+# 1. 直接加载 normalize_materials，验证 Java/Web 两套 Markdown 标题层级都能解析。
+# 2. 材料格式来自人工维护文档，边界测试能防止正则调整后漏题或串题。
+# 3. 这些测试不需要数据库，只关注纯文本解析函数的稳定性。
+# 4. 动态加载脚本让测试不依赖包安装，适合课程项目的本地运行方式。
+# 5. 若未来材料格式升级，应先扩展这里的样例再改解析正则。
+
 
 def load_normalize_module():
     """按文件路径加载 normalize_materials，避免依赖当前工作目录。"""

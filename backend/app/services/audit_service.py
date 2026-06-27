@@ -7,6 +7,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# 审计服务目前使用应用日志作为落点：
+# 1. 认证成功、失败、登出、重置等事件都可以记录统一字段。
+# 2. user_id、ip、ua、result、reason 便于后续做安全排查。
+# 3. 如果未来接入数据库或外部审计系统，只需要替换这个服务实现。
 class AuditService:
     """认证审计服务。"""
 

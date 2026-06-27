@@ -23,8 +23,16 @@ import { ResetPasswordPage } from '../pages/ResetPasswordPage'
 import { ResumeUploadPage } from '../pages/ResumeUploadPage'
 import { ResumeManagePage } from '../pages/ResumeManagePage'
 
+// 路由设计说明：
+// 1. 未登录用户只能访问登录、注册、忘记密码和重置密码页面。
+// 2. 登录后的主功能统一套 AppLayout，侧边栏和顶部用户菜单保持一致。
+// 3. 管理端页面额外使用 AdminRoute，避免普通用户通过地址栏直接访问。
+// 4. 面试、练习、报告等页面通过 URL 参数恢复上下文，支持刷新和分享内部链接。
+// 5. 根路径根据登录状态自动跳转，减少用户进入空白首页的可能。
+
 /** 通用登录保护路由。 */
 function ProtectedRoute(props: { children: JSX.Element }) {
+  // 保存当前 pathname 到 location.state.from，便于登录页后续扩展“登录后回跳”。
   const location = useLocation()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   if (!isAuthenticated) {
@@ -35,6 +43,8 @@ function ProtectedRoute(props: { children: JSX.Element }) {
 
 /** 管理权限路由。 */
 function AdminRoute(props: { children: JSX.Element }) {
+  // 管理页面是前端展示层保护，真正权限仍由后端 require_admin 决定。
+  // 这里的跳转主要减少普通用户看到无权限页面的机会。
   const user = useAuthStore((state) => state.user)
   if (!user || user.role !== 'admin') {
     return <Navigate to="/overview" replace />
@@ -50,6 +60,7 @@ export function AppRouter() {
     <BrowserRouter>
       <AppLayout>
         <Routes>
+          {/* 默认入口根据登录态分流，避免访问 / 时出现无内容页面。 */}
           <Route path="/" element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />} />
           <Route
             path="/overview"

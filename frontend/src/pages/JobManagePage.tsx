@@ -5,6 +5,13 @@ import { useMemo, useState } from 'react'
 
 import { deleteJd, fetchCompanies, fetchJds, uploadJd } from '../api/interview'
 
+// 岗位库页面：
+// 1. 管理用户自建 JD，也展示系统预置 JD 供面试选择。
+// 2. 支持按岗位、标题关键字和公司筛选，减少长列表查找成本。
+// 3. 新建 JD 可以直接输入文本，后端负责保存为岗位描述记录。
+// 4. 删除操作只针对用户有权限的 JD，系统预置数据由后端保护。
+// 5. 公司列表用于给 JD 绑定来源公司，便于后续按公司筛选。
+
 /** 岗位管理页面。 */
 export function JobManagePage() {
   const queryClient = useQueryClient()

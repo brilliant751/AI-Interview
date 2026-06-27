@@ -14,6 +14,13 @@ import sentencepiece as spm
 from huggingface_hub import snapshot_download
 
 
+# 翻译脚本用于把英文选择题离线转换为中文：
+# 1. 输入可以来自 SQLite 表，也可以来自 JSON 文件，便于不同数据来源复用。
+# 2. LocalTranslator 基于 CTranslate2/SentencePiece，本地 CPU 推理，不依赖在线翻译接口。
+# 3. TranslationStats 记录字段级翻译数量和异常数据，便于人工复核。
+# 4. dry-run 可以只统计需要翻译的内容，不写输出文件。
+# 5. 内存 cache 按原文去重，减少相同选项或解释重复翻译的成本。
+
 @dataclass
 class TranslationStats:
     """翻译统计数据。"""
@@ -41,6 +48,8 @@ class LocalTranslator:
 
     def translate(self, text: str) -> str:
         """翻译单段文本并使用内存缓存减少重复计算。"""
+        # 很多选择题选项会重复出现，例如 True/False、None of the above。
+        # 使用原文缓存可以明显减少本地模型推理次数。
         if text in self.cache:
             return self.cache[text]
         source_tokens = self.source_sp.encode(text, out_type=str)

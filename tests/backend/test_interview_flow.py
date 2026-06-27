@@ -17,6 +17,14 @@ from app.core.config import get_settings  # noqa: E402
 from app.core.errors import ApiError  # noqa: E402
 from app.main import create_app  # noqa: E402
 
+# 面试主流程集成测试说明：
+# 1. 覆盖简历/JD 准备、创建面试、提交轮次、结束面试、报告生成和历史查询。
+# 2. 使用 TestClient 走完整 HTTP 栈，能同时发现路由、服务、仓储和 schema 的断裂。
+# 3. 检索 fallback 打开，保证没有真实 Chroma/Ollama 时也能生成下一题。
+# 4. user/admin 两组 token 用于验证普通用户和管理员接口边界。
+# 5. 异步 turn job/report job 需要适当等待或轮询，防止断言早于后台任务完成。
+# 6. 这些用例是面试业务最重要的回归网，注释保留主要覆盖意图。
+
 
 class InterviewFlowTestCase(unittest.TestCase):
     """覆盖创建、提交、结束、查询报告与历史的主路径。"""

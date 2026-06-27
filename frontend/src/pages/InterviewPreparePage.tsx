@@ -9,6 +9,13 @@ import { ProviderHealthBanner } from '../components/ProviderHealthBanner'
 import { createInterview, fetchHistory, fetchInterviewStatus, fetchJds, fetchResumes, fetchVoiceToneProfiles, uploadJd } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
+// InterviewPreparePage 是旧版/备用面试准备入口：
+// 1. 支持选择简历、选择或上传 JD、配置岗位方向和面试模式。
+// 2. 准备页会预先拉取 provider health，提示用户当前是否处于 mock/降级模式。
+// 3. 创建成功后把首题和会话配置写入 interviewStore，再跳转答题页。
+// 4. 页面保留暂停会话恢复入口，方便用户从准备页继续未完成面试。
+// 5. 新版面试大厅也有准备弹窗，但该页面仍可作为独立入口使用。
+
 /** 面试准备页面。 */
 export function InterviewPreparePage() {
   const questionTypeOrder: Array<'project' | 'technical' | 'scenario'> = ['project', 'technical', 'scenario']
@@ -32,6 +39,8 @@ export function InterviewPreparePage() {
 
   /** 查询 provider 健康状态。 */
   const healthQuery = useQuery({
+    // provider health 在准备页展示给用户，避免进入面试后才发现模型不可用。
+    // retry=false 可以更快暴露错误，避免页面长时间停留在加载态。
     queryKey: ['provider-health'],
     queryFn: fetchProviderHealth,
     retry: false,
@@ -44,6 +53,7 @@ export function InterviewPreparePage() {
 
   useEffect(() => {
     if (healthQuery.data) {
+      // 健康状态同步进全局 store，面试页打开后可以复用最新一次检查结果。
       setProviderHealth(healthQuery.data)
     }
   }, [healthQuery.data, setProviderHealth])
@@ -55,10 +65,14 @@ export function InterviewPreparePage() {
 
   /** 查询可选简历。 */
   const resumeQuery = useQuery({
+    // 准备页默认加载简历列表，帮助用户直接在表格中绑定简历。
+    // page_size 取 50，避免课程项目里频繁翻页影响操作。
     queryKey: ['resumes', 'prepare-picker'],
     queryFn: () => fetchResumes({ page: 1, page_size: 50 }),
   })
   const jdQuery = useQuery({
+    // JD 列表只在选择弹窗打开时查询，减少准备页初始请求数量。
+    // 过滤条件由岗位方向和标题关键字控制。
     queryKey: ['jds', jdPickerOpen, jdFilterRole, jdFilterTitle],
     queryFn: () =>
       fetchJds({
@@ -68,23 +82,30 @@ export function InterviewPreparePage() {
     enabled: jdPickerOpen,
   })
   const toneQuery = useQuery({
+    // 语气配置用于 voice 输出模式。
+    // 即使当前选择文本模式，也提前加载以便用户切换时立即可选。
     queryKey: ['voice-tone-profiles'],
     queryFn: fetchVoiceToneProfiles,
   })
 
   useEffect(() => {
     if (jdPickerOpen) {
+      // 弹窗打开时主动 refetch，保证用户刚上传的 JD 能出现在列表中。
       void jdQuery.refetch()
     }
   }, [jdPickerOpen, jdQuery])
 
   /** 查询暂停中的面试。 */
   const pausedQuery = useQuery({
+    // 暂停会话列表帮助用户从准备页恢复上次中断的面试。
+    // 这里只取第一页最近记录，避免准备页承担完整历史管理职责。
     queryKey: ['paused-interviews'],
     queryFn: () => fetchHistory({ page: 1, page_size: 20, status: 'PAUSED' }),
   })
 
   const selectedResumeName = useMemo(() => {
+    // 根据当前 resumeId 从列表中反查文件名，用于顶部已绑定标签展示。
+    // 如果列表尚未返回，就退化显示 resumeId。
     const items = resumeQuery.data?.items ?? []
     const current = items.find((item) => item.resume_id === resumeId)
     return current?.file_name || ''
@@ -92,6 +113,8 @@ export function InterviewPreparePage() {
 
   /** 创建面试会话。 */
   const createMutation = useMutation({
+    // 创建会话成功后以后端首题为准，不在前端生成默认问题。
+    // JD 模式下 variables.job_role 可能为空，因此 fallback 到 currentJobRole。
     mutationFn: createInterview,
     onSuccess: (data, variables) => {
       setSessionConfig({
@@ -114,6 +137,8 @@ export function InterviewPreparePage() {
 
   /** 恢复暂停面试。 */
   const resumeMutation = useMutation({
+    // 恢复会话通过 status 接口拿到当前题目和阶段。
+    // 这比本地缓存可靠，因为暂停期间可能已经有其他设备更新过状态。
     mutationFn: (interviewId: string) => fetchInterviewStatus(interviewId, { status: 'ACTIVE' }),
     onSuccess: (data) => {
       setSessionConfig({

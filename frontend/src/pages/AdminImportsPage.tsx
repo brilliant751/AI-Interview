@@ -5,6 +5,13 @@ import { useMemo, useState } from 'react'
 import { getImportTask, triggerMaterialImport } from '../api/admin'
 import { parseApiError } from '../api/client'
 
+// 管理端材料重建页：
+// 1. 管理员选择重建模式、岗位范围和模型配置后触发后台导入任务。
+// 2. taskId 存在时轮询任务进度，成功或失败后停止刷新。
+// 3. dry_run 用于只验证材料和流程，不覆盖真实知识库。
+// 4. lastPayload 保留最近一次提交内容，便于用户看到当前任务来源。
+// 5. 该页只面向管理员，实际权限仍由后端 admin 接口校验。
+
 /** 管理导入表单载荷。 */
 interface ImportFormPayload {
   rebuild_mode: 'full' | 'incremental'

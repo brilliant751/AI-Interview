@@ -29,6 +29,13 @@ const ACCESS_TOKEN_KEY = 'ai_interview_access_token'
 const REFRESH_TOKEN_KEY = 'ai_interview_refresh_token'
 const USER_KEY = 'ai_interview_user'
 
+// 认证状态持久化策略：
+// 1. accessToken/refreshToken/user 三项必须同时存在，才认为当前用户已登录。
+// 2. Zustand 保存运行时状态，localStorage 负责页面刷新后的恢复。
+// 3. getStorage 会兼容测试环境和 SSR 场景，避免 window/localStorage 不存在时报错。
+// 4. clearSession 同时清内存和本地缓存，确保退出后拦截器不会继续带旧 token。
+// 5. hydrate 由应用启动阶段调用，把本地缓存恢复成全局状态。
+
 /** 获取可用的本地存储对象。 */
 function getStorage(): Storage | null {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -47,6 +54,8 @@ function getStorage(): Storage | null {
 
 /** 从本地存储读取会话。 */
 function loadSession() {
+  // 这里对 user JSON 做容错解析。
+  // 如果用户对象损坏，就让 isAuthenticated=false，避免展示半登录状态。
   const storage = getStorage()
   if (!storage) {
     return {
@@ -108,6 +117,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set) => ({
   user: null,
   isAuthenticated: false,
   setSession: (payload) => {
+    // 登录或刷新成功后同步写入 localStorage 和 Zustand。
+    // 这样后续 API 拦截器可以立即读到最新 token。
     persistSession(payload)
     set({
       accessToken: payload.accessToken,
@@ -117,6 +128,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set) => ({
     })
   },
   updateAccessToken: (accessToken) => {
+    // 只更新 access token 时保留 refresh token 和 user。
+    // 该操作主要给自动续期流程使用。
     const current = useAuthStore.getState()
     persistSession({
       accessToken,
@@ -126,6 +139,8 @@ export const useAuthStore = create<AuthState & AuthActions>()((set) => ({
     set({ accessToken, isAuthenticated: Boolean(accessToken && current.refreshToken && current.user) })
   },
   clearSession: () => {
+    // 退出登录、refresh 失败、认证失效都会走这里。
+    // 统一清理可以避免页面之间残留不一致的登录状态。
     clearPersistedSession()
     set({
       accessToken: '',

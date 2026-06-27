@@ -14,6 +14,13 @@ import {
 import { parseApiError } from '../api/client'
 import { usePracticeStore } from '../stores/practiceStore'
 
+// 题库练习准备页：
+// 1. 展示岗位维度的题量、完成率和最近练习记录。
+// 2. 用户在这里选择岗位、练习模式、题量和题目类别筛选。
+// 3. 创建成功后把会话写入 practiceStore，再进入作答页。
+// 4. followup 模式当前仍由后端返回占位策略，页面根据 question_strategy 展示提示。
+// 5. 概览和记录是读操作，创建练习是唯一写操作。
+
 /** 题目类别选项。 */
 const CATEGORY_OPTIONS: Array<{ label: string; value: PracticeCategory }> = [
   { label: '技术', value: 'technical' },

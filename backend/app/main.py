@@ -31,6 +31,13 @@ from app.services.turn_worker import TurnWorker
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+# 启动入口承担“依赖装配层”的职责：
+# 1. 只在这里创建数据库仓储和各类服务，避免路由层重复初始化。
+# 2. 将实例挂到 app.state，FastAPI 的 Depends 再从 request.app.state 取用。
+# 3. 启动时同步内置题库，关闭时统一释放后台 worker 和导入服务资源。
+# 4. 这里不写具体业务流程，业务规则继续下沉到 service/repository 中。
+# 5. 这样可以让测试直接替换 app.state 上的对象，减少对真实外部服务的依赖。
+
 
 def _bootstrap_coding_questions(repo: InterviewRepository, repo_root: Path) -> None:
     """启动时幂等同步内置编程题到数据库。"""
@@ -39,6 +46,9 @@ def _bootstrap_coding_questions(repo: InterviewRepository, repo_root: Path) -> N
         logger.warning("编程题材料文件不存在，跳过启动同步: path=%s", material_path)
         return
     try:
+        # 这里使用 upsert 而不是简单 insert，是为了允许题库文件反复导入。
+        # 本地开发、CI 初始化、生产重启都会走同一段逻辑，幂等能避免重复题目。
+        # 题库文件仍然是来源事实，数据库只保存接口查询和做题流程需要的结构化副本。
         rows = json.loads(material_path.read_text(encoding="utf-8"))
         if not isinstance(rows, list):
             raise ValueError("编程题材料文件格式错误")
@@ -72,6 +82,10 @@ async def lifespan(app: FastAPI):
     repo = InterviewRepository(db_path=settings.db_path)
     repo.init_schema()
     _bootstrap_coding_questions(repo=repo, repo_root=REPO_ROOT)
+
+    # 后台 worker 放在应用级生命周期中管理，保证一个进程内只有一套队列消费。
+    # ReportWorker 负责面试结束后的报告生成，TurnWorker 负责单轮回答的异步处理。
+    # 两者都依赖同一个仓储实例，避免不同连接之间读写时序不一致。
     report_worker = ReportWorker(repo=repo)
     turn_worker = TurnWorker(repo=repo)
     material_import_service = MaterialImportService(repo_root=REPO_ROOT)
@@ -83,6 +97,10 @@ async def lifespan(app: FastAPI):
         repo_root=REPO_ROOT,
     )
     code_execution_service = CodeExecutionService()
+
+    # app.state 是本项目的轻量依赖容器。
+    # 路由层只负责协议转换，真正的鉴权、状态推进、题目生成都委托给这些服务。
+    # 这种写法比在每个接口里 new Service 更容易保证缓存、worker 和数据库连接复用。
     app.state.repo = repo
     app.state.report_worker = report_worker
     app.state.turn_worker = turn_worker
@@ -131,6 +149,9 @@ def create_app() -> FastAPI:
     @app.middleware("http")
     async def log_api_requests(request: Request, call_next):
         """记录 API 请求日志，并在 405 时输出路由方法提示。"""
+        # 中间件只记录可观测信息，不改写请求和响应。
+        # 405 时额外输出同一路径支持的方法，便于前端定位“路径正确但方法错了”的问题。
+        # 对非 /api/ 路径保持安静，避免静态资源或健康检查把日志刷满。
         started_at = time.perf_counter()
         response = await call_next(request)
         latency_ms = int((time.perf_counter() - started_at) * 1000)

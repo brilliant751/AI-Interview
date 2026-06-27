@@ -5,6 +5,12 @@ import { useNavigate } from 'react-router-dom'
 import { createCodingPracticeSession, fetchCodingPracticeQuestions, type CodingPracticeQuestionSummary } from '../api/codingPractice'
 import { parseApiError } from '../api/client'
 
+// 编程练习列表页：
+// 1. 展示题目难度、标签和当前用户进度。
+// 2. 点击题目先创建或恢复后端 session，再跳转到编辑器页面。
+// 3. 列表数据已经包含最新提交状态，页面无需额外请求记录接口。
+// 4. 错误统一走 parseApiError，保持和其他业务页一致的提示方式。
+
 const DIFFICULTY_COLOR: Record<'easy' | 'medium' | 'hard', string> = {
   easy: 'green',
   medium: 'orange',
@@ -20,6 +26,7 @@ const STATUS_LABEL: Record<string, string> = {
 export function CodingPracticeListPage() {
   const navigate = useNavigate()
   const questionsQuery = useQuery({
+    // 题目列表相对稳定，React Query 会在页面返回时复用缓存并按需刷新。
     queryKey: ['coding-practice-questions'],
     queryFn: fetchCodingPracticeQuestions,
   })

@@ -17,6 +17,12 @@ from app.repositories.interview_repository import InterviewRepository
 from app.services.audit_service import AuditService
 
 
+# AuthService 处理认证域核心规则：
+# 1. 密码只保存哈希结果，比较时使用 hmac.compare_digest 降低时序攻击风险。
+# 2. access/refresh/reset token 分开签发和校验，生命周期由配置集中控制。
+# 3. 登录限流保存在进程内，适合课程项目和单进程部署，生产可替换为 Redis。
+# 4. 所有关键认证事件都会写审计日志，便于排查暴力登录或异常重置。
+# 5. 服务层不依赖 FastAPI Request，方便单元测试直接调用。
 @dataclass
 class _RateLimitWindow:
     """登录限流窗口状态。"""

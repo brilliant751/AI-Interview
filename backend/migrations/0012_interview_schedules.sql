@@ -1,4 +1,12 @@
 -- 单次模拟面试预约 MVP
+-- 迁移说明：
+-- 1. interview_schedules 保存预约日历事件和其关联面试会话。
+-- 2. source_type/plan_id/sequence_no 为未来多场计划预约预留。
+-- 3. scheduled_start_at/end_at/timezone 共同描述用户看到的预约时间。
+-- 4. status 覆盖 scheduled、ready、in_progress、completed、missed、cancelled。
+-- 5. calendar_token 用于日历文件下载或外部订阅场景。
+-- 6. cancel_reason/cancelled_at 保留取消审计信息。
+-- 7. interview_id 为空表示尚未真正开始面试。
 
 CREATE TABLE IF NOT EXISTS interview_schedules (
   schedule_id TEXT PRIMARY KEY,
