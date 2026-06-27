@@ -1,25 +1,22 @@
 {
-  "status": "PARTIAL_SUCCESS",
-  "total_rows": 468,
-  "updated_rows": 468,
+  "status": "SUCCESS",
+  "total_rows": 234,
+  "updated_rows": 0,
   "written_rows": 0,
-  "embedding_dimensions": {},
-  "rebuild_mode": "full",
+  "embedding_dimensions": {
+    "java": 0
+  },
+  "rebuild_mode": "incremental",
   "embed_model": "nomic-embed-text",
   "ollama_base_url": "http://127.0.0.1:11434",
   "embed_batch_size": 32,
   "roles": {
-    "java": 234,
-    "web": 234
+    "java": 234
   },
   "collection_version": {
-    "java": "kb_java_v3",
-    "web": "kb_web_v3"
+    "java": "kb_java_v3"
   },
   "task_id": "",
-  "errors": [
-    "岗位 java 写入 Chroma 失败：Ollama 调用失败：<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>",
-    "岗位 web 写入 Chroma 失败：Ollama 调用失败：<urlopen error [WinError 10061] 由于目标计算机积极拒绝，无法连接。>"
-  ],
-  "dry_run": false
+  "errors": [],
+  "dry_run": true
 }
