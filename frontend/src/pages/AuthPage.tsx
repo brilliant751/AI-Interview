@@ -30,7 +30,7 @@ const titleByMode: Record<AuthMode, string> = {
 const introByMode: Record<AuthMode, { kicker: string; titleLines: string[]; body: string; tags: string[] }> = {
   login: {
     kicker: '模拟 · 练习 · 复盘',
-    titleLines: ['用一次登录，', '进入完整的 AI 面试训练台。'],
+    titleLines: ['一键登录，', '开启专属AI面试训练场'],
     body: '从岗位准备、简历匹配到实时面试和报告复盘，把练习过程集中在一个清爽的工作区里。',
     tags: ['智能追问', '简历联动', '复盘报告'],
   },
@@ -131,13 +131,13 @@ export function AuthPage(props: { initialMode?: AuthMode }) {
   return (
     <div className="login-garden-shell auth-static is-ready">
       <section className="login-panel-stage auth-panel-stage" aria-label="AI 模拟面试系统认证入口">
-        <div className="auth-branch-scene" aria-hidden="true">
-          <span className="auth-branch auth-branch-left" />
-          <span className="auth-branch auth-branch-right" />
-          <span className="auth-leaf auth-leaf-left-a" />
-          <span className="auth-leaf auth-leaf-left-b" />
-          <span className="auth-leaf auth-leaf-right-a" />
-          <span className="auth-leaf auth-leaf-right-b" />
+        <div className="auth-bubble-scene" aria-hidden="true">
+          <span className="auth-bubble auth-bubble-l1" />
+          <span className="auth-bubble auth-bubble-l2" />
+          <span className="auth-bubble-dot auth-bubble-l3" />
+          <span className="auth-bubble auth-bubble-r1" />
+          <span className="auth-bubble auth-bubble-r2" />
+          <span className="auth-bubble-dot auth-bubble-r3" />
         </div>
 
         <div className="login-brand-panel">

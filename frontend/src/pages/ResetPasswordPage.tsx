@@ -26,13 +26,13 @@ export function ResetPasswordPage() {
   return (
     <div className="login-garden-shell auth-static is-ready">
       <section className="login-panel-stage auth-panel-stage" aria-label="重置 AI 模拟面试系统密码">
-        <div className="auth-branch-scene" aria-hidden="true">
-          <span className="auth-branch auth-branch-left" />
-          <span className="auth-branch auth-branch-right" />
-          <span className="auth-leaf auth-leaf-left-a" />
-          <span className="auth-leaf auth-leaf-left-b" />
-          <span className="auth-leaf auth-leaf-right-a" />
-          <span className="auth-leaf auth-leaf-right-b" />
+        <div className="auth-bubble-scene" aria-hidden="true">
+          <span className="auth-bubble auth-bubble-l1" />
+          <span className="auth-bubble auth-bubble-l2" />
+          <span className="auth-bubble-dot auth-bubble-l3" />
+          <span className="auth-bubble auth-bubble-r1" />
+          <span className="auth-bubble auth-bubble-r2" />
+          <span className="auth-bubble-dot auth-bubble-r3" />
         </div>
 
         <div className="login-brand-panel">

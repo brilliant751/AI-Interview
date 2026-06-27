@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfigProvider } from 'antd'
 
-import { WelcomeGate } from './components/WelcomeGate'
 import { AppRouter } from './router'
 import './monaco/config'
 import { useAuthStore } from './stores/authStore'
@@ -18,12 +17,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: '#37b85a',
-          colorSuccess: '#2dbb4f',
-          colorInfo: '#37b85a',
-          colorLink: '#1f8f46',
-          colorBgLayout: '#eff8ec',
-          colorBorder: '#d8ecd5',
+          colorPrimary: '#4A9BE8',
+          colorSuccess: '#4A9BE8',
+          colorInfo: '#4A9BE8',
+          colorLink: '#357ABD',
+          colorBgLayout: '#F2F7FC',
+          colorBorder: '#D6E5F2',
           borderRadius: 12,
           fontFamily: '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif',
         },
@@ -36,20 +35,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             borderRadiusLG: 18,
           },
           Layout: {
-            headerBg: '#16351f',
-            bodyBg: '#eff8ec',
-            siderBg: '#f5fbf2',
+            headerBg: '#1A3A5C',
+            bodyBg: '#F2F7FC',
+            siderBg: '#F5F9FD',
           },
           Menu: {
-            itemSelectedBg: '#e4f6df',
-            itemSelectedColor: '#1f7a3b',
-            itemHoverColor: '#1f7a3b',
+            itemSelectedBg: '#E3F0FA',
+            itemSelectedColor: '#357ABD',
+            itemHoverColor: '#357ABD',
           },
         },
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WelcomeGate />
         <AppRouter />
       </QueryClientProvider>
     </ConfigProvider>

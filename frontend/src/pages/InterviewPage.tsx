@@ -1144,7 +1144,7 @@ export function InterviewPage() {
           <Space direction="vertical" size={2} style={{ width: '100%' }}>
             <Badge
               count={currentItems.length}
-              style={{ backgroundColor: currentItems.some((item) => item.start_available) ? '#16a34a' : '#1677ff' }}
+              style={{ backgroundColor: currentItems.some((item) => item.start_available) ? '#4A9BE8' : '#1677ff' }}
             />
             <Typography.Text style={{ fontSize: 11 }} ellipsis>
               {formatScheduleDateTime(currentItems[0]?.scheduled_start_at)}

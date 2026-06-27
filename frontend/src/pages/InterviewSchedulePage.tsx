@@ -106,14 +106,14 @@ function getScheduleStatusText(status: string): string {
 /** 获取状态强调色。 */
 function getScheduleStatusAccent(status: string): string {
   const colorMap: Record<string, string> = {
-    scheduled: '#1f7a3b',
-    ready: '#16a34a',
+    scheduled: '#357ABD',
+    ready: '#4A9BE8',
     in_progress: '#d97706',
     completed: '#6b7280',
     missed: '#dc2626',
     cancelled: '#9ca3af',
   }
-  return colorMap[status] || '#1f7a3b'
+  return colorMap[status] || '#357ABD'
 }
 
 /** 面试预约页面。 */
@@ -341,9 +341,9 @@ export function InterviewSchedulePage() {
         variant="borderless"
         styles={{
           body: {
-            padding: 24,
-            borderRadius: 28,
-            background: 'linear-gradient(135deg, #123761 0%, #194a7f 48%, #e7f1ff 48%, #f8fbff 100%)',
+            padding: 28,
+            borderRadius: 24,
+            background: 'linear-gradient(135deg, #0d2b4a 0%, #153e68 40%, #edf4fb 40%, #f8fafd 100%)',
           },
         }}
       >
@@ -380,8 +380,8 @@ export function InterviewSchedulePage() {
 
           <Card
             variant="borderless"
-            style={{ borderRadius: 24, boxShadow: '0 20px 48px rgba(15, 23, 42, 0.12)' }}
-            styles={{ body: { padding: 20 } }}
+            style={{ borderRadius: 20, background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', boxShadow: '0 12px 36px rgba(0,0,0,0.10)' }}
+            styles={{ body: { padding: 22 } }}
           >
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               <Typography.Text strong>最近需要你关注</Typography.Text>
@@ -423,11 +423,11 @@ export function InterviewSchedulePage() {
             key={item.key}
             variant="borderless"
             style={{
-              borderRadius: 22,
-              background: index === 0 ? 'linear-gradient(180deg, #f3fbf0 0%, #ffffff 100%)' : '#ffffff',
-              boxShadow: '0 12px 28px rgba(15, 23, 42, 0.06)',
+              borderRadius: 18,
+              background: index === 0 ? 'linear-gradient(180deg, #f0f4fc 0%, #ffffff 100%)' : '#ffffff',
+              boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.04)',
             }}
-            styles={{ body: { padding: 18 } }}
+            styles={{ body: { padding: '20px 22px' } }}
           >
             <Space direction="vertical" size={6}>
               <Typography.Text type="secondary">{item.label}</Typography.Text>
@@ -450,36 +450,31 @@ export function InterviewSchedulePage() {
       >
         <Card
           variant="borderless"
-          style={{ borderRadius: 26, boxShadow: '0 20px 44px rgba(15, 23, 42, 0.08)' }}
-          styles={{ body: { padding: 22 } }}
-          title={<Typography.Title level={4} style={{ margin: 0 }}>我的日程表</Typography.Title>}
+          style={{ borderRadius: 20, boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.05)' }}
+          styles={{ body: { padding: 24 } }}
+          title={<Typography.Title level={4} style={{ margin: 0, fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em' }}>我的日程表</Typography.Title>}
           extra={
-            <Space>
-              <Button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>上个月</Button>
-              <Tag color="blue" style={{ marginInlineEnd: 0 }}>{formatMonthLabel(currentMonth)}</Tag>
-              <Button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}>下个月</Button>
+            <Space size={8}>
+              <Button size="small" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>上个月</Button>
+              <Typography.Text strong style={{ minWidth: 100, textAlign: 'center', fontSize: 14 }}>{formatMonthLabel(currentMonth)}</Typography.Text>
+              <Button size="small" onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}>下个月</Button>
             </Space>
           }
         >
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
-              <Typography.Text type="secondary">蓝色代表已预约，绿色代表可直接进入，橙色代表仍在进行中的面试。</Typography.Text>
-              <Button type="link" style={{ paddingInline: 0 }} onClick={() => setCurrentMonth(startOfMonth(new Date()))}>
+            <Space style={{ justifyContent: 'space-between', width: '100%' }}>
+              <Space size={16}>
+                <Space size={4}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#4A9BE8', display: 'inline-block' }} /><Typography.Text type="secondary" style={{ fontSize: 12 }}>已预约</Typography.Text></Space>
+                <Space size={4}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#22c55e', display: 'inline-block' }} /><Typography.Text type="secondary" style={{ fontSize: 12 }}>可进入</Typography.Text></Space>
+                <Space size={4}><span style={{ width: 8, height: 8, borderRadius: 4, background: '#f59e0b', display: 'inline-block' }} /><Typography.Text type="secondary" style={{ fontSize: 12 }}>进行中</Typography.Text></Space>
+              </Space>
+              <Button type="link" size="small" style={{ paddingInline: 0, fontSize: 13 }} onClick={() => setCurrentMonth(startOfMonth(new Date()))}>
                 回到本月
               </Button>
             </Space>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 8 }}>
               {weekLabels.map((label) => (
-                <div
-                  key={label}
-                  style={{
-                    textAlign: 'center',
-                    fontWeight: 700,
-                    color: '#64748b',
-                    paddingBlock: 4,
-                    letterSpacing: 1,
-                  }}
-                >
+                <div key={label} style={{ textAlign: 'center', fontWeight: 600, color: '#86868b', fontSize: 12, paddingBlock: 6, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                   {label}
                 </div>
               ))}
@@ -489,7 +484,7 @@ export function InterviewSchedulePage() {
                 const isCurrentMonth = isSameMonth(day, currentMonth)
                 const isSelected = key === selectedDateKey
                 const isToday = key === todayKey
-                const accent = items[0] ? getScheduleStatusAccent(items[0].status) : '#dbe5f1'
+                const statusAccent = items[0] ? getScheduleStatusAccent(items[0].status) : null
                 return (
                   <button
                     key={key}
@@ -497,60 +492,77 @@ export function InterviewSchedulePage() {
                     aria-label={buildCalendarDayAriaLabel(key, { isCurrentMonth, isToday, scheduleCount: items.length })}
                     onClick={() => setSelectedDateKey(key)}
                     style={{
-                      minHeight: 132,
-                      borderRadius: 20,
-                      border: isSelected ? '1px solid #1d4ed8' : isToday ? '1px solid #93c5fd' : '1px solid #e5e7eb',
+                      minHeight: 110,
+                      borderRadius: 14,
+                      border: isSelected
+                        ? '2px solid #0071e3'
+                        : isToday && !isSelected
+                          ? '2px solid #86868b'
+                          : '1px solid transparent',
                       background: isSelected
-                        ? 'linear-gradient(180deg, #edf5ff 0%, #ffffff 100%)'
+                        ? '#ffffff'
                         : isCurrentMonth
-                          ? '#ffffff'
-                          : '#f8fafc',
-                      padding: 12,
+                          ? 'rgba(255,255,255,0.55)'
+                          : 'rgba(248,250,252,0.4)',
+                      padding: 10,
                       textAlign: 'left',
-                      cursor: 'pointer',
-                      boxShadow: isSelected ? '0 10px 24px rgba(37, 99, 235, 0.16)' : 'none',
+                      cursor: isCurrentMonth ? 'pointer' : 'default',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(0,113,227,0.12), 0 8px 24px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+                      opacity: isCurrentMonth ? 1 : 0.45,
                     }}
                   >
-                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                    <Space direction="vertical" size={6} style={{ width: '100%' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography.Text strong style={{ color: isCurrentMonth ? '#0f172a' : '#94a3b8', fontSize: 15 }}>
+                        <Typography.Text strong style={{
+                          fontSize: 14,
+                          fontWeight: isToday ? 700 : 600,
+                          width: 24,
+                          height: 24,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 12,
+                          background: isToday ? '#1d1d1f' : 'transparent',
+                          color: isToday ? '#ffffff' : isCurrentMonth ? '#1d1d1f' : '#86868b',
+                        }}>
                           {day.getDate()}
                         </Typography.Text>
-                        {isToday ? (
-                          <Tag color="processing" style={{ marginInlineEnd: 0 }}>
-                            今天
-                          </Tag>
-                        ) : items.length > 0 ? (
-                          <Badge count={items.length} color={accent} />
+                        {items.length > 0 ? (
+                          <div style={{ display: 'flex', gap: 3 }}>
+                            {items.slice(0, 3).map((it, i) => (
+                              <span key={i} style={{ width: 6, height: 6, borderRadius: 3, background: getScheduleStatusAccent(it.status), display: 'inline-block' }} />
+                            ))}
+                          </div>
                         ) : null}
                       </div>
                       {items.length > 0 ? (
-                        <Space direction="vertical" size={6} style={{ width: '100%' }}>
+                        <Space direction="vertical" size={4} style={{ width: '100%' }}>
                           {items.slice(0, 2).map((item) => (
                             <div
                               key={item.schedule_id}
                               style={{
-                                borderRadius: 12,
-                                background: `${getScheduleStatusAccent(item.status)}12`,
-                                borderLeft: `3px solid ${getScheduleStatusAccent(item.status)}`,
-                                padding: '6px 8px',
+                                borderRadius: 8,
+                                background: 'rgba(0,0,0,0.03)',
+                                padding: '4px 8px',
+                                fontSize: 11,
+                                color: '#424245',
+                                lineHeight: 1.3,
+                                overflow: 'hidden',
+                                whiteSpace: 'nowrap',
+                                textOverflow: 'ellipsis',
                               }}
                             >
-                              <Typography.Text style={{ fontSize: 12, display: 'block', color: '#0f172a' }}>
-                                {new Date(item.scheduled_start_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                              </Typography.Text>
-                              <Typography.Text ellipsis style={{ fontSize: 12, color: '#475569', display: 'block' }}>
-                                {item.title || item.resume_file_name || item.schedule_id}
-                              </Typography.Text>
+                              {new Date(item.scheduled_start_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })} {item.title || item.resume_file_name || ''}
                             </div>
                           ))}
-                          {items.length > 2 ? <Typography.Text type="secondary">{`还有 ${items.length - 2} 场待查看`}</Typography.Text> : null}
+                          {items.length > 2 ? (
+                            <Typography.Text style={{ fontSize: 11, color: '#86868b' }}>{`+${items.length - 2} 场`}</Typography.Text>
+                          ) : null}
                         </Space>
-                      ) : (
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          {isCurrentMonth ? '留白也没关系，可以补一场练习。' : '非本月日期'}
-                        </Typography.Text>
-                      )}
+                      ) : isCurrentMonth ? (
+                        <Typography.Text style={{ fontSize: 11, color: '#d2d2d7' }}>可预约</Typography.Text>
+                      ) : null}
                     </Space>
                   </button>
                 )
@@ -561,7 +573,7 @@ export function InterviewSchedulePage() {
 
         <Card
           variant="borderless"
-          style={{ borderRadius: 26, boxShadow: '0 20px 44px rgba(15, 23, 42, 0.08)', position: 'sticky', top: 0 }}
+          style={{ borderRadius: 20, boxShadow: '0 1px 0 rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.05)', position: 'sticky', top: 16 }}
           styles={{ body: { padding: 22 } }}
         >
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -585,11 +597,12 @@ export function InterviewSchedulePage() {
                       variant="borderless"
                       style={{
                         width: '100%',
-                        borderRadius: 18,
-                        background: `${getScheduleStatusAccent(item.status)}10`,
-                        border: `1px solid ${getScheduleStatusAccent(item.status)}22`,
+                        borderRadius: 14,
+                        background: '#ffffff',
+                        border: '1px solid rgba(0,0,0,0.05)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
                       }}
-                      styles={{ body: { padding: 16 } }}
+                      styles={{ body: { padding: 14 } }}
                     >
                       <Space direction="vertical" size={10} style={{ width: '100%' }}>
                         <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
@@ -628,11 +641,11 @@ export function InterviewSchedulePage() {
               <Card
                 variant="borderless"
                 style={{
-                  borderRadius: 18,
-                  background: 'linear-gradient(180deg, #f8fbff 0%, #ffffff 100%)',
-                  border: '1px dashed #bfdbfe',
+                  borderRadius: 14,
+                  background: '#fafafa',
+                  border: '1px dashed #d2d2d7',
                 }}
-                styles={{ body: { padding: 22 } }}
+                styles={{ body: { padding: 20 } }}
               >
                 <Space direction="vertical" size={10} style={{ width: '100%' }}>
                   <Typography.Text strong>这一天还没有预约</Typography.Text>
@@ -655,12 +668,12 @@ export function InterviewSchedulePage() {
             <Card
               size="small"
               variant="borderless"
-              style={{ borderRadius: 18, background: '#0f172a' }}
+              style={{ borderRadius: 14, background: '#1d1d1f' }}
               styles={{ body: { padding: 16 } }}
             >
-              <Space direction="vertical" size={6}>
-                <Typography.Text style={{ color: '#93c5fd' }}>使用建议</Typography.Text>
-                <Typography.Text style={{ color: '#e2e8f0' }}>把高压一点的正式模拟，尽量排在精力更好的时段。把 20 分钟短练习塞进工作日晚上，通常更容易坚持。</Typography.Text>
+              <Space direction="vertical" size={4}>
+                <Typography.Text style={{ color: '#86868b', fontSize: 12, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase' }}>使用建议</Typography.Text>
+                <Typography.Text style={{ color: '#d2d2d7', fontSize: 13, lineHeight: 1.6 }}>把高压一点的正式模拟，尽量排在精力更好的时段。把 20 分钟短练习塞进工作日晚上，通常更容易坚持。</Typography.Text>
               </Space>
             </Card>
           </Space>
