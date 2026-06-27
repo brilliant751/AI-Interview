@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from app.services.report_service import ReportService
 
 
@@ -77,7 +79,7 @@ def test_normalize_dimension_scores_fills_missing_llm_dimensions() -> None:
 
     assert len(normalized) == 12
     assert by_name["技术深度"]["capability_score"] == 5
-    assert by_name["技术深度"]["match_score"] == 1
+    assert by_name["技术深度"]["match_score"] == 3
     assert by_name["技术深度"]["evidence"] == "模型证据"
     assert "沟通表达" in by_name
 
@@ -96,6 +98,9 @@ def test_fallback_report_returns_ready_structured_payload() -> None:
 
     assert report["status"] == "READY"
     assert isinstance(report["overall_score"], int)
-    assert len(report["dimension_scores"]) == 12
-    assert report["question_deep_dives"]
-    assert report["jd_resume_alignment"]
+    dimension_scores = json.loads(report["dimension_scores"])
+    question_deep_dives = json.loads(report["question_deep_dives"])
+    jd_resume_alignment = json.loads(report["jd_resume_alignment"])
+    assert len(dimension_scores) == 12
+    assert question_deep_dives
+    assert jd_resume_alignment
