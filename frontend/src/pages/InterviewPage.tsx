@@ -469,6 +469,7 @@ export function InterviewPage() {
     playbackQuery.data?.meta.duration_seconds,
     playbackQuery.data?.meta.duration_updated_at,
     playbackQuery.data?.meta.status,
+    parseBackendDate,
   ])
 
   /** 在语音输出且音频地址变化时尝试自动播放。 */
@@ -1043,6 +1044,7 @@ export function InterviewPage() {
     isVoiceAutoRecordCountdownRunning,
     recording,
     startVoiceAutoRecordCountdown,
+    stopRecording,
     stopRecordingLimitCountdown,
     submitMutation.isPending,
   ])
@@ -1068,7 +1070,19 @@ export function InterviewPage() {
     }
     pendingCountdownQuestionKeyRef.current = ''
     startCountdownRecording(true)
-  }, [buildQuestionKey, currentQuestion, currentStage, inputMode, interviewId, outputMode, pipelineMeta?.trace_id, startCountdownRecording, ttsAudioUrl])
+  }, [
+    buildQuestionKey,
+    currentQuestion,
+    currentStage,
+    inputMode,
+    interviewId,
+    outputMode,
+    pipelineMeta?.trace_id,
+    startCountdownRecording,
+    stopRecording,
+    stopRecordingLimitCountdown,
+    ttsAudioUrl,
+  ])
 
   const formatDuration = (seconds: number) => {
     const safeSeconds = Math.max(0, seconds)

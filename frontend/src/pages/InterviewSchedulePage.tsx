@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Badge, Button, Card, Checkbox, Descriptions, Form, Input, List, Modal, Radio, Select, Space, Tag, Typography, message } from 'antd'
+import { Button, Card, Checkbox, Descriptions, Form, Input, List, Modal, Radio, Select, Space, Tag, Typography, message } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
@@ -484,7 +484,6 @@ export function InterviewSchedulePage() {
                 const isCurrentMonth = isSameMonth(day, currentMonth)
                 const isSelected = key === selectedDateKey
                 const isToday = key === todayKey
-                const statusAccent = items[0] ? getScheduleStatusAccent(items[0].status) : null
                 return (
                   <button
                     key={key}
