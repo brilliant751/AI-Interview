@@ -12,6 +12,8 @@ const mockNavigate = vi.fn()
 
 vi.mock('../api/auth', () => ({
   forgotPassword: (email: string) => mockForgotPassword(email),
+  login: vi.fn(),
+  register: vi.fn(),
   resetPassword: (payload: unknown) => mockResetPassword(payload),
 }))
 
