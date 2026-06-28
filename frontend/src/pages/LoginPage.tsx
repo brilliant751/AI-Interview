@@ -1,9 +1,5 @@
 import { AuthPage } from './AuthPage'
 
-import { login } from '../api/auth'
-import { parseApiError } from '../api/client'
-import { useAuthStore } from '../stores/authStore'
-
 // 登录页：
 // 1. 登录成功后把 token 和用户信息写入 authStore。
 // 2. 如果用户是从受保护路由跳转而来，优先回到原路径。
