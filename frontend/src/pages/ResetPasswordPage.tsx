@@ -1,17 +1,16 @@
 import { useMutation } from '@tanstack/react-query'
 import { Button, Card, Form, Input, Typography, message } from 'antd'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { resetPassword } from '../api/auth'
 import { parseApiError } from '../api/client'
 
-/** 重置密码页面。 */
+/** 邮件重置链接进入后的密码重置页。 */
 export function ResetPasswordPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const initialToken = searchParams.get('token') ?? ''
 
-  /** 提交重置密码。 */
   const resetMutation = useMutation({
     mutationFn: resetPassword,
     onSuccess: () => {
@@ -25,33 +24,56 @@ export function ResetPasswordPage() {
   })
 
   return (
-    <Card title="重置密码" style={{ maxWidth: 460, margin: '40px auto' }}>
-      <Form
-        layout="vertical"
-        initialValues={{ reset_token: initialToken, new_password: '' }}
-        onFinish={(values: { reset_token: string; new_password: string }) => resetMutation.mutate(values)}
-      >
-        <Form.Item name="reset_token" label="重置令牌" rules={[{ required: true, message: '请输入重置令牌' }]}>
-          <Input placeholder="请输入重置令牌" />
-        </Form.Item>
-        <Form.Item
-          name="new_password"
-          label="新密码"
-          rules={[
-            { required: true, message: '请输入新密码' },
-            { min: 8, message: '密码至少 8 位' },
-            { pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/, message: '密码需同时包含字母和数字' },
-          ]}
-        >
-          <Input.Password placeholder="请输入新密码" />
-        </Form.Item>
-        <Button type="primary" htmlType="submit" loading={resetMutation.isPending} block>
-          确认重置
-        </Button>
-      </Form>
-      <Typography.Paragraph style={{ marginTop: 16, marginBottom: 0 }}>
-        返回<Link to="/login">登录页</Link>
-      </Typography.Paragraph>
-    </Card>
+    <div className="login-garden-shell auth-static is-ready">
+      <section className="login-panel-stage auth-panel-stage" aria-label="重置 AI 模拟面试系统密码">
+        <div className="auth-bubble-scene" aria-hidden="true">
+          <span className="auth-bubble auth-bubble-l1" />
+          <span className="auth-bubble auth-bubble-l2" />
+          <span className="auth-bubble-dot auth-bubble-l3" />
+          <span className="auth-bubble auth-bubble-r1" />
+          <span className="auth-bubble auth-bubble-r2" />
+          <span className="auth-bubble-dot auth-bubble-r3" />
+        </div>
+
+        <div className="login-brand-panel">
+          <Typography.Text className="login-brand-kicker">安全 · 恢复 · 继续训练</Typography.Text>
+          <Typography.Title level={2}>设置新密码，回到你的模拟面试训练节奏。</Typography.Title>
+          <Typography.Paragraph>
+            使用邮件中的重置令牌完成验证。新密码会立即生效，之后你可以用新密码重新登录系统。
+          </Typography.Paragraph>
+          <div className="login-signal-row" aria-label="重置密码能力">
+            <span>令牌验证</span>
+            <span>新密码保护</span>
+            <span>安全登录</span>
+          </div>
+        </div>
+
+        <Card className="login-garden-card auth-garden-card" title="重置密码">
+          <Form
+            layout="vertical"
+            initialValues={{ reset_token: initialToken, new_password: '' }}
+            onFinish={(values: { reset_token: string; new_password: string }) => resetMutation.mutate(values)}
+          >
+            <Form.Item name="reset_token" label="重置令牌" rules={[{ required: true, message: '请输入重置令牌' }]}>
+              <Input size="large" placeholder="请输入重置令牌" />
+            </Form.Item>
+            <Form.Item
+              name="new_password"
+              label="新密码"
+              rules={[
+                { required: true, message: '请输入新密码' },
+                { min: 8, message: '密码至少 8 位' },
+                { pattern: /^(?=.*[A-Za-z])(?=.*\d).+$/, message: '密码需要同时包含字母和数字' },
+              ]}
+            >
+              <Input.Password size="large" placeholder="请输入新密码" autoComplete="new-password" />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={resetMutation.isPending} block size="large">
+              确认重置
+            </Button>
+          </Form>
+        </Card>
+      </section>
+    </div>
   )
 }

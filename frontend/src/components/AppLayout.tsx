@@ -11,10 +11,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
-import { Badge, Button, Dropdown, Grid, Layout, Menu, Space, Typography, notification } from 'antd'
-import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { Badge, Button, Dropdown, Layout, Menu, Space, Typography, notification } from 'antd'
 import type { MenuProps } from 'antd'
+import type { ReactNode } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 import { logout } from '../api/auth'
@@ -30,10 +30,8 @@ const { Header, Content, Sider } = Layout
 // 4. 管理员菜单只在 user.role === 'admin' 时显示，和路由保护保持一致。
 // 5. 面试进行页会隐藏或弱化部分导航，减少用户在会话中误操作跳出。
 
-/** 应用布局组件。 */
+/** 应用主布局。 */
 export function AppLayout(props: { children: ReactNode }) {
-  const screens = Grid.useBreakpoint()
-  const isMobile = !screens.md
   const location = useLocation()
   const navigate = useNavigate()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -43,7 +41,6 @@ export function AppLayout(props: { children: ReactNode }) {
   const isInterviewSessionPage = /^\/interview\/[^/]+/.test(location.pathname)
   const [notificationApi, notificationContextHolder] = notification.useNotification()
 
-  /** 生成今日本地时间范围，对后端显式传输 ISO 边界。 */
   const buildTodayRange = () => {
     // 后端按 ISO 时间解析，前端用本地当天 00:00-23:59 覆盖“今天”的用户感知。
     // 这样跨时区浏览器也能明确告诉服务端本次查询的时间边界。
@@ -68,7 +65,7 @@ export function AppLayout(props: { children: ReactNode }) {
     enabled: isAuthenticated,
     refetchInterval: isAuthenticated ? 60000 : false,
   })
-  const todayScheduleItems = todayScheduleQuery.data?.items ?? []
+  const todayScheduleItems = useMemo(() => todayScheduleQuery.data?.items ?? [], [todayScheduleQuery.data?.items])
   const todayPendingCount = todayScheduleItems.length
 
   useEffect(() => {
@@ -116,7 +113,6 @@ export function AppLayout(props: { children: ReactNode }) {
     sideMenuItems.push({ key: '/admin/questions', icon: <UserOutlined />, label: <Link to="/admin/questions">题库管理</Link> })
   }
 
-  /** 根据当前路径选中侧边栏菜单。 */
   const selectedMenuKey = () => {
     const pathName = location.pathname
     const allKeys = sideMenuItems?.map((item) => String(item?.key || '')) || []
@@ -124,7 +120,6 @@ export function AppLayout(props: { children: ReactNode }) {
     return matched ? [matched] : ['/overview']
   }
 
-  /** 执行退出登录。 */
   const handleLogout = async () => {
     // logout 接口失败也要清理本地会话，因为用户已经明确选择退出。
     // 后端 refresh token 失效时，finally 仍会把前端状态恢复为未登录。
@@ -152,33 +147,16 @@ export function AppLayout(props: { children: ReactNode }) {
   ]
 
   return (
-    <Layout
-      style={{
-        minHeight: '100dvh',
-        height: '100dvh',
-        overflow: 'hidden',
-        background: 'linear-gradient(180deg, #f9fafb 0%, #f2f6ff 100%)',
-      }}
-    >
+    <Layout className={`app-shell ${isAuthenticated ? 'is-authenticated' : 'is-public'}`}>
       {notificationContextHolder}
-      <Header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: '#10243f',
-          color: '#fff',
-          gap: 12,
-          paddingInline: isMobile ? 12 : 20,
-        }}
-      >
-        <Space size={10}>
-          <Typography.Title level={4} style={{ margin: 0, color: '#fff' }}>
-            AI Interview
-          </Typography.Title>
-          {isAuthenticated ? <Typography.Text style={{ color: '#9ec5ff' }}>面试训练工作台</Typography.Text> : null}
-        </Space>
-        {isAuthenticated ? (
+      {isAuthenticated ? (
+        <Header className="app-header">
+          <Space size={10}>
+            <Typography.Title level={4} className="app-header-title">
+              AI Interview
+            </Typography.Title>
+            <Typography.Text className="app-header-subtitle">面试训练工作台</Typography.Text>
+          </Space>
           <Space size={14}>
             <Badge count={todayPendingCount} size="small">
               <Button shape="circle" icon={<BellOutlined />} onClick={() => navigate('/interview')} />
@@ -187,44 +165,15 @@ export function AppLayout(props: { children: ReactNode }) {
               <Button icon={<UserOutlined />}>{user?.display_name || user?.email?.split('@')[0] || '用户'}</Button>
             </Dropdown>
           </Space>
-        ) : (
-          <Space size={10}>
-            <Button type="link">
-              <Link to="/login">登录</Link>
-            </Button>
-            <Button>
-              <Link to="/register">注册</Link>
-            </Button>
-          </Space>
-        )}
-      </Header>
-      <Layout style={{ minHeight: 0, overflow: 'hidden' }}>
+        </Header>
+      ) : null}
+      <Layout className="app-body">
         {isAuthenticated ? (
-          <Sider
-            width={220}
-            collapsedWidth={0}
-            breakpoint="lg"
-            theme="light"
-            style={{
-              borderRight: '1px solid #e5e7eb',
-              background: '#f7faff',
-              paddingTop: 8,
-            }}
-          >
-            <Menu mode="inline" selectedKeys={selectedMenuKey()} items={sideMenuItems} style={{ borderInlineEnd: 0, background: '#f7faff' }} />
+          <Sider width={220} collapsedWidth={0} breakpoint="lg" theme="light" className="app-sider">
+            <Menu mode="inline" selectedKeys={selectedMenuKey()} items={sideMenuItems} className="app-menu" />
           </Sider>
         ) : null}
-        <Content
-          style={{
-            padding: isMobile ? '14px 10px' : '24px 16px',
-            maxWidth: 1380,
-            margin: '0 auto',
-            width: '100%',
-            minHeight: 0,
-            height: '100%',
-            overflow: isInterviewSessionPage ? 'hidden' : 'auto',
-          }}
-        >
+        <Content className="app-content" data-interview-session={isInterviewSessionPage ? 'true' : 'false'}>
           {props.children}
         </Content>
       </Layout>

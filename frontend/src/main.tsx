@@ -18,13 +18,43 @@ import './styles/global.css'
 /** 全局 QueryClient 实例。 */
 const queryClient = new QueryClient()
 
-/** 启动时恢复本地会话状态。 */
 useAuthStore.getState().hydrate()
 
-/** 渲染前端应用根节点。 */
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider>
+    <ConfigProvider
+      theme={{
+        token: {
+          colorPrimary: '#4A9BE8',
+          colorSuccess: '#4A9BE8',
+          colorInfo: '#4A9BE8',
+          colorLink: '#357ABD',
+          colorBgLayout: '#F2F7FC',
+          colorBorder: '#D6E5F2',
+          borderRadius: 12,
+          fontFamily: '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif',
+        },
+        components: {
+          Button: {
+            controlHeightLG: 46,
+            borderRadius: 13,
+          },
+          Card: {
+            borderRadiusLG: 18,
+          },
+          Layout: {
+            headerBg: '#1A3A5C',
+            bodyBg: '#F2F7FC',
+            siderBg: '#F5F9FD',
+          },
+          Menu: {
+            itemSelectedBg: '#E3F0FA',
+            itemSelectedColor: '#357ABD',
+            itemHoverColor: '#357ABD',
+          },
+        },
+      }}
+    >
       <QueryClientProvider client={queryClient}>
         <AppRouter />
       </QueryClientProvider>

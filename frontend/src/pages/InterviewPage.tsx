@@ -102,7 +102,7 @@ export function InterviewPage() {
   const [healthDetailsOpen, setHealthDetailsOpen] = useState(false)
   const lastTextQuestionKeyRef = useRef('')
   const [createForm] = Form.useForm()
-  const parseBackendDate = (value?: string) => {
+  const parseBackendDate = useCallback((value?: string) => {
     if (!value) {
       return null
     }
@@ -113,7 +113,7 @@ export function InterviewPage() {
       return null
     }
     return parsed
-  }
+  }, [])
   /** 将表单中的本地日期时间转换为 ISO 字符串。 */
   const toScheduleIsoString = (value?: string) => {
     if (!value) {
@@ -126,7 +126,7 @@ export function InterviewPage() {
     return parsed.toISOString()
   }
   /** 按本地日期生成 YYYY-MM-DD key。 */
-  const buildDateKey = (value?: string) => {
+  const buildDateKey = useCallback((value?: string) => {
     const parsed = parseBackendDate(value)
     if (!parsed) {
       return ''
@@ -135,7 +135,7 @@ export function InterviewPage() {
     const month = String(parsed.getMonth() + 1).padStart(2, '0')
     const day = String(parsed.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
-  }
+  }, [parseBackendDate])
   /** 格式化预约开始时间。 */
   const formatScheduleDateTime = (value?: string) => {
     const parsed = parseBackendDate(value)
@@ -159,7 +159,7 @@ export function InterviewPage() {
     return code === 'ERR_CANCELED' || name === 'CanceledError' || messageText.includes('canceled')
   }
   /** 计算麦克风优先级：优先本机内建麦克风，弱化 iPhone 连续互通设备。 */
-  const scoreAudioInputLabel = (label: string) => {
+  const scoreAudioInputLabel = useCallback((label: string) => {
     const lowerLabel = label.toLowerCase()
     let score = 0
     if (lowerLabel.includes('iphone')) {
@@ -178,15 +178,15 @@ export function InterviewPage() {
       score += 10
     }
     return score
-  }
+  }, [])
   /** 从设备列表中挑选默认麦克风。 */
-  const pickPreferredAudioInputId = (devices: MediaDeviceInfo[]) => {
+  const pickPreferredAudioInputId = useCallback((devices: MediaDeviceInfo[]) => {
     if (devices.length === 0) {
       return ''
     }
     const sorted = [...devices].sort((left, right) => scoreAudioInputLabel(right.label) - scoreAudioInputLabel(left.label))
     return sorted[0].deviceId
-  }
+  }, [scoreAudioInputLabel])
   /** 刷新可用麦克风设备列表并更新默认选择。 */
   const refreshAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) {
@@ -205,7 +205,7 @@ export function InterviewPage() {
       }
       return pickPreferredAudioInputId(audioInputs)
     })
-  }, [])
+  }, [pickPreferredAudioInputId])
   /** 请求麦克风权限后刷新设备，用于拿到完整设备名称。 */
   const prepareAudioInputDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -431,7 +431,7 @@ export function InterviewPage() {
   }, [currentQuestion, pipelineMeta?.trace_id, currentStage])
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
-  const resetRoundRuntimeState = () => {
+  const resetRoundRuntimeState = useCallback(() => {
     // 每次切换会话或开始新轮次时，必须清空录音、倒计时和输入框状态。
     // 如果不清理 mediaRecorder，上一轮的音频轨道可能继续占用麦克风。
     // lastQuestionKeyRef 等 ref 用于防止同一题重复触发自动录音和倒计时。
@@ -450,7 +450,7 @@ export function InterviewPage() {
       mediaRecorderRef.current.stop()
       mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
     }
-  }
+  }, [MAX_TEXT_ANSWER_SECONDS, stopRecordingLimitCountdown, stopTextAnswerCountdown, stopVoiceAutoRecordCountdown])
 
   useEffect(() => {
     if (inputMode !== 'text' || !interviewId || !currentQuestion || currentStage === 'END') {
@@ -497,6 +497,7 @@ export function InterviewPage() {
     playbackQuery.data?.meta.duration_seconds,
     playbackQuery.data?.meta.duration_updated_at,
     playbackQuery.data?.meta.status,
+    parseBackendDate,
   ])
 
   /** 在语音输出且音频地址变化时尝试自动播放。 */
@@ -521,7 +522,7 @@ export function InterviewPage() {
     }
     resetRoundRuntimeState()
     setResumeReplayTick((previous) => previous + 1)
-  }, [interviewId])
+  }, [interviewId, resetRoundRuntimeState])
 
   /** 进入语音模式时主动准备设备列表，并监听设备变化。 */
   useEffect(() => {
@@ -613,7 +614,7 @@ export function InterviewPage() {
     const current = items.find((item) => item.resume_id === resumeId)
     return current?.file_name || ''
   }, [resumeId, resumeQuery.data])
-  const scheduleItems = scheduleQuery.data?.items ?? []
+  const scheduleItems = useMemo(() => scheduleQuery.data?.items ?? [], [scheduleQuery.data?.items])
   const scheduleMap = useMemo(() => {
     // 将预约列表按日期聚合，日历格和右侧当天列表都可以复用。
     // buildDateKey 使用本地日期，符合用户在页面看到的月份和日期。
@@ -625,7 +626,7 @@ export function InterviewPage() {
       mapped.set(key, currentItems)
     })
     return mapped
-  }, [scheduleItems])
+  }, [buildDateKey, scheduleItems])
   const selectedScheduleItems = useMemo(
     () => scheduleMap.get(selectedScheduleDate.format('YYYY-MM-DD')) ?? [],
     [scheduleMap, selectedScheduleDate],
@@ -931,7 +932,7 @@ export function InterviewPage() {
   }
 
   /** 停止录音并收集音频文件。 */
-  const stopRecording = () => {
+  const stopRecording = useCallback(() => {
     stopVoiceAutoRecordCountdown(0)
     stopRecordingLimitCountdown(0)
     if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
@@ -939,7 +940,7 @@ export function InterviewPage() {
       return
     }
     mediaRecorderRef.current.stop()
-  }
+  }, [stopRecordingLimitCountdown, stopVoiceAutoRecordCountdown])
 
   /** 启动浏览器麦克风录音。 */
   const startRecording = async () => {
@@ -1081,6 +1082,7 @@ export function InterviewPage() {
     isVoiceAutoRecordCountdownRunning,
     recording,
     startVoiceAutoRecordCountdown,
+    stopRecording,
     stopRecordingLimitCountdown,
     submitMutation.isPending,
   ])
@@ -1106,7 +1108,19 @@ export function InterviewPage() {
     }
     pendingCountdownQuestionKeyRef.current = ''
     startCountdownRecording(true)
-  }, [buildQuestionKey, currentQuestion, currentStage, inputMode, interviewId, outputMode, pipelineMeta?.trace_id, startCountdownRecording, ttsAudioUrl])
+  }, [
+    buildQuestionKey,
+    currentQuestion,
+    currentStage,
+    inputMode,
+    interviewId,
+    outputMode,
+    pipelineMeta?.trace_id,
+    startCountdownRecording,
+    stopRecording,
+    stopRecordingLimitCountdown,
+    ttsAudioUrl,
+  ])
 
   const formatDuration = (seconds: number) => {
     const safeSeconds = Math.max(0, seconds)
@@ -1182,7 +1196,7 @@ export function InterviewPage() {
           <Space direction="vertical" size={2} style={{ width: '100%' }}>
             <Badge
               count={currentItems.length}
-              style={{ backgroundColor: currentItems.some((item) => item.start_available) ? '#16a34a' : '#1677ff' }}
+              style={{ backgroundColor: currentItems.some((item) => item.start_available) ? '#4A9BE8' : '#1677ff' }}
             />
             <Typography.Text style={{ fontSize: 11 }} ellipsis>
               {formatScheduleDateTime(currentItems[0]?.scheduled_start_at)}

@@ -94,7 +94,7 @@ export function JobManagePage() {
       title="岗位管理"
       bordered={false}
       style={{
-        background: 'linear-gradient(140deg, #f5f9ff 0%, #eef6f1 60%, #fff7ea 100%)',
+        background: 'linear-gradient(140deg, #F5F9FD 0%, #EDF4FB 62%, #E3F0FA 100%)',
       }}
     >
       <Typography.Paragraph>岗位描述支持直接文本录入。点击下方卡片可查看详情。</Typography.Paragraph>
