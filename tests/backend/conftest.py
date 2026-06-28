@@ -11,6 +11,14 @@ BACKEND_PATH = Path(__file__).resolve().parents[2] / "backend"
 if str(BACKEND_PATH) not in sys.path:
     sys.path.insert(0, str(BACKEND_PATH))
 
+# 后端测试公共夹具说明：
+# 1. 每个测试默认使用临时 SQLite 数据库，避免污染真实开发数据。
+# 2. LLM/ASR/TTS provider 默认固定为 mock，测试不依赖外部模型服务。
+# 3. Chroma 目录也指向 tmp_path，保证向量检索相关测试彼此隔离。
+# 4. dev static token 默认打开，旧接口测试可以直接使用 user-token/admin-token。
+# 5. 每个测试前后清理 get_settings 缓存，确保环境变量变更立即生效。
+# 6. 这里的 autouse fixture 是测试稳定性的基础，不需要各用例重复声明。
+
 
 @pytest.fixture(autouse=True)
 def default_mock_provider_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):

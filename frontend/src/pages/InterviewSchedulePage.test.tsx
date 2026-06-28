@@ -38,6 +38,13 @@ vi.mock('../api/interview', () => ({
   fetchVoiceToneProfiles: () => mockFetchVoiceToneProfiles(),
 }))
 
+// InterviewSchedulePage 测试说明：
+// 1. 所有后端 API 都用 mock 函数替换，测试只验证页面交互和状态写入。
+// 2. 创建、取消、开始和下载日历是预约页最关键的用户动作。
+// 3. start 成功后需要写入 interviewStore 并跳转面试页，这里会直接断言。
+// 4. window.open/download 等浏览器能力使用 mock，避免测试环境真实打开窗口。
+// 5. 预约页依赖多组异步数据，QueryClient 包装是测试稳定运行的前提。
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: {

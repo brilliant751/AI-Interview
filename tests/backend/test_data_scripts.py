@@ -11,6 +11,14 @@ import unittest
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
+# 数据脚本测试说明：
+# 1. 按文件路径动态加载脚本模块，避免依赖当前工作目录或安装包路径。
+# 2. 使用临时目录构造输入输出，测试不会改动真实 data/material 目录。
+# 3. 重点验证 normalize、validate、build_question_bank 等脚本的幂等和报告输出。
+# 4. subprocess 路径使用当前 Python 解释器，确保测试环境一致。
+# 5. 这些用例保护离线数据流水线，避免材料导入接口背后的脚本悄悄失效。
+# 6. script_root 指向 backend/assets/scripts/data，是历史兼容路径的一部分。
+
 
 class DataScriptsTestCase(unittest.TestCase):
     """验证数据脚本基础能力与幂等行为。"""

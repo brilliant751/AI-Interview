@@ -10,6 +10,13 @@ from common import REPO_ROOT, write_json, write_jsonl
 from embeddings import create_embedding_client
 
 
+# build_knowledge_vectorstore 构建本地检索索引：
+# 1. 输入是 normalize_materials 生成的 *_knowledge.jsonl。
+# 2. 每条知识片段生成一个向量，并写入 data/chroma 下的 JSONL 索引文件。
+# 3. aliases.json/collection 名称由岗位区分，后端 RAGService 据此查找集合。
+# 4. provider_summary 统计 Ollama/hash_fallback 使用情况，帮助判断索引质量。
+# 5. dry-run 只完成读取和统计，不写向量文件。
+
 def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="构建知识库向量索引")
@@ -40,6 +47,8 @@ def parse_args() -> argparse.Namespace:
 
 def iter_knowledge_rows(input_dir: Path) -> dict[str, list[dict]]:
     """按岗位读取知识 JSONL 记录。"""
+    # 返回值按 role 分组，后续每个岗位生成独立索引。
+    # 这样 Java/Web 检索互不干扰，也方便未来扩展更多岗位方向。
     by_role: dict[str, list[dict]] = {}
     for file_path in sorted(input_dir.glob("*_knowledge.jsonl")):
         role = file_path.name.replace("_knowledge.jsonl", "")
@@ -68,6 +77,8 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     embed_text = create_embedding_client()
 
+    # Chroma 是增强输出；如果依赖缺失，脚本仍会写 JSONL 索引。
+    # 这样轻量环境可以先跑通构建流程，完整环境再额外获得 Chroma collection。
     chroma_client = None
     try:
         import chromadb  # type: ignore
@@ -81,6 +92,8 @@ def main() -> int:
         summary[role] = len(rows)
         index_rows: list[dict] = []
         for row in rows:
+            # embed_text 同时返回向量和 provider 名称。
+            # provider_summary 可以暴露某次构建是否因为 Ollama 不可用而大量走 hash fallback。
             embedding, provider = embed_text(row.get("content", ""), args.dimension)
             provider_summary[provider] = provider_summary.get(provider, 0) + 1
             index_rows.append(

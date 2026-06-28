@@ -13,6 +13,12 @@ import {
 import { parseApiError } from '../api/client'
 import { useCodingPracticeStore } from '../stores/codingPracticeStore'
 
+// 编程练习作答页：
+// 1. Monaco Editor 负责代码编辑，Zustand 保存不同语言的草稿。
+// 2. RUN 调用自测样例，SUBMIT 调用正式判题，两者复用同一个结果面板。
+// 3. 切换语言时不丢失其他语言草稿，但会清空上一次运行结果。
+// 4. 页面只展示判题摘要和失败用例，执行细节由后端服务控制。
+
 const LANGUAGE_LABELS: Record<CodingLanguage, string> = {
   cpp: 'C++11',
   java: 'Java 21',

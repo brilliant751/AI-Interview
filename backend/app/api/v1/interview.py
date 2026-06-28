@@ -39,6 +39,13 @@ from app.repositories.interview_repository import InterviewRepository
 
 router = APIRouter(prefix="/interviews", tags=["interviews"])
 
+# 面试接口层只做三类事情：
+# 1. 将 HTTP 请求转换成 Pydantic 模型和 service 入参。
+# 2. 调用 require_user 确认当前用户身份，并把 user_id 传入服务层。
+# 3. 把 service/repository 返回的 dict 包装成稳定的响应模型。
+# 幂等键逻辑也留在路由层，因为它和 HTTP 请求语义直接相关。
+# 具体面试状态推进、题目生成、语音降级等复杂规则都在 InterviewService 中处理。
+
 
 def get_service(request: Request) -> InterviewService:
     """从应用状态获取面试服务。"""
@@ -60,6 +67,9 @@ async def create_interview(
 ) -> InterviewCreateResponse:
     """创建新的面试会话。"""
     endpoint = "POST:/interviews"
+    # X-Idempotency-Key 用于抵消前端重复点击或网络重试。
+    # 命中缓存时直接返回第一次创建的结果，避免重复创建多个面试会话。
+    # endpoint 加入缓存 key，是为了防止不同接口使用相同幂等键时互相污染。
     if idempotency_key:
         cached = repo.get_idempotent_response(endpoint, idempotency_key)
         if cached:
@@ -101,6 +111,9 @@ async def submit_turn(
 ) -> InterviewTurnJobResponse:
     """提交单轮回答并获取下一题。"""
     endpoint = f"POST:/interviews/{interview_id}/turns"
+    # 单轮回答可能触发 ASR、RAG、LLM、TTS 多个耗时步骤。
+    # 这里先创建异步任务并返回 PROCESSING，前端再轮询 job 结果。
+    # 幂等缓存保存的是 job_id，而不是最终答案，避免重试时重复入队。
     if idempotency_key:
         cached = repo.get_idempotent_response(endpoint, idempotency_key)
         if cached:
@@ -127,6 +140,8 @@ async def list_turns(
     turns = repo.list_turns(interview_id)
     items: list[InterviewTurnItemResponse] = []
     for turn in turns:
+        # degrade_flags 历史上可能以 JSON 字符串或列表两种形态存在。
+        # 响应层统一整理成 list[str]，让前端无需理解数据库兼容细节。
         degrade_flags: list[str] = []
         raw_flags = turn.get("degrade_flags")
         if isinstance(raw_flags, str) and raw_flags.strip():

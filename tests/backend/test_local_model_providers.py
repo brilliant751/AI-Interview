@@ -17,6 +17,13 @@ from app.services.providers import (  # noqa: E402
     PaddleSpeechProviderClient,
 )
 
+# 本地模型 provider 测试说明：
+# 1. 通过 mock HTTP/SDK 调用验证 provider 成功、超时和异常映射。
+# 2. Ollama、FunASR、PaddleSpeech 都属于可插拔外部能力，失败时必须返回 ApiError。
+# 3. 测试不启动真实模型服务，避免 CI 依赖大模型下载或本地端口。
+# 4. 环境变量在 setUp/tearDown 中清理，防止 provider 配置污染其他测试。
+# 5. 这些用例保护 VoiceService/QuestionWorkflow 上层降级逻辑的错误输入。
+
 
 class LocalModelProviderTestCase(unittest.TestCase):
     """验证本地 provider 的成功与失败路径。"""

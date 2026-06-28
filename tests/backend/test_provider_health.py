@@ -13,6 +13,13 @@ sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
+# Provider 健康检查测试说明：
+# 1. 验证管理端健康接口能聚合 ASR、LLM、TTS、Embedding 状态。
+# 2. 测试环境使用静态 admin token，重点放在接口输出结构而非登录流程。
+# 3. 即使部分 provider 降级，接口也应返回可读状态而不是 500。
+# 4. 这些用例帮助前端健康横幅保持字段兼容。
+# 5. 临时数据库只用于应用 lifespan 初始化，不承载真实业务数据。
+
 
 class ProviderHealthTestCase(unittest.TestCase):
     """验证 provider health 接口聚合逻辑。"""

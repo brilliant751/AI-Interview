@@ -23,6 +23,13 @@ import { useAuthStore } from '../stores/authStore'
 
 const { Header, Content, Sider } = Layout
 
+// AppLayout 是登录后页面的共同外壳：
+// 1. 负责顶部栏、侧边栏、移动端菜单和用户下拉菜单。
+// 2. 登录态从 authStore 读取，退出登录时同步通知后端并清本地会话。
+// 3. 今日面试提醒通过 React Query 定时刷新，避免用户错过预约。
+// 4. 管理员菜单只在 user.role === 'admin' 时显示，和路由保护保持一致。
+// 5. 面试进行页会隐藏或弱化部分导航，减少用户在会话中误操作跳出。
+
 /** 应用主布局。 */
 export function AppLayout(props: { children: ReactNode }) {
   const location = useLocation()
@@ -35,6 +42,8 @@ export function AppLayout(props: { children: ReactNode }) {
   const [notificationApi, notificationContextHolder] = notification.useNotification()
 
   const buildTodayRange = () => {
+    // 后端按 ISO 时间解析，前端用本地当天 00:00-23:59 覆盖“今天”的用户感知。
+    // 这样跨时区浏览器也能明确告诉服务端本次查询的时间边界。
     const now = new Date()
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
     const end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
@@ -45,6 +54,8 @@ export function AppLayout(props: { children: ReactNode }) {
   }
 
   const todayScheduleQuery = useQuery({
+    // 顶部提醒只需要今天的预约数据，且登录后才发起请求。
+    // 60 秒刷新一次能兼顾实时性和接口压力。
     queryKey: ['today-interview-schedules', isAuthenticated],
     queryFn: () =>
       fetchScheduledInterviews({
@@ -58,6 +69,8 @@ export function AppLayout(props: { children: ReactNode }) {
   const todayPendingCount = todayScheduleItems.length
 
   useEffect(() => {
+    // 同一天同一批预约状态只提醒一次。
+    // fingerprint 包含 interview_id 和 status，预约状态变化后允许再次提醒。
     if (!isAuthenticated || todayScheduleItems.length === 0) {
       return
     }
@@ -95,6 +108,7 @@ export function AppLayout(props: { children: ReactNode }) {
     { key: '/resumes', icon: <TeamOutlined />, label: <Link to="/resumes">简历管理</Link> },
   ]
   if (user?.role === 'admin') {
+    // 管理菜单在运行时追加，普通用户不会在侧边栏看到导入和题库维护入口。
     sideMenuItems.push({ key: '/admin/imports', icon: <UserOutlined />, label: <Link to="/admin/imports">知识库重建</Link> })
     sideMenuItems.push({ key: '/admin/questions', icon: <UserOutlined />, label: <Link to="/admin/questions">题库管理</Link> })
   }
@@ -107,6 +121,8 @@ export function AppLayout(props: { children: ReactNode }) {
   }
 
   const handleLogout = async () => {
+    // logout 接口失败也要清理本地会话，因为用户已经明确选择退出。
+    // 后端 refresh token 失效时，finally 仍会把前端状态恢复为未登录。
     try {
       if (refreshToken) {
         await logout(refreshToken)

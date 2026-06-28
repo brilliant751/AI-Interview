@@ -17,6 +17,14 @@ _original_version = importlib_metadata.version
 _original_email_validator = sys.modules.get("email_validator")
 _original_pydantic_version = pydantic_networks.version
 
+# 题库练习流程测试说明：
+# 1. 覆盖题库导入、创建练习、顺序答题、重复提交、记录详情和首页概览。
+# 2. 练习题会被快照到 session_questions，测试需要确认题库更新不影响历史记录。
+# 3. 重复提交既有服务层检查，也有数据库唯一约束，两个层面都要防回归。
+# 4. email_validator stub 让认证依赖在最小测试环境中可用。
+# 5. 文件较长是因为仓储、接口和服务流程都在这里做集成式验证。
+# 6. 每个用例都使用隔离数据库，保证题目顺序和答题数量断言稳定。
+
 
 def _patched_version(distribution_name: str) -> str:
     """为测试环境补齐 email-validator 版本元数据。"""

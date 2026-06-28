@@ -3,6 +3,12 @@ import { describe, expect, test } from 'vitest'
 
 import { ProviderHealthBanner } from './ProviderHealthBanner'
 
+// ProviderHealthBanner 测试说明：
+// 1. 组件只负责展示 provider 健康状态，不主动发请求。
+// 2. DEGRADED 状态需要明确展示兜底模板，提醒用户当前不是完整 AI 模式。
+// 3. 每个 provider 的状态和名称都应可见，便于排查语音或检索异常。
+// 4. 测试构造完整 health 对象，确保新增 provider 字段时不破坏渲染。
+
 describe('ProviderHealthBanner', () => {
   test('renders degraded provider state without failing the page', () => {
     render(

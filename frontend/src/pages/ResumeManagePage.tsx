@@ -7,6 +7,12 @@ import { useNavigate } from 'react-router-dom'
 import { deleteResume, fetchResumeFile, fetchResumes, uploadResume } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
+// 简历管理页：
+// 1. 支持上传、列表、预览、删除和选择用于面试。
+// 2. 文件预览通过 Blob URL 创建，组件卸载时必须 revoke 防止内存泄漏。
+// 3. 删除后刷新列表，选择简历后写入 interviewStore 并跳转面试准备流程。
+// 4. 上传错误兼容 AxiosError，用后端 message 给用户更准确反馈。
+
 /** 简历管理页面。 */
 export function ResumeManagePage() {
   const navigate = useNavigate()

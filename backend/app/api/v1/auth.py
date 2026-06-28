@@ -21,6 +21,13 @@ from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+# 认证路由负责把 HTTP 头、IP、UA 等请求上下文传给 AuthService：
+# 1. 账号注册、登录、刷新、重置密码都在同一模块暴露，便于前端统一封装。
+# 2. 具体密码哈希、JWT 签发、审计记录和限流规则都交给服务层。
+# 3. 路由层保留 Response 参数，是为了在需要时可以设置状态码或清理响应头。
+# 4. me/logout 等接口通过 require_user 复用统一鉴权依赖。
+# 5. IP 和 UA 只做字符串提取，不在路由层判断可信代理链。
+
 
 def _get_auth_service(request: Request) -> AuthService:
     """从应用状态获取认证服务。"""

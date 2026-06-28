@@ -10,6 +10,13 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 resume_context_logger = logging.getLogger("app.resume_context")
 
+# OpenAIProviderClient 是外部兼容模型服务的统一适配层：
+# 1. 既支持官方 OpenAI，也支持配置 provider_base_url 的兼容 API。
+# 2. ASR、TTS、LLM 共用同一份 provider 超时和重试配置。
+# 3. 音频 URL 会先下载成 bytes，再复用 bytes 转写逻辑，减少重复实现。
+# 4. 生成问题和报告时的 prompt 构造在上层服务完成，这里只负责调用 SDK。
+# 5. resume_context_logger 用于记录和简历上下文相关的模型调用排障信息。
+
 
 class OpenAIProviderClient:
     """统一封装 OpenAI SDK 的 ASR/TTS/LLM 调用。"""
@@ -20,6 +27,8 @@ class OpenAIProviderClient:
         settings = get_settings()
         from openai import OpenAI
 
+        # OpenAI SDK 初始化时显式传入 http_client，方便控制 timeout、retry 和代理继承。
+        # provider_base_url 为空时使用默认官方地址，非空时切换到兼容网关或第三方模型服务。
         kwargs: dict = {
             "api_key": settings.openai_api_key,
             "timeout": settings.provider_timeout_seconds,

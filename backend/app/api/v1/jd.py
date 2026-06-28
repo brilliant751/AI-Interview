@@ -19,6 +19,13 @@ router = APIRouter(prefix="/jds", tags=["jds"])
 JD_STORAGE_DIR = Path(__file__).resolve().parents[3] / "assets" / "data" / "jds"
 jd_parse_service = ResumeParseService()
 
+# JD 接口支持“上传文件”和“直接填写文本”两种来源：
+# 1. 路由层负责把文件内容或表单文本整理成统一 content_text。
+# 2. 系统预置 JD 和用户自建 JD 共享查询模型，但访问控制规则不同。
+# 3. 上传文件复用 ResumeParseService，因为两类文档都只需要抽取纯文本。
+# 4. company_id/job_role/title 在这里做基础归一化，深层规则由服务或仓储保证。
+# 5. 幂等缓存避免同一个 JD 文件被重复创建多次。
+
 
 def get_repo(request: Request) -> InterviewRepository:
     """从应用状态获取仓储对象。"""

@@ -9,6 +9,12 @@ from app.repositories.interview_repository import InterviewRepository
 from app.services.code_execution_service import CodeExecutionService
 
 
+# CodingPracticeService 是在线编程练习的流程层：
+# 1. 题目列表会合并用户进度，方便前端展示“未开始/进行中/已提交”。
+# 2. 进入题目时创建或恢复 session，保持同一用户同一题只有一个练习上下文。
+# 3. RUN 和 SUBMIT 都走 CodeExecutionService，但保存为不同 submit_type。
+# 4. source_code 优先使用本次请求传入的代码，没有传入时再回退到题目 starter code。
+# 5. 访问任意 session 都要校验 user_id，避免通过猜测 ID 读取他人练习记录。
 class CodingPracticeService:
     """负责编程题列表、会话与判题流程。"""
 
@@ -19,6 +25,8 @@ class CodingPracticeService:
 
     def list_questions(self, user_id: str) -> dict[str, Any]:
         """读取编程题列表并补充用户进度。"""
+        # list_coding_questions 返回公共题库；list_coding_records 返回当前用户进度。
+        # 这里按 question_id 做一次内存合并，避免前端为每道题再发请求。
         questions = self.repo.list_coding_questions()
         records = {str(item["question_id"]): item for item in self.repo.list_coding_records(user_id=user_id)}
         items = []
@@ -62,6 +70,8 @@ class CodingPracticeService:
         session = self._require_session(session_id=session_id, user_id=user_id)
         question = self._require_question(str(session["question_id"]))
         language = str(payload["language"])
+        # 自测只运行题目内置的 self_test_case，反馈速度优先。
+        # 正式提交才会运行完整 judge_cases，便于控制本地执行成本。
         source_code = self._resolve_source_code(
             user_id=user_id,
             session_id=session_id,
@@ -91,6 +101,8 @@ class CodingPracticeService:
         session = self._require_session(session_id=session_id, user_id=user_id)
         question = self._require_question(str(session["question_id"]))
         language = str(payload["language"])
+        # 正式提交会记录一条 submission，用于题目列表展示最新提交状态。
+        # 当前实现不把完整源码写入提交记录，避免过大的代码文本撑大数据库。
         source_code = self._resolve_source_code(
             user_id=user_id,
             session_id=session_id,
@@ -160,6 +172,9 @@ class CodingPracticeService:
         inline_source_code: object | None,
     ) -> str:
         """从请求或题目示例代码中解析本次运行代码。"""
+        # 前端编辑器传入的源码优先级最高。
+        # 如果用户还没有编辑，就使用 starter code 作为可运行模板。
+        # 没有模板时直接返回校验错误，避免把空代码送进执行器产生误导结果。
         if isinstance(inline_source_code, str) and inline_source_code.strip():
             return inline_source_code
         starter_codes = question.get("starter_codes") or {}

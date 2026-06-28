@@ -13,6 +13,13 @@ from app.core.config import get_settings  # noqa: E402
 from app.core.errors import ApiError  # noqa: E402
 from app.services.providers import FunASRProviderClient, PaddleSpeechProviderClient  # noqa: E402
 
+# 语音 SDK provider 测试说明：
+# 1. 覆盖 FunASR/PaddleSpeech 的惰性初始化、成功返回和异常映射。
+# 2. 测试通过 mock SDK 对象完成，不下载真实模型包。
+# 3. provider 失败必须抛 ApiError，供 VoiceService 决定是否降级为文本。
+# 4. 临时数据库环境只为统一配置夹具，不参与语音 provider 的核心断言。
+# 5. 这些用例保护语音面试模式在本地依赖缺失时的稳定性。
+
 
 class VoiceSDKProviderTestCase(unittest.TestCase):
     """覆盖 SDK provider 的惰性初始化与异常映射。"""

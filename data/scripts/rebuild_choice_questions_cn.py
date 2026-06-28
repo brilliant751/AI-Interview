@@ -13,6 +13,13 @@ import argostranslate.package as argos_package
 import argostranslate.translate as argos_translate
 
 
+# rebuild_choice_questions_cn 用可靠来源题库重建中文选择题：
+# 1. 输入是已经归一化的英文/混合语言选择题 JSON 数组。
+# 2. 只翻译看起来主要是英文的文本，已有中文内容保持不变。
+# 3. 选项翻译时保留 A/B/C/D key，避免答案映射被破坏。
+# 4. Argos en->zh 包缺失时会自动安装或提示错误。
+# 5. 输出题库和报告分离，便于前端验证和导入流程分别消费。
+
 def parse_args() -> argparse.Namespace:
     """解析命令行参数。"""
     parser = argparse.ArgumentParser(description="重建中文选择题数据")
@@ -44,6 +51,8 @@ def load_rows(path: Path) -> list[dict[str, Any]]:
 
 def looks_english(text: str) -> bool:
     """判断文本是否主要由英文组成。"""
+    # 使用简单字符比例判断，避免把包含少量英文技术词的中文句子误翻译。
+    # 该规则偏保守：宁可保留混合中文，也不破坏已经人工整理过的题干。
     if not text.strip():
         return False
     letters = re.findall(r"[A-Za-z]", text)

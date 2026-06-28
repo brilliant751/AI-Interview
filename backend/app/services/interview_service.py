@@ -28,6 +28,13 @@ resume_context_logger = logging.getLogger("app.resume_context")
 INTERVIEW_END_MESSAGE = "本次面试已结束，正在生成报告。"
 INTERVIEW_FIRST_QUESTION = "请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。"
 
+# InterviewService 是面试主流程的编排中心：
+# 1. API 层负责收发请求，这里负责会话状态、阶段转换和 provider 降级。
+# 2. Repository 只做数据读写，这里决定哪些数据可以被写入以及何时写入。
+# 3. QuestionWorkflow/RAG/VoiceService 是可替换能力，服务层负责把它们串成稳定流程。
+# 4. 所有返回给前端的字段都在这里组装，便于和 Pydantic 响应模型保持一致。
+# 5. 异步入口和同步 submit_turn 共用同一套校验，避免两条路径出现状态差异。
+
 
 class InterviewService:
     """封装会话创建、轮次提交、报告生成等流程。"""
@@ -58,6 +65,9 @@ class InterviewService:
         if stage != str(session.get("current_stage") or ""):
             raise ApiError(code="STATE_409", message="提交阶段与会话阶段不一致", status_code=409)
 
+        # 先落库创建任务，再把真正的 submit_turn 丢给后台 worker。
+        # 这样即使 LLM 或 TTS 很慢，前端也能立即拿到 job_id 并展示处理中状态。
+        # run_in_threadpool 用来复用同步业务实现，避免维护两份几乎相同的轮次逻辑。
         job_id = self.repo.create_turn_job(interview_id=interview_id, user_id=user_id, stage=stage, payload=payload)
 
         async def _task() -> dict:
@@ -132,6 +142,9 @@ class InterviewService:
             raise ApiError(code="INTERVIEW_400_ROLE_OR_JD_REQUIRED", message="岗位方向与岗位描述至少选择一个", status_code=400)
         jd_snapshot: dict[str, str] = {}
         if jd_id:
+            # 创建会话时保存 JD 快照，而不是后续每轮都读取最新 JD。
+            # 这样用户在面试过程中修改或删除 JD，不会影响已经开始的会话上下文。
+            # 系统预置 JD 不要求 user_id 匹配，用户自建 JD 必须做归属校验。
             jd = self.repo.get_jd(jd_id)
             if not jd or int(jd.get("is_deleted") or 0) == 1:
                 raise ApiError(code="JD_404_NOT_FOUND", message="JD 不存在", status_code=404)
@@ -163,6 +176,7 @@ class InterviewService:
         requested_tone_id = str(payload.get("voice_tone_id") or "").strip()
         tone = None
         if requested_tone_id:
+            # 语气配置只允许选择启用中的记录，避免前端缓存了已下线 tone 后继续使用。
             tone = self.repo.get_voice_tone(requested_tone_id)
             if not tone:
                 raise ApiError(code="VOICE_TONE_404_NOT_FOUND", message="语气配置不存在", status_code=404)
@@ -181,6 +195,8 @@ class InterviewService:
         tts_audio_url: Optional[str] = None
         if output_mode == "voice" and status == "ACTIVE":
             try:
+                # 首题语音合成失败不阻断会话创建，文本问题仍然可以继续面试。
+                # 语音能力属于增强体验，因此降级策略是“能播则播，失败回文本”。
                 tts_style = self._build_tts_style(
                     stage=InterviewStage.SELF_INTRO.value,
                     question=first_question,
@@ -376,6 +392,10 @@ class InterviewService:
         answer_audio_bytes = payload.get("answer_audio_bytes")
         answer_audio_filename = (payload.get("answer_audio_filename") or "answer.wav").strip() or "answer.wav"
 
+        # 输入优先级从“已经识别好的文本”到“原始音频”递减：
+        # 1. 客户端 ASR 文本可信度最高，也能减少后端重复识别成本。
+        # 2. 普通文本回答是最稳定路径，适合手动输入和测试。
+        # 3. 音频 URL/字节流最后交给服务端 ASR，失败时由 VoiceService 抛出可控错误。
         if asr_text:
             logger.info("ASR转写结果(客户端传入): %s", asr_text)
             print(f"[ASR] 客户端转写结果: {asr_text}")
@@ -402,6 +422,9 @@ class InterviewService:
         source = (resume_text or "").strip()
         if not source:
             return []
+        # 这里做一个轻量关键词匹配，不依赖向量库。
+        # 目的不是精确检索，而是在 LLM 提问时补充“候选人简历中的可追问事实”。
+        # 如果回答里没有命中任何简历片段，就退回前 top_k 行，至少给模型一点简历上下文。
         answer_tokens = {token for token in re.findall(r"[\u4e00-\u9fff]+|[A-Za-z0-9_]+", answer.lower()) if token}
         lines = [line.strip() for line in source.splitlines() if len(line.strip()) >= 6]
         scored: list[tuple[int, str]] = []
@@ -458,6 +481,9 @@ class InterviewService:
         """处理单轮回答并产出下一题。"""
         started_at = now_ms()
         trace_id = build_trace_id()
+        # providers/provider_status/degrade_flags 会随本轮链路逐步填充。
+        # 前端报告和排障日志都依赖这些字段判断本轮是否走了降级路径。
+        # trace_id 用来把 API 日志、简历上下文日志和 provider 日志串起来。
         providers = {
             "asr": None,
             "llm": None,
@@ -486,6 +512,8 @@ class InterviewService:
         if stage != session["current_stage"]:
             raise ApiError(code="STATE_409", message="提交阶段与会话阶段不一致", status_code=409)
 
+        # 从这里开始进入本轮业务处理：解析回答、补充上下文、推进状态、生成下一题。
+        # 前面的校验确保用户、会话状态和当前阶段都匹配，后续写库才是安全的。
         answer, input_source = self._resolve_answer(payload)
         resume = self.repo.get_resume(session["resume_id"]) or {}
         resume_text = str(resume.get("parsed_text") or "").strip()
@@ -542,6 +570,10 @@ class InterviewService:
             ensure_behavior_followup_limit(stage, follow_up_count)
 
         live_score = min(95, max(40, 60 + min(len(answer) // 10, 35)))
+        # 阶段推进规则保持确定性：
+        # 自我介绍 -> 项目深挖 -> 多轮技术题 -> 行为题 -> 结束。
+        # 技术题根据回答长度和计数决定是否继续追问，行为题使用 follow_up_count 控制上限。
+        # 每次跨阶段都要经过 ensure_transition_allowed，防止非法跳转污染会话状态。
         if stage == InterviewStage.SELF_INTRO.value:
             next_stage = InterviewStage.PROJECT_DEEP_DIVE.value
             follow_up_count = 0
@@ -570,6 +602,8 @@ class InterviewService:
         jd_snapshot_title = str(session.get("jd_snapshot_title") or "").strip()
         jd_references: list[dict[str, Any]] = []
         if jd_snapshot_content:
+            # JD 快照优先级高于知识库材料，因为它代表本次面试的具体岗位要求。
+            # 最终 references 限制在 4 条以内，避免 prompt 过长导致生成质量下降。
             jd_references.append(
                 {
                     "title": f"JD要求：{jd_snapshot_title or '岗位描述'}",
@@ -584,11 +618,14 @@ class InterviewService:
         history_messages = self._build_conversation_history(previous_turns=previous_turns, current_answer=answer)
         generation_mode = "mock"
         if next_stage == InterviewStage.END.value:
+            # 结束阶段不再调用 LLM 生成问题，直接返回固定收束语并触发报告生成。
             next_question = INTERVIEW_END_MESSAGE
             providers["llm"] = "finalizer"
             provider_status["llm"] = "UP"
         elif self.question_workflow.llm_provider in {"openai", "ollama"}:
             try:
+                # LLM 路径失败时只降级为模板问题，不让 provider 故障中断整场面试。
+                # degrade_flags 会记录这次降级，便于报告和运维排查。
                 next_question = self.question_workflow.generate(
                     answer=answer,
                     references=references,
@@ -635,6 +672,8 @@ class InterviewService:
         tts_audio_url = None
         if output_mode == "voice" and next_stage != InterviewStage.END.value:
             try:
+                # TTS 只影响下一题的语音播放，不影响题目文本本身。
+                # 因此 TTS 失败时记录降级标记并继续返回 next_question。
                 tts_style = self._build_tts_style(stage=next_stage, question=next_question, session=session)
                 tts_audio_url = self.voice_service.tts(
                     next_question,
@@ -673,6 +712,8 @@ class InterviewService:
             generation_mode,
         )
         if next_stage == InterviewStage.END.value:
+            # 到达 END 后立即写入 GENERATING 报告占位记录。
+            # 前端可以据此进入报告等待页，后台 ReportWorker 再异步补齐评分和建议。
             self.repo.finish_session(interview_id)
             self.repo.upsert_report(
                 interview_id,

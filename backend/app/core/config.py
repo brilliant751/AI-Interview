@@ -11,6 +11,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 ASSETS_ROOT = BACKEND_ROOT / "assets"
 
+# 配置读取的约定：
+# 1. 所有环境变量统一使用 AI_INTERVIEW_ 前缀，避免与系统变量或其他项目冲突。
+# 2. 默认值尽量指向本地可运行的 mock/SQLite 环境，方便新人拉仓库后直接启动。
+# 3. provider 相关配置集中在这里，服务层只读取 settings，不直接碰 os.environ。
+# 4. 路径默认放在 backend/assets 下，使测试和本地开发都能复用同一套目录结构。
+# 5. 兼容性字段保留默认值，避免历史 .env 在升级时导致应用无法启动。
+
 
 class Settings(BaseSettings):
     """应用配置对象，统一管理环境变量读取。"""
@@ -79,6 +86,9 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_openai_key_for_dev(self) -> Settings:
         """在 dev 环境使用 openai provider 时校验密钥是否存在。"""
+        # dev 环境下如果显式启用 openai provider，就提前校验密钥。
+        # 这样可以把“启动配置错误”暴露在应用启动阶段，而不是等到用户面试中途才失败。
+        # mock/ollama 等本地模式不需要密钥，因此不进入这个强校验分支。
         need_key = any(
             provider == "openai"
             for provider in [self.llm_provider, self.asr_provider, self.tts_provider]

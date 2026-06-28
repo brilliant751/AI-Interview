@@ -29,6 +29,13 @@ import {
 import { useDeadlineCountdown } from '../hooks/useDeadlineCountdown'
 import { useInterviewStore } from '../stores/interviewStore'
 
+// InterviewPage 是前端最核心的业务页：
+// 1. 同时承载面试准备、预约列表、会话恢复、答题提交和结果展示。
+// 2. React Query 负责远端数据拉取，Zustand 保存当前会话的即时状态。
+// 3. 文本与语音输入共用同一套提交链路，语音只是在提交前多一步录音/上传。
+// 4. 轮次提交后先拿 job_id，再轮询任务结果，避免页面被 LLM/TTS 长耗时阻塞。
+// 5. 页面内所有状态跳转都以后端返回的 stage/status 为准，不自行推断面试结束。
+
 /** 面试答题页面。 */
 export function InterviewPage() {
   const screens = Grid.useBreakpoint()
@@ -268,6 +275,9 @@ export function InterviewPage() {
 
   /** 面试页主动拉取 provider 健康状态，避免仅依赖准备页缓存。 */
   const healthQuery = useQuery({
+    // 面试过程中 provider 可能从 UP 变为 DEGRADED。
+    // 这里每 15 秒刷新一次，页面可以及时展示兜底模式或语音能力异常。
+    // suspendPolling 为 true 时暂停刷新，避免提交轮次期间多余请求干扰用户反馈。
     queryKey: ['provider-health', 'interview-page'],
     queryFn: fetchProviderHealth,
     enabled: !suspendPolling,
@@ -276,6 +286,9 @@ export function InterviewPage() {
   })
   /** 会话页拉取状态，确保支持直接访问 /interview/{id}。 */
   const interviewStatusQuery = useQuery({
+    // URL 中带 interviewId 时，store 可能还没有会话信息。
+    // 状态查询负责把服务端会话重新同步到前端，支持刷新页面和从历史入口进入。
+    // 轮询还能捕捉后台结束、暂停恢复等其他入口造成的状态变化。
     queryKey: ['interview-status', interviewId],
     queryFn: () => fetchInterviewStatus(interviewId),
     enabled: Boolean(interviewId) && !suspendPolling,
@@ -283,6 +296,8 @@ export function InterviewPage() {
   })
   /** 查询面试详情（用于左侧详情面板）。 */
   const playbackQuery = useQuery({
+    // 回放数据包含 meta、resume 和 turns，当前页面用它补充侧边详情。
+    // 这里不主动轮询，因为轮次结果主要由 turn job 和 status query 驱动。
     queryKey: ['interview-playback', interviewId],
     queryFn: () => fetchInterviewPlayback(interviewId),
     enabled: Boolean(interviewId) && !suspendPolling,
@@ -299,6 +314,9 @@ export function InterviewPage() {
       return
     }
     const status = interviewStatusQuery.data
+    // 当用户直接打开 /interview/{id} 时，Zustand store 为空。
+    // 首次拿到 status 后使用 setSessionConfig 初始化完整会话状态。
+    // 如果 store 已经有 interviewId，则只同步可变字段，避免覆盖本地选择配置。
     if (!useInterviewStore.getState().interviewId) {
       setSessionConfig({
         interviewId: status.interview_id,
@@ -347,6 +365,9 @@ export function InterviewPage() {
       setQuestionRound(1)
       return
     }
+    // questionRound 用于页面展示当前第几轮。
+    // 优先使用 trace_id 区分同阶段相似问题，缺少 trace_id 时退回 stage+question。
+    // 这样 LLM 生成了文本相同但链路不同的问题时也能尽量保持轮次准确。
     const key = pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
     if (!currentQuestion) {
       return
@@ -411,6 +432,9 @@ export function InterviewPage() {
 
   /** 重置当前轮次的前端运行态，确保恢复会话时从新一轮开始。 */
   const resetRoundRuntimeState = useCallback(() => {
+    // 每次切换会话或开始新轮次时，必须清空录音、倒计时和输入框状态。
+    // 如果不清理 mediaRecorder，上一轮的音频轨道可能继续占用麦克风。
+    // lastQuestionKeyRef 等 ref 用于防止同一题重复触发自动录音和倒计时。
     stopVoiceAutoRecordCountdown(0)
     stopRecordingLimitCountdown(0)
     stopTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
@@ -433,6 +457,8 @@ export function InterviewPage() {
       stopTextAnswerCountdown(MAX_TEXT_ANSWER_SECONDS)
       return
     }
+    // 文本模式每道题只启动一次答题倒计时。
+    // trace_id 能区分同阶段连续追问，避免问题文本变化不明显时漏启动。
     const questionKey = pipelineMeta?.trace_id || `${currentStage}:${currentQuestion}`
     if (lastTextQuestionKeyRef.current === questionKey) {
       return
@@ -451,6 +477,8 @@ export function InterviewPage() {
       setInterviewElapsedSeconds(Math.max(0, durationSeconds))
       return
     }
+    // 后端只持久化累计时长和最后更新时间，前端在 ACTIVE 状态下实时补上本地增量。
+    // PAUSED/FINISHED 不再增加时长，直接展示服务端累计值。
     const refreshElapsed = () => {
       if (status !== 'ACTIVE') {
         setInterviewElapsedSeconds(Math.max(0, durationSeconds))
@@ -532,18 +560,24 @@ export function InterviewPage() {
 
   /** 查询可选简历。 */
   const resumeQuery = useQuery({
+    // 简历选择弹窗打开时才加载，避免面试页初始渲染发起不必要请求。
+    // page_size 取 50 是为了覆盖大多数课程项目场景，减少分页选择成本。
     queryKey: ['resumes', 'interview-picker'],
     queryFn: () => fetchResumes({ page: 1, page_size: 50 }),
     enabled: resumePickerOpen,
   })
   /** 查询暂停中的面试。 */
   const pausedQuery = useQuery({
+    // 未进入具体会话时才展示可恢复面试。
+    // 进入 interviewId 后该列表没有意义，因此禁用请求。
     queryKey: ['paused-interviews', 'interview-page'],
     queryFn: () => fetchHistory({ page: 1, page_size: 20, status: 'PAUSED' }),
     enabled: !interviewId,
   })
   /** 查询当前月份的预约面试。 */
   const scheduleQuery = useQuery({
+    // 预约日历按月份加载，查询范围使用当前 calendarValue 的月初/月末。
+    // 只拉 SCHEDULED/ACTIVE/PAUSED，已完成报告和取消项不在面试入口重复展示。
     queryKey: ['interview-schedules', calendarValue.format('YYYY-MM')],
     queryFn: () =>
       fetchScheduledInterviews({
@@ -582,6 +616,8 @@ export function InterviewPage() {
   }, [resumeId, resumeQuery.data])
   const scheduleItems = useMemo(() => scheduleQuery.data?.items ?? [], [scheduleQuery.data?.items])
   const scheduleMap = useMemo(() => {
+    // 将预约列表按日期聚合，日历格和右侧当天列表都可以复用。
+    // buildDateKey 使用本地日期，符合用户在页面看到的月份和日期。
     const mapped = new Map<string, typeof scheduleItems>()
     scheduleItems.forEach((item) => {
       const key = buildDateKey(item.scheduled_start_at)
@@ -598,6 +634,8 @@ export function InterviewPage() {
 
   /** 创建面试会话。 */
   const createMutation = useMutation({
+    // createInterview 既可能立即创建 ACTIVE 会话，也可能创建 SCHEDULED 预约会话。
+    // onSuccess 根据后端 status 分支处理，避免前端用 scheduled_start_at 自行判断。
     mutationFn: createInterview,
     onSuccess: (data, variables) => {
       setCreateModalOpen(false)

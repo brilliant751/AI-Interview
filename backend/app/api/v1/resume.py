@@ -20,6 +20,13 @@ router = APIRouter(prefix="/resumes", tags=["resumes"])
 RESUME_STORAGE_DIR = Path(__file__).resolve().parents[3] / "assets" / "data" / "resumes"
 resume_parse_service = ResumeParseService()
 
+# 简历接口直接面对文件上传，因此在路由层处理文件名、扩展名和幂等缓存：
+# 1. 只允许 pdf/doc/docx，防止任意文件进入解析流程。
+# 2. 文件落盘后保存解析文本，后续面试可以直接读取 parsed_text。
+# 3. 每条简历记录都绑定 user_id，列表、下载、删除都必须做归属校验。
+# 4. X-Idempotency-Key 防止用户重复点击上传造成多条重复简历记录。
+# 5. 解析服务只负责文本提取，不参与权限和数据库写入。
+
 
 def get_repo(request: Request) -> InterviewRepository:
     """从应用状态获取仓储对象。"""

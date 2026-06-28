@@ -1,6 +1,12 @@
 import { apiClient } from './client'
 import type { AuthUser } from '../stores/authStore'
 
+// 认证 API 封装：
+// 1. 登录/注册/刷新/登出都返回或消费后端认证域的统一字段。
+// 2. token 持久化不在这里做，而是交给 authStore，保持 API 函数纯粹。
+// 3. forgot/reset password 只暴露页面需要的最小结果。
+// 4. fetchMe 用于未来做会话校验或用户信息刷新，避免完全依赖本地缓存。
+
 /** 注册请求。 */
 export interface RegisterPayload {
   email: string

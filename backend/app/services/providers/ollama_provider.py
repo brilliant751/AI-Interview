@@ -11,6 +11,11 @@ from app.core.config import get_settings
 from app.core.errors import ApiError
 
 
+# OllamaProviderClient 封装本地模型服务：
+# 1. /api/chat 用于生成面试追问和报告辅助内容。
+# 2. /api/embeddings 用于知识库检索或健康检查中的向量生成。
+# 3. 本地服务不可用时统一转换为 ApiError，让上层按 provider 降级策略处理。
+# 4. trust_env=False 避免本地代理影响 127.0.0.1/localhost 的访问。
 class OllamaProviderClient:
     """封装本地 Ollama 的 LLM 与 Embedding 调用。"""
 
@@ -25,6 +30,8 @@ class OllamaProviderClient:
         """调用本地聊天模型生成下一题。"""
         started_at = time.perf_counter()
         try:
+            # Ollama chat 接口返回 message.content。
+            # 如果返回空字符串，按上游失败处理，避免空问题写入面试轮次。
             response = self.client.post(
                 f"{self.base_url}/api/chat",
                 json={

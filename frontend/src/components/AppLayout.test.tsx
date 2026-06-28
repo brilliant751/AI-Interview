@@ -12,6 +12,13 @@ vi.mock('../api/interview', () => ({
   fetchInterviewSchedules: (...args: unknown[]) => mockFetchInterviewSchedules(...args),
 }))
 
+// AppLayout 测试说明：
+// 1. 使用 MemoryRouter 模拟路由环境，不依赖真实浏览器地址。
+// 2. 使用 QueryClientProvider 支持今日预约提醒的 React Query 请求。
+// 3. 登录状态通过 authStore 手动写入，验证普通用户和管理员菜单差异。
+// 4. 面试预约查询被 mock，测试只关注布局渲染和导航文案。
+// 5. 这些用例防止全局布局改动导致主功能入口消失。
+
 /** AppLayout 渲染测试。 */
 describe('AppLayout', () => {
   beforeEach(() => {

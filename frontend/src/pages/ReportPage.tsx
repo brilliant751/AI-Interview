@@ -6,6 +6,13 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { fetchReport, fetchReportList, retryReport } from '../api/interview'
 import { useInterviewStore } from '../stores/interviewStore'
 
+// 报告页支持两种入口：
+// 1. /report 展示当前用户报告列表，并可选择某一场报告。
+// 2. /report/:interviewId 直接打开指定面试报告。
+// 3. 报告可能处于 GENERATING/FAILED/SUCCESS，页面根据状态展示等待、失败或结果。
+// 4. retryReport 只负责重新触发后台任务，页面随后通过查询刷新结果。
+// 5. 雷达图使用本地 SVG 绘制，避免引入额外图表库。
+
 /** 六维雷达图。 */
 function RadarHexagon(props: { dimensions: Array<{ dimension: string; capability_score: number }> }) {
   const dimensions = props.dimensions.slice(0, 6)

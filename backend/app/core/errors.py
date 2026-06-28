@@ -8,6 +8,12 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 
+# 错误处理统一约定：
+# 1. 业务代码只抛 ApiError，不直接返回 JSONResponse。
+# 2. 不同领域维护自己的错误码到 HTTP 状态映射，便于前端按 code 精确提示。
+# 3. 未识别的知识库/认证错误会退回通用 500 或 400，避免漏配导致崩溃。
+# 4. FastAPI 全局异常处理器把 ApiError 转成统一 {"code","message"} 响应。
+# 5. 领域错误码保留业务前缀，排查日志时能快速定位来源模块。
 @dataclass
 class ApiError(Exception):
     """业务错误对象。"""

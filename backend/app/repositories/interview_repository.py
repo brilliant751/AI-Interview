@@ -10,6 +10,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
+# 仓储层统一约定：
+# 1. 所有 SQLite 读写都集中在 InterviewRepository，服务层不直接拼 SQL。
+# 2. JSON 字段在写入时序列化、读取时尽量反序列化，减少上层对存储细节的感知。
+# 3. 每个方法都尽量保持“单一数据库动作或一个事务动作”，便于排查数据问题。
+# 4. _session 负责 commit/rollback/close，调用方无需记忆事务收尾细节。
+# 5. 外键在连接创建时开启，保证会话、题目、答案等关联数据不会悬空。
+# 6. 表结构 DDL 放在仓储内，是为了本地开发和测试可以自动初始化最小数据库。
 class InterviewRepository:
     """面试数据访问层。"""
 
@@ -19,6 +26,8 @@ class InterviewRepository:
 
     def _connect(self) -> sqlite3.Connection:
         """创建数据库连接。"""
+        # row_factory 让查询结果表现得像 dict，方便 service 层按字段名读取。
+        # 每次连接都显式开启外键，因为 SQLite 的外键约束是连接级设置。
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON;")
@@ -27,6 +36,9 @@ class InterviewRepository:
     @contextmanager
     def _session(self):
         """创建自动关闭的数据库会话。"""
+        # 写操作和多步读写都通过这个上下文执行：
+        # 成功时统一 commit，异常时 rollback，最后一定 close。
+        # 这样 service 层抛出的 ApiError 也不会留下半完成事务。
         conn = self._connect()
         try:
             yield conn
@@ -39,6 +51,11 @@ class InterviewRepository:
 
     def _practice_tables_sql(self) -> str:
         """返回题库练习域的表结构 DDL。"""
+        # 题库练习表分三层：
+        # practice_choice_questions 保存可复用题库；
+        # practice_sessions 保存一次练习会话；
+        # practice_session_questions 保存题目快照，保证题库更新后历史练习仍可回放。
+        # practice_answers 独立存答案，并用唯一约束阻止同一题重复提交。
         return """
                 CREATE TABLE IF NOT EXISTS practice_choice_questions (
                   question_id TEXT PRIMARY KEY,
@@ -104,6 +121,10 @@ class InterviewRepository:
 
     def _coding_tables_sql(self) -> str:
         """返回编程练习域的表结构 DDL。"""
+        # 编程练习同样保留“题目、会话、草稿、提交记录”四类数据。
+        # sessions 用 UNIQUE(user_id, question_id) 支持同一用户恢复同一道题。
+        # drafts 按 session + language 保存，便于切换语言时保留不同草稿。
+        # submissions 保存每次运行/提交结果，是进度展示和历史回放的数据来源。
         return """
                 CREATE TABLE IF NOT EXISTS coding_questions (
                   question_id TEXT PRIMARY KEY,
@@ -181,6 +202,11 @@ class InterviewRepository:
 
     def init_schema(self) -> None:
         """初始化核心表结构。"""
+        # init_schema 是应用启动时的数据库自修复入口。
+        # 课程项目部署环境可能没有单独迁移步骤，因此这里保留 CREATE IF NOT EXISTS。
+        # 后续新增字段通常通过 migrations 补齐，但基础表必须能在空库中创建。
+        # WAL 模式适合本地 SQLite 的读多写少场景，前端查询和后台 worker 写入可并行。
+        # 所有表都集中初始化，方便测试用例用临时数据库直接启动完整应用。
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
         with self._session() as conn:
             conn.execute("PRAGMA journal_mode=WAL;")
@@ -967,6 +993,11 @@ class InterviewRepository:
 
     def create_session(self, user_id: str, payload: dict, jd_snapshot: dict | None = None) -> dict:
         """创建面试会话记录。"""
+        # 面试会话创建时会把 JD 快照、语气配置、模式配置一起写入 session。
+        # 这些字段是后续每轮提问的上下文基础，不能只依赖外部表的最新状态。
+        # scheduled_start_at 不为空时表示预约会话，started_at 先使用预约时间占位。
+        # ACTIVE 会话则立即从当前时间开始累计 duration_seconds。
+        # current_stage 固定从 SELF_INTRO 开始，状态推进只能通过服务层完成。
         interview_id = f"int_{uuid.uuid4().hex[:12]}"
         snapshot = jd_snapshot or {}
         status = str(payload.get("status") or "ACTIVE")
@@ -1036,6 +1067,10 @@ class InterviewRepository:
 
     def create_practice_session(self, user_id: str, payload: dict) -> dict:
         """创建题库练习会话记录。"""
+        # 这是早期只创建 session 的轻量方法。
+        # 当前主流程更多使用 create_practice_session_with_snapshots，
+        # 但保留该方法可以兼容旧测试或未来只需要记录练习元信息的场景。
+        # 题目数量写在 session 上，用于概览统计和进度展示。
         practice_id = f"prac_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(
@@ -1055,6 +1090,11 @@ class InterviewRepository:
 
     def create_practice_session_with_snapshots(self, user_id: str, payload: dict, question_snapshots: list[dict]) -> dict:
         """以单事务创建练习会话及其题目快照。"""
+        # 练习题必须快照保存，而不是每次实时读取题库表：
+        # 1. 用户开始练习后，题库被管理员编辑也不能改变本次题目。
+        # 2. 历史记录需要展示当时的题干、选项和解析。
+        # 3. session 与 question snapshots 在同一事务写入，避免只有会话没有题目的半成品。
+        # 4. question_order 从 1 开始，前端可直接展示“第 N 题”。
         practice_id = f"prac_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(
@@ -1489,6 +1529,11 @@ class InterviewRepository:
 
     def upsert_coding_question(self, payload: dict) -> None:
         """幂等写入编程练习题。"""
+        # 编程题来自内置 JSON 材料，应用启动时会反复同步。
+        # 使用 question_id 冲突更新可以让题面、样例、判题用例随材料文件更新。
+        # slug 有唯一约束，便于未来做更友好的 URL 或题目搜索。
+        # JSON 字段统一在这里序列化，服务层读取时再反序列化为列表/对象。
+        # updated_at 用于题目列表显示最近更新，也方便排查材料是否同步成功。
         with self._session() as conn:
             conn.execute(
                 """
@@ -2355,6 +2400,11 @@ class InterviewRepository:
         latency_ms: int = 0,
     ) -> str:
         """写入单轮面试记录并返回 turn_id。"""
+        # interview_turns 是报告、回放和历史分析的事实来源。
+        # 每一轮都保存 answer_text、next_question、live_score 和 pipeline 元数据。
+        # degrade_flags 以 JSON 数组保存，便于后续扩展多个降级原因。
+        # trace_id 与日志系统对齐，可以从报告中的异常轮次反查服务端链路。
+        # 这里只负责写入，不推进 session 阶段，阶段推进由 InterviewService 统一处理。
         turn_id = f"turn_{uuid.uuid4().hex[:12]}"
         with self._session() as conn:
             conn.execute(

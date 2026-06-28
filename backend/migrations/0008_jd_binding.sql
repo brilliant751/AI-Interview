@@ -1,4 +1,11 @@
 -- JD 绑定能力：新增 JD 数据表并扩展面试会话字段
+-- 迁移说明：
+-- 1. job_descriptions 保存系统预置和用户上传的岗位描述。
+-- 2. interview_sessions 保存 JD 快照，避免会话中途 JD 被修改影响提问。
+-- 3. source_type 区分 SYSTEM_PRESET 和 USER_UPLOAD，便于权限判断。
+-- 4. storage_path 支持文件型 JD，content_text 支持直接粘贴文本。
+-- 5. jd_snapshot_content 是报告和问题生成的重要上下文来源。
+-- 6. 相关索引提升按用户、岗位和来源筛选 JD 的性能。
 
 CREATE TABLE IF NOT EXISTS job_descriptions (
   jd_id TEXT PRIMARY KEY,

@@ -1,4 +1,11 @@
 -- 新增语气配置表与会话语气快照字段
+-- 迁移说明：
+-- 1. voice_tone_profiles 保存可选面试官语气和语速配置。
+-- 2. interview_sessions 保存语气快照，保证会话开始后配置变更不影响当前面试。
+-- 3. is_active 和 sort_order 支持管理端上下线和排序。
+-- 4. base_instructions 会传给 TTS/语音风格生成逻辑。
+-- 5. 默认插入几套语气，保证前端无需额外初始化就有可选项。
+-- 6. speed 使用 REAL，允许 0.95、1.02 等细粒度语速调整。
 
 CREATE TABLE IF NOT EXISTS voice_tone_profiles (
   tone_id TEXT PRIMARY KEY,

@@ -16,6 +16,12 @@ from app.services.material_import_service import MaterialImportService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+# 管理端接口只面向管理员：
+# 1. 材料导入通常耗时较长，因此返回 202 和 task_id，前端轮询任务状态。
+# 2. provider health 用来展示 LLM/ASR/TTS/Embedding 等外部能力的可用性。
+# 3. 这里不直接执行脚本细节，导入编排交给 MaterialImportService。
+# 4. require_admin 是硬边界，普通用户不能触发全局材料重建。
+
 
 def _get_import_service(request: Request) -> MaterialImportService:
     """获取应用级导入任务服务。"""

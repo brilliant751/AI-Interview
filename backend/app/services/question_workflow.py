@@ -7,6 +7,12 @@ from typing import Any, Optional, TypedDict
 from app.services.providers import OllamaProviderClient, OpenAIProviderClient
 
 
+# 问题生成工作流提供两条路径：
+# 1. provider 可用时调用 OpenAI/Ollama 生成更贴合简历、JD 和历史上下文的追问。
+# 2. provider 不可用或未启用时使用模板问题，保证面试流程仍能完整走完。
+# 3. LangGraph 是可选增强，缺失依赖时 _build_graph 返回 None，不影响模板兜底。
+# 4. 所有模型输出都会经过清理，尽量得到“可以直接说出口”的单句问题。
+# 5. JD、简历、知识库引用会按优先级进入 prompt，避免通用知识压过岗位要求。
 class _WorkflowState(TypedDict):
     """问题生成工作流状态。"""
 
@@ -37,9 +43,13 @@ class QuestionWorkflow:
         try:
             from langgraph.graph import END, START, StateGraph
         except Exception:
+            # LangGraph 不是主流程硬依赖；缺失时退回普通模板逻辑。
+            # 这样 CI 或轻量部署环境无需额外安装图编排库也能运行。
             return None
 
         def compose(state: _WorkflowState) -> dict:
+            # compose 节点是最小可运行图，只根据阶段、回答摘要和引用标题生成追问。
+            # 复杂 provider 生成逻辑放在 generate_by_llm 中，图节点用于本地兜底。
             ref_hint = state["references"][0]["title"] if state["references"] else "岗位基础能力"
             answer_hint = state["answer"].strip().replace("\n", " ")[:24]
             if state["stage"] == "PROJECT_DEEP_DIVE":
@@ -84,6 +94,8 @@ class QuestionWorkflow:
             return "无"
 
         def _priority(reference: dict[str, Any]) -> int:
+            # Prompt 中参考资料的优先级：JD > 简历 > 知识库。
+            # JD 定义岗位要求，简历定义候选人事实，知识库只提供通用补充。
             source = str(reference.get("source_path") or "").lower()
             retrieval_mode = str(reference.get("retrieval_mode") or "").lower()
             if source == "jd" or retrieval_mode == "jd":
@@ -104,6 +116,8 @@ class QuestionWorkflow:
 
     def _sanitize_spoken_question(self, text: str) -> str:
         """清理模型可能返回的装饰性内容，保留可直接说出口的一句问句。"""
+        # 模型有时会返回 markdown、解释、追问意图等额外文本。
+        # 面试官语音播报只需要自然问题，因此这里过滤装饰性内容和代码块标记。
         normalized = (text or "").strip()
         if not normalized:
             return normalized
@@ -189,6 +203,9 @@ class QuestionWorkflow:
         interview_id: str = "",
     ) -> str:
         """调用 LLM 生成问题。"""
+        # provider 分支在这里集中处理，上层 InterviewService 只关心 generate() 返回一句问题。
+        # OpenAI provider 已经封装了更复杂的消息结构，所以这里直接透传上下文参数。
+        # Ollama provider 使用本地 /api/chat，需要在当前方法内组装完整 prompt。
         if self.llm_provider == "openai":
             return self._get_openai_client().generate_question(
                 answer=answer,
@@ -203,6 +220,9 @@ class QuestionWorkflow:
                 interview_id=interview_id,
             )
         if self.llm_provider == "ollama":
+            # Ollama prompt 需要尽量短而明确：
+            # JD/简历/知识库按优先级进入 ref_context，历史对话保持 role/content 格式。
+            # 输出要求限制为“一句中文问句”，减少模型返回分析段落的概率。
             ref_titles = "；".join(ref.get("title", "") for ref in references[:3] if ref.get("title"))
             ref_hint = ref_titles or "岗位基础能力"
             ref_context = self._build_reference_context(references=references)
@@ -221,6 +241,8 @@ class QuestionWorkflow:
             difficulty_hint = difficulty_hint_map.get(difficulty, difficulty_hint_map["medium"])
             prefix = ""
             if stage == "PROJECT_DEEP_DIVE" and (resume_content or "").strip():
+                # 项目深挖阶段才把较长简历内容放入 prompt。
+                # 其他阶段过多简历文本会稀释技术/JD 追问重点，也会增加本地模型负担。
                 prefix = (
                     "【简历内容（仅项目经历轮使用）】\n"
                     f"{resume_content[:2400]}\n"
@@ -257,6 +279,9 @@ class QuestionWorkflow:
         interview_id: str = "",
     ) -> str:
         """统一生成入口：openai 优先，失败由上层降级。"""
+        # generate 负责统一“真实 provider 或模板”的出口。
+        # 真实 provider 的异常不在这里吞掉，交给 InterviewService 记录 degrade_flags。
+        # 无论哪条路径，最后都清理成适合语音播报的问句。
         if self.llm_provider in {"openai", "ollama"}:
             question = self.generate_by_llm(
                 answer=answer,

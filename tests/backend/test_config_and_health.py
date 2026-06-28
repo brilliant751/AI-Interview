@@ -7,6 +7,13 @@ from fastapi.testclient import TestClient
 from app.core.config import get_settings
 from app.main import create_app
 
+# 配置与健康检查 smoke test 说明：
+# 1. 这些测试运行成本低，适合作为 CI 最早发现应用无法启动的用例。
+# 2. 默认 provider 必须是 mock，保证本地没有模型服务时仍能启动。
+# 3. OpenAPI 和 Swagger 文档可访问，说明路由注册和 Pydantic 模型没有基础错误。
+# 4. Provider health 不应因为外部服务缺失而让整个应用崩溃。
+# 5. 该文件主要防止配置默认值或 lifespan 初始化的低级回归。
+
 
 def test_settings_defaults_use_mock_providers() -> None:
     """默认测试环境应使用 mock provider，避免触发外部服务。"""

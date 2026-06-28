@@ -6,6 +6,14 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, model_validator
 
+# Schema 文件是前后端契约的中心：
+# 1. Request 模型负责把输入限制在业务允许的范围内，减少 service 层重复校验。
+# 2. Response 模型固定接口返回字段，防止仓储层字段直接泄漏给前端。
+# 3. Literal 用来约束枚举值，让 OpenAPI 文档和 TypeScript 调用方都能得到明确选项。
+# 4. Field 的长度限制优先放在 API 边界，避免无意义的大文本进入业务流程。
+# 5. default_factory 用于列表字段，避免多个实例共享同一个可变默认值。
+# 6. 跨字段约束使用 model_validator，保证如 job_role/jd_id 这样的组合规则可集中维护。
+
 
 class ResumeUploadResponse(BaseModel):
     """简历上传响应。"""
@@ -222,6 +230,10 @@ class VoiceToneProfileListResponse(BaseModel):
 class InterviewTurnRequest(BaseModel):
     """提交轮次请求。"""
 
+    # 轮次提交模型兼容文本、客户端 ASR、音频 URL 三种输入。
+    # stage 必须由前端传当前阶段，后端会和 session.current_stage 再校验一次。
+    # answer_text/asr_text 都允许为空，是为了支持纯音频上传接口复用部分字段。
+    # answer_audio_format 默认 mp3，和前端录音/上传的常见格式保持一致。
     stage: Literal["SELF_INTRO", "PROJECT_DEEP_DIVE", "TECHNICAL", "BEHAVIORAL", "END"]
     answer_text: str = ""
     asr_text: str = ""
@@ -248,6 +260,10 @@ class PipelineProviderStatus(BaseModel):
 class PipelineMeta(BaseModel):
     """链路元数据。"""
 
+    # pipeline_meta 是前端排障和展示“当前模式”的核心字段。
+    # providers 记录本轮实际调用的供应商，provider_status 记录健康结果。
+    # degrade_flags 说明是否发生 LLM/TTS 等降级，trace_id 用于日志关联。
+    # generation_mode 明确区分本地 AI、模板兜底和 mock，避免页面猜测。
     input_source: str
     providers: PipelineProviders
     provider_status: PipelineProviderStatus = Field(default_factory=PipelineProviderStatus)
@@ -281,6 +297,9 @@ class InterviewTurnJobResponse(BaseModel):
 class InterviewTurnJobResultResponse(BaseModel):
     """轮次异步任务结果响应。"""
 
+    # job 查询接口有三种状态：
+    # PROCESSING 表示后台仍在生成，READY 表示 result 可用，FAILED 表示 error_message 可展示。
+    # result 只在 READY 时返回，避免前端在处理中状态误读半成品数据。
     interview_id: str
     job_id: str
     status: Literal["PROCESSING", "READY", "FAILED"]
@@ -421,6 +440,10 @@ class ResumeInterviewResponse(BaseModel):
 class ReportResponse(BaseModel):
     """面试报告响应。"""
 
+    # 报告字段全部给默认值，保证 GENERATING/FAILED 状态下也能返回完整响应结构。
+    # dimension_scores、jd_resume_alignment、question_deep_dives 是结构化数组，
+    # 后端会从数据库 JSON 字符串转换为 list，前端直接渲染即可。
+    # final_recommendation 和 key_risks 支持报告页做最终结论和风险提示。
     interview_id: str
     status: Literal["GENERATING", "READY", "FAILED"]
     overall_score: Optional[int] = None

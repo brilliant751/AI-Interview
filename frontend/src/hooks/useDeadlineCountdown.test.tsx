@@ -3,6 +3,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { useDeadlineCountdown } from './useDeadlineCountdown'
 
+// useDeadlineCountdown 测试说明：
+// 1. 使用 fake timers 固定系统时间，断言不受真实时间流逝影响。
+// 2. 重复 start 和 rerender 是为了防止多 interval 导致倒计时加速。
+// 3. onExpire 只能触发一次，避免面试自动提交或提示重复执行。
+// 4. Hook 测试不渲染真实页面，只验证返回状态和控制函数。
+// 5. 这些用例保护语音作答倒计时的稳定性。
+
 describe('useDeadlineCountdown', () => {
   beforeEach(() => {
     vi.useFakeTimers()

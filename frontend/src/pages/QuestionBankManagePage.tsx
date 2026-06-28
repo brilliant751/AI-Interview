@@ -11,6 +11,13 @@ import {
 } from '../api/practice'
 import { parseApiError } from '../api/client'
 
+// 题库管理页：
+// 1. 管理员可以查看结构化题库、上传 Markdown、手动新增题目。
+// 2. 查询条件包括岗位、类别、关键字和分页，方便定位具体题目。
+// 3. Markdown 上传后会触发导入任务，页面通过 taskId 轮询进度。
+// 4. 手动新增题目写入源材料后也会刷新列表，保持页面和数据库同步。
+// 5. 类别选项与练习准备页保持同一套英文枚举。
+
 const CATEGORY_OPTIONS: Array<{ label: string; value: PracticeCategory }> = [
   { label: '技术', value: 'technical' },
   { label: '项目', value: 'project' },

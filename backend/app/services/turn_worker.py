@@ -8,6 +8,11 @@ from collections.abc import Awaitable, Callable
 from app.repositories.interview_repository import InterviewRepository
 
 
+# TurnWorker 专门处理单轮回答任务：
+# 1. API 收到回答后立即创建 job，真实处理逻辑在后台执行。
+# 2. 成功时把 submit_turn 的结果写入 turn_jobs.result_json。
+# 3. 失败时统一写 FAILED 和 error_message，前端轮询可以展示失败原因。
+# 4. shutdown 等待所有未完成任务，减少测试或服务退出时的悬空任务。
 class TurnWorker:
     """负责异步执行轮次提交任务。"""
 
