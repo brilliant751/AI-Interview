@@ -1,6 +1,7 @@
 import { Navigate, Route, BrowserRouter, Routes, useLocation } from 'react-router-dom'
 
 import { AppLayout } from '../components/AppLayout'
+import { WelcomeGate } from '../components/WelcomeGate'
 import { useAuthStore } from '../stores/authStore'
 import { AdminImportsPage } from '../pages/AdminImportsPage'
 import { CodingPracticeListPage } from '../pages/CodingPracticeListPage'
@@ -50,7 +51,7 @@ export function AppRouter() {
     <BrowserRouter>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />} />
+          <Route path="/" element={isAuthenticated ? <Navigate to="/overview" replace /> : <WelcomeGate />} />
           <Route
             path="/overview"
             element={
