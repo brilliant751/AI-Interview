@@ -176,7 +176,7 @@ export function WelcomeGate() {
         title="沉浸式实时模拟面试体验"
         body="选择岗位、上传简历后即刻开始。AI 面试官会根据你的回答智能追问，真实还原面试压力场景，帮助你发现表达弱项并持续提升。"
         points={['岗位定制题库', '简历深度联动', '实时智能追问']}
-        imgSrc="/screenshots/interview.png"
+        imgSrc="/screenshots/landing-interview.png"
         imgAlt="AI 模拟面试界面"
         altBg
       />
@@ -206,7 +206,7 @@ export function WelcomeGate() {
         title="每次面试都有深度复盘"
         body="完整保留每一次面试过程，支持回放查看。AI 生成的详细分析报告涵盖表达能力、技术深度、项目经验等多维度评估。"
         points={['面试回放', '多维评分', '成长轨迹']}
-        imgSrc="/screenshots/history.png"
+        imgSrc="/screenshots/landing-report.png"
         imgAlt="面试记录界面"
         imageLeft
       />
