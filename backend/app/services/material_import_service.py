@@ -21,6 +21,12 @@ from app.models.schemas import (
 logger = logging.getLogger(__name__)
 
 
+# 材料导入服务负责把管理员请求转换成后台脚本任务：
+# 1. 任务状态保存在进程内，前端通过 task_id 查询进度。
+# 2. 导入脚本仍然复用 scripts/data 下的离线处理能力，避免线上逻辑重复实现。
+# 3. idempotency_key 用于防止管理员重复点击触发多次重建。
+# 4. 失败时保留 last_error 和 report_path，便于在管理页展示诊断信息。
+# 5. shutdown 会等待未完成任务，避免应用关闭时中断正在写报告的导入流程。
 @dataclass
 class _ImportTask:
     """导入任务运行时状态。"""

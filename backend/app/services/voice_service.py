@@ -18,6 +18,12 @@ from app.services.providers import (
 logger = logging.getLogger(__name__)
 
 
+# VoiceService 统一封装语音输入输出：
+# 1. ASR/TTS provider 由配置决定，调用方只关心 asr() 和 tts() 两个方法。
+# 2. openai、FunASR、PaddleSpeech 都通过惰性客户端初始化，避免启动时连接外部服务。
+# 3. mock 模式用于本地开发和测试，保证无语音依赖时流程仍能跑通。
+# 4. 语音失败由 ApiError 传递给上层，上层再决定是否降级为文本。
+# 5. health_details 返回更细的 provider 信息，管理端健康检查可直接展示。
 class VoiceService:
     """统一 ASR/TTS 接口，支持 openai 与 mock 双模式。"""
 

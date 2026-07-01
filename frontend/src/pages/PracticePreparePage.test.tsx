@@ -29,6 +29,13 @@ vi.mock('../api/practice', async () => {
   }
 })
 
+// PracticePreparePage 测试说明：
+// 1. 概览、记录和创建练习接口都用 mock，断言页面如何消费这些数据。
+// 2. 创建成功后需要写入 practiceStore 并跳转作答页。
+// 3. 类别筛选和题量选择属于创建 payload 的关键字段，测试会覆盖用户操作。
+// 4. QueryClient 关闭重试，避免 mock 失败时出现不可控等待。
+// 5. 这些用例保护题库练习入口页的主要转化路径。
+
 /** 渲染题库练习准备页。 */
 function renderPage() {
   const queryClient = new QueryClient({

@@ -11,6 +11,13 @@ from pathlib import Path
 from common import REPO_ROOT, discover_material_files, write_json
 
 
+# validate_materials 是导入前质量门禁：
+# 1. 检查题库是否包含“第 X 题”、题干、解析等关键结构。
+# 2. 检查知识材料是否为空或缺少标题，提前发现无法检索的材料。
+# 3. 报告以 JSON 输出，方便 CI、管理端或人工查看。
+# 4. strict 模式下存在 error 会返回非 0，适合阻断错误材料进入构建。
+# 5. warning 不阻断构建，只提醒后续解析可能使用兜底逻辑。
+
 @dataclass
 class ValidationIssue:
     """表示单个材料文件的校验问题。"""
@@ -44,6 +51,8 @@ def read_text(path: Path) -> str:
 
 def validate_question_file(path: Path, content: str) -> list[ValidationIssue]:
     """校验题库文件结构。"""
+    # 题库导入依赖“第X题”标题作为切分边界，因此没有题目结构时直接 error。
+    # 题干/解析缺失仍可兜底解析，所以只记录 warning。
     issues: list[ValidationIssue] = []
     question_count = len(re.findall(r"^#{2,3}\s*第\s*\d+\s*题[：:]", content, flags=re.MULTILINE))
     if question_count == 0:
@@ -126,6 +135,8 @@ def validate_one_file(role: str, kind: str, file_path: Path) -> tuple[dict, list
 
 def collect_targets() -> list[tuple[str, str, Path]]:
     """收集需要校验的所有材料文件路径。"""
+    # material 清单里既有目录也有单文件。
+    # 目录类型只扫描一层 Markdown 文件，避免误把临时文件或深层产物纳入校验。
     targets: list[tuple[str, str, Path]] = []
     for item in discover_material_files():
         role = item["role"]
@@ -185,4 +196,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

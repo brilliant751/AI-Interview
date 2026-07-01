@@ -4,6 +4,12 @@ import { useParams } from 'react-router-dom'
 
 import { fetchInterviewPlayback } from '../api/interview'
 
+// 面试回放页：
+// 1. 根据 interviewId 拉取会话元信息、简历摘要和全部轮次。
+// 2. 首题固定展示为自我介绍，后续问题来自每轮 next_question。
+// 3. Timeline 用于按提交顺序展示问答，便于复盘面试过程。
+// 4. 这里只读历史数据，不允许继续提交或修改会话。
+
 /** 面试回放详情页。 */
 export function InterviewPlaybackPage() {
   const firstQuestion = '请先做 1 分钟自我介绍，聚焦与你申请岗位最相关的经历。'

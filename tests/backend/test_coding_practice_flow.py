@@ -16,6 +16,14 @@ _original_version = importlib_metadata.version
 _original_email_validator = sys.modules.get("email_validator")
 _original_pydantic_version = pydantic_networks.version
 
+# 编程练习后端测试说明：
+# 1. 覆盖题目列表、创建/恢复 session、自测、正式提交和记录查询。
+# 2. 题目数据通过启动同步或测试内插入准备，确保接口返回包含用户进度。
+# 3. email_validator stub 复用认证相关测试策略，减少额外依赖对 CI 的影响。
+# 4. 判题执行通常会被 mock 或使用轻量路径，避免测试受本机编译器环境影响。
+# 5. 用户归属校验是重点，session_id 不能被其他用户直接访问。
+# 6. 这些用例防止编程练习和普通题库练习的数据表混淆。
+
 
 def _patched_version(distribution_name: str) -> str:
     """为测试环境补齐 email-validator 版本元数据。"""

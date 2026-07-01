@@ -13,6 +13,12 @@ from app.repositories.interview_repository import InterviewRepository
 
 router = APIRouter(prefix="/interviews/history", tags=["history"])
 
+# 历史记录接口只读取当前用户的面试会话：
+# 1. 支持 job_role 和 status 过滤，方便前端按岗位或状态筛选。
+# 2. status 在路由层先归一化为大写枚举，避免仓储层处理自由文本。
+# 3. 分页参数在 Query 中限制范围，防止一次查询过多历史数据。
+# 4. 返回项只暴露列表展示所需字段，不返回完整简历/JD/轮次内容。
+
 
 def get_repo(request: Request) -> InterviewRepository:
     """从应用状态获取仓储对象。"""

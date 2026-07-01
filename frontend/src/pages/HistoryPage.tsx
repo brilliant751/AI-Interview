@@ -6,6 +6,12 @@ import { useNavigate } from 'react-router-dom'
 
 import { deleteInterviewHistory, fetchHistory, fetchResumeFile } from '../api/interview'
 
+// 历史记录页：
+// 1. 按岗位和分页查询当前用户的面试会话。
+// 2. 支持跳转回放、查看报告、预览关联简历和删除历史记录。
+// 3. 简历预览同样使用 Blob URL，关闭或卸载时释放资源。
+// 4. 删除成功后刷新对应分页，避免列表展示已删除项。
+
 /** 历史记录页面。 */
 export function HistoryPage() {
   const navigate = useNavigate()

@@ -41,6 +41,12 @@ _WEB_SECTION_PATTERN = re.compile(
 )
 
 
+# 题库管理服务承接“Markdown 文件”和“数据库题库”之间的转换：
+# 1. 管理端创建题目时先写入规范 Markdown，再触发导入任务更新数据库。
+# 2. 类别支持中英文别名，最终归一化为 technical/project/scenario/behavior。
+# 3. 正则解析保留 Java/Web 两套材料格式差异，避免强行要求历史材料重写。
+# 4. 导入动作委托给 MaterialImportService，服务本身不直接跑耗时脚本。
+# 5. 查询接口从数据库读结构化题目，编辑接口维护源 Markdown，二者职责分离。
 class QuestionBankService:
     """负责题库查询、Markdown 落盘与导入任务触发。"""
 

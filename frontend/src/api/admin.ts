@@ -1,5 +1,11 @@
 import { apiClient } from './client'
 
+// 管理端 API 契约：
+// 1. 知识库/题库材料导入是异步任务，触发后通过 task_id 查询进度。
+// 2. idempotencyKey 由页面按按钮操作生成，避免管理员重复点击创建多份任务。
+// 3. provider health 用于首页或管理页展示外部模型服务状态。
+// 4. 管理端接口依赖后端管理员鉴权，前端这里只负责传递请求。
+
 /** 导入触发请求。 */
 export interface TriggerMaterialImportPayload {
   rebuild_mode: 'full' | 'incremental'
@@ -36,6 +42,7 @@ export async function triggerMaterialImport(
   payload: TriggerMaterialImportPayload,
   idempotencyKey?: string,
 ): Promise<TriggerMaterialImportResponse> {
+  // 当页面传入幂等键时覆盖默认请求头，确保同一次导入按钮操作可重复安全重试。
   const headers: Record<string, string> = {}
   if (idempotencyKey) {
     headers['X-Idempotency-Key'] = idempotencyKey

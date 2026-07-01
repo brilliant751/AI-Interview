@@ -9,6 +9,12 @@ from app.core.errors import ApiError
 from app.repositories.interview_repository import InterviewRepository
 
 
+# PracticeService 负责题库练习的业务规则：
+# 1. 创建练习时从题库取候选题，并把题目内容快照到会话中。
+# 2. 答题时只允许提交当前题，避免前端跳题或重复提交造成进度错乱。
+# 3. 练习记录和概览都在这里聚合，前端不需要自己拼多张表的统计。
+# 4. 仓储层负责原始数据读写，服务层负责“什么状态下能做什么操作”。
+# 5. followup 模式目前通过占位题保持接口兼容，后续可接入智能追问生成。
 class PracticeService:
     """封装题库练习会话创建、答题推进和记录查询流程。"""
 
@@ -18,6 +24,8 @@ class PracticeService:
 
     def create_session(self, payload: dict[str, Any], user_id: str) -> dict[str, Any]:
         """创建题库练习会话并返回首题。"""
+        # 先检查候选题数量，再创建会话，避免生成一个题量不足的半成品会话。
+        # 选题结果会被快照保存，后续题库导入或更新不会影响正在进行的练习。
         questions = self._list_question_bank_candidates(payload)
         question_count = int(payload["question_count"])
         if len(questions) < question_count:
@@ -48,6 +56,9 @@ class PracticeService:
         if str(session.get("status") or "") == "FINISHED":
             raise ApiError(code="STATE_409", message="练习已结束，禁止继续提交", status_code=409)
 
+        # 这里重新读取 snapshots 和 answers，而不是相信前端传来的进度。
+        # 当前题由服务端根据“已答题数量”推导，保证顺序模式不可越权跳题。
+        # 重复提交由显式检查和数据库唯一约束两层保护。
         snapshots = self.repo.list_practice_question_snapshots(user_id=user_id, practice_id=practice_id)
         answers = self.repo.list_practice_answers(user_id=user_id, practice_id=practice_id)
         submitted_question_id = str(payload["session_question_id"])
@@ -109,6 +120,9 @@ class PracticeService:
 
     def get_overview(self, user_id: str) -> dict[str, Any]:
         """聚合题库练习首页所需概览数据。"""
+        # 概览页需要按岗位聚合和最近记录两类数据。
+        # 聚合逻辑放在服务层，前端只消费已经整理好的统计口径。
+        # completion_rate 使用 answered_questions / total_questions，且限制在 1.0 以内。
         overview = self.repo.get_practice_overview(user_id=user_id, recent_limit=8)
         role_items: list[dict[str, Any]] = []
         total_questions = 0
@@ -204,6 +218,8 @@ class PracticeService:
         job_role = str(payload["job_role"])
         categories = [str(item).strip() for item in payload.get("category_filters") or [] if str(item).strip()]
         try:
+            # 题库表可能还没有完成导入，这里把底层 no such table 转成业务可读错误。
+            # 其他数据库异常继续抛出，避免把真实故障误报成“题库未准备”。
             rows = self.repo.list_question_bank_items(job_role=job_role, categories=categories)
         except Exception as exc:
             message = str(exc).lower()

@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+# 本地执行服务的设计重点是“足够可控”：
+# 1. 每次执行都在临时目录内写入源码，运行结束目录自动删除。
+# 2. 编译和运行都设置 timeout，避免用户代码无限循环拖住后端进程。
+# 3. 输出会截断，防止大 stdout/stderr 撑爆响应体或数据库记录。
+# 4. RUN 和 SUBMIT 共用执行逻辑，只通过 submit_type 区分业务语义。
+# 5. 当前服务依赖本机 g++/javac/java/node 环境，适合课程项目和本地部署。
 @dataclass(frozen=True)
 class _LanguageConfig:
     """语言执行配置。"""
@@ -30,12 +36,15 @@ class CodeExecutionService:
         """编译代码并批量执行测试用例。"""
         config = self._resolve_config(language)
         with tempfile.TemporaryDirectory(prefix="coding-practice-") as tmpdir:
+            # 临时目录隔离每一次运行，避免不同用户或不同题目的源码互相覆盖。
+            # 这里不复用历史文件，确保判题结果只受当前 source_code 和 cases 影响。
             workdir = Path(tmpdir)
             source_path = workdir / config.source_file
             source_path.write_text(source_code, encoding="utf-8")
 
             compile_result = self._compile_if_needed(workdir, config)
             if compile_result is not None:
+                # 编译失败时不再运行任何测试用例，直接返回统一的 COMPILE_ERROR 结构。
                 return {
                     "status": "COMPILE_ERROR",
                     "passed_count": 0,
@@ -49,6 +58,8 @@ class CodeExecutionService:
             results: list[dict] = []
             passed_count = 0
             for index, case in enumerate(cases, start=1):
+                # 一旦发现首个失败用例就提前返回，减少无意义的后续执行。
+                # 前端只展示失败样例即可帮助用户定位问题。
                 run_result = self._run_once(workdir, config, str(case.get("input") or ""))
                 expected_output = str(case.get("output") or "")
                 normalized_actual = self._normalize_output(run_result["stdout"])
@@ -120,6 +131,8 @@ class CodeExecutionService:
 
     def _compile_java(self, workdir: Path) -> str | None:
         """编译 Java 代码，并在低版本 JDK 环境下自动降级。"""
+        # 优先使用 --release 21 保持题目环境一致。
+        # 如果本地 JDK 不支持 release 21，再回退到普通 javac，提升学生本机兼容性。
         primary_command = ["javac", "--release", "21", "Main.java"]
         compile_error = self._run_compile_command(workdir, primary_command)
         if compile_error is None:

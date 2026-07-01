@@ -8,6 +8,11 @@ from app.repositories.interview_repository import InterviewRepository
 from app.services.report_service import ReportService
 
 
+# ReportWorker 将报告生成从请求链路中拆出来：
+# 1. 面试结束后先写 GENERATING 状态，再异步计算完整报告。
+# 2. worker 读取轮次、会话、简历、JD 快照后交给 ReportService 聚合。
+# 3. 任务集合用于 shutdown 等待，避免应用退出时丢失正在生成的报告。
+# 4. 如果 enqueue 来自非当前事件循环线程，会通过保存的 loop 安全投递任务。
 class ReportWorker:
     """负责异步执行报告生成任务。"""
 

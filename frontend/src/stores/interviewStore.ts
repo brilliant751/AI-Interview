@@ -3,6 +3,13 @@ import { create } from 'zustand'
 import type { ProviderHealthResponse } from '../api/admin'
 import type { PipelineMeta } from '../api/interview'
 
+// 面试 store 保存“当前正在进行的会话”：
+// 1. 页面刷新后的长期恢复主要靠后端接口，store 只保存当前前端运行期状态。
+// 2. pipelineMeta 用于展示本轮是否走了 ASR/LLM/TTS 以及是否降级。
+// 3. providerHealth 是管理端健康信息的轻量缓存，避免每个组件重复请求。
+// 4. setSessionConfig 在创建或恢复会话时重置轮次状态。
+// 5. updateTurnResult 只接收后端确认后的结果，不在本地预测下一阶段。
+
 /** 面试流程状态模型。 */
 interface InterviewState {
   resumeId: string
@@ -72,6 +79,7 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()((se
   ...initialState,
   setResumeId: (resumeId) => set({ resumeId }),
   setSessionConfig: (payload) =>
+    // 新会话开始时清空上一场面试的即时分、降级信息和 provider 状态。
     set({
       interviewId: payload.interviewId,
       jobRole: payload.jobRole,
@@ -89,6 +97,8 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()((se
       providerHealth: null,
     }),
   updateTurnResult: (payload) =>
+    // 每次提交回答后，以后端返回的阶段、题目和分数作为唯一事实来源。
+    // generationMode/lastInputSource 从 pipelineMeta 派生，供页面标签和提示展示。
     set({
       currentStage: payload.stage,
       currentQuestion: payload.question,
@@ -101,6 +111,8 @@ export const useInterviewStore = create<InterviewState & InterviewActions>()((se
     }),
   setProviderHealth: (health) => set({ providerHealth: health }),
   syncSessionStatus: (payload) =>
+    // 恢复暂停会话或轮询任务状态时，只同步服务端确认的字段。
+    // currentQuestion/ttsAudioUrl 未提供时保留原值，避免短暂空响应清掉页面题目。
     set((state) => ({
       currentStage: payload.stage,
       followUpCount: payload.followUpCount,

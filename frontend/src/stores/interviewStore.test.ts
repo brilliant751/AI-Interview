@@ -2,6 +2,13 @@ import { describe, expect, test } from 'vitest'
 
 import { useInterviewStore } from './interviewStore'
 
+// interviewStore 测试说明：
+// 1. 覆盖简历选择、会话配置、轮次结果和 provider health 更新。
+// 2. 所有断言都直接读取 Zustand 状态，不需要渲染页面。
+// 3. reset 在每个关键场景前调用，避免上一个测试残留会话数据。
+// 4. pipelineMeta 派生字段用于页面展示降级信息，需要单独验证。
+// 5. 这些用例保证面试页复杂状态更新有稳定基础。
+
 /** interviewStore 基础行为测试。 */
 describe('interviewStore', () => {
   test('should set resume id and session config', () => {

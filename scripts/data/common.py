@@ -10,6 +10,13 @@ from typing import Iterable
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MATERIAL_ROOT = REPO_ROOT / "material"
 
+# 数据脚本公共约定：
+# 1. REPO_ROOT 统一按脚本位置反推，避免从不同目录运行时路径错乱。
+# 2. discover_material_files 是材料入口清单，后续校验、规范化、构建脚本共用。
+# 3. stable_id 使用内容相关字段生成可重复 ID，保证重复导入不会产生新主键。
+# 4. write_json/write_jsonl 统一负责创建父目录，调用脚本只关心业务数据。
+# 5. JSON 输出全部使用 ensure_ascii=False，方便直接阅读中文报告。
+
 
 def discover_material_files() -> list[dict[str, str]]:
     """发现并返回受支持的材料文件清单。"""
@@ -62,4 +69,3 @@ def write_jsonl(path: Path, rows: Iterable[dict]) -> int:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
             count += 1
     return count
-

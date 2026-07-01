@@ -1,5 +1,12 @@
 import { apiClient } from './client'
 
+// 在线编程练习 API 契约：
+// 1. 题目列表带用户进度，详情通过创建/恢复 session 后获取。
+// 2. RUN 表示自测样例，SUBMIT 表示正式判题，两者共用执行结果结构。
+// 3. source_code 可选，后端会在缺省时回退到题目 starter code。
+// 4. results 设计为 Record<string, unknown>，兼容不同语言和判题错误的扩展字段。
+// 5. 页面层只根据 status/message/passed_count 做展示，不直接理解后端执行细节。
+
 export type CodingLanguage = 'cpp' | 'java' | 'javascript'
 
 export interface CodingPracticeQuestionSummary {
@@ -75,11 +82,13 @@ export interface CodingPracticeRecordsResponse {
 }
 
 export async function fetchCodingPracticeQuestions(): Promise<CodingPracticeQuestionListResponse> {
+  // 列表接口已经合并当前用户进度，页面无需再逐题查询 session。
   const { data } = await apiClient.get<CodingPracticeQuestionListResponse>('/coding-practice/questions')
   return data
 }
 
 export async function createCodingPracticeSession(questionId: string): Promise<CodingPracticeSessionResponse> {
+  // 后端会按 user_id + question_id 创建或恢复会话，因此重复进入同一道题不会丢失上下文。
   const { data } = await apiClient.post<CodingPracticeSessionResponse>('/coding-practice/sessions', {
     question_id: questionId,
   })

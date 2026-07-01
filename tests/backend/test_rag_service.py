@@ -15,6 +15,13 @@ from app.core.config import get_settings  # noqa: E402
 from app.core.errors import ApiError  # noqa: E402
 from app.services.rag_service import RAGService  # noqa: E402
 
+# RAG 服务测试说明：
+# 1. 重点验证 Chroma 缺失、集合不存在、fallback 开关等检索边界。
+# 2. 默认关闭 retrieval fallback，确保缺索引时能暴露明确错误。
+# 3. 需要 fallback 的用例会单独设置环境变量，避免不同策略相互污染。
+# 4. 临时 Chroma 目录保证不会读取开发机真实向量库。
+# 5. 这些测试保护面试提问上下文的可解释失败路径。
+
 
 class RAGServiceTestCase(unittest.TestCase):
     """验证检索服务的显式降级行为。"""

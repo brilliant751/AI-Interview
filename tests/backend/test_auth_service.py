@@ -17,6 +17,14 @@ if sys.version_info >= (3, 11):
 else:
     AuthService = None
 
+# AuthService 单元测试说明：
+# 1. 直接测试服务层逻辑，不经过 FastAPI 路由，便于覆盖细粒度认证规则。
+# 2. 使用审计桩记录 log_auth_event 调用，验证失败和成功路径都有审计记录。
+# 3. 仓储对象在测试内构造，避免依赖真实用户数据。
+# 4. 登录限流、密码哈希、token 签发和 reset token 都属于该文件关注范围。
+# 5. Python 版本兼容分支用于规避旧解释器对依赖或类型语法的限制。
+# 6. deepcopy 用于确保测试数据被服务层处理后不会污染后续断言。
+
 
 class _AuditStub:
     """认证审计桩实现。"""

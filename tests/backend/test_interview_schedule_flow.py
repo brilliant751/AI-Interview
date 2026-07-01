@@ -15,6 +15,14 @@ sys.path.append("backend")
 from app.core.config import get_settings  # noqa: E402
 from app.main import create_app  # noqa: E402
 
+# 面试预约集成测试说明：
+# 1. 覆盖预约创建、列表、详情、取消、到点开始和面试完成后的状态回写。
+# 2. 时间统一使用 Asia/Shanghai，贴近产品页面的本地时间语义。
+# 3. 测试会直接访问 repo 调整时间或状态，用于构造 ready/missed 等边界场景。
+# 4. 预约开始最终会调用面试服务，因此也能验证 schedule 与 interview 的衔接。
+# 5. 日历链接和 ICS 下载属于用户可见输出，需要通过接口层回归保护。
+# 6. 每个测试使用独立临时数据库，避免时间敏感状态互相影响。
+
 
 class InterviewScheduleFlowTestCase(unittest.TestCase):
     """覆盖预约创建、查询、取消、开始与完成回写。"""

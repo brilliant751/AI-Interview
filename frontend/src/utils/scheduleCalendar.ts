@@ -1,5 +1,12 @@
 import type { InterviewScheduleListItem } from '../api/interview'
 
+// 预约日历工具函数保持纯函数：
+// 1. 页面传入 Date 或 ISO 字符串，这里统一转换成本地日期键。
+// 2. 月历固定生成 6 周 42 格，便于 UI 网格尺寸稳定。
+// 3. 周一作为第一列，更符合中文用户的日历习惯。
+// 4. groupSchedulesByDate 会按开始时间排序，页面渲染时不用再排序。
+// 5. 工具层不依赖 React，方便单元测试覆盖。
+
 /** 将时间转换为本地日期键。 */
 export function toDateKey(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value)
@@ -40,6 +47,8 @@ export function isSameMonth(left: Date, right: Date): boolean {
 
 /** 按日期分组预约列表。 */
 export function groupSchedulesByDate(items: InterviewScheduleListItem[]): Map<string, InterviewScheduleListItem[]> {
+  // Map 的 key 是 yyyy-MM-dd，本地日期语义与页面日历格保持一致。
+  // 同一天多个预约按 scheduled_start_at 升序展示。
   const grouped = new Map<string, InterviewScheduleListItem[]>()
   for (const item of items) {
     const key = toDateKey(item.scheduled_start_at)

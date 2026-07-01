@@ -1,5 +1,12 @@
 import { apiClient } from './client'
 
+// 面试 API 类型与后端 Pydantic Schema 对齐：
+// 1. 创建会话、预约、轮次提交、报告播放都从这里统一导出。
+// 2. 前端页面不要直接拼响应字段，优先复用这些 interface。
+// 3. status/stage 等字符串枚举尽量在类型层收窄，减少页面条件判断拼写错误。
+// 4. 语音模式字段可选，因为文本模式不会返回 tts_audio_url。
+// 5. 预约相关字段保留日历链接，页面可以直接渲染 Google/Outlook 入口。
+
 /** 创建会话请求体。 */
 export interface CreateInterviewPayload {
   resume_id: string
@@ -421,6 +428,8 @@ export interface CompanyListResponse {
 
 /** 上传简历并返回简历 ID。 */
 export async function uploadResume(file: File): Promise<{ resume_id: string; parse_status: string }> {
+  // 简历上传必须走 multipart/form-data。
+  // apiClient 仍会自动追加鉴权和幂等头，后端据此避免重复上传记录。
   const formData = new FormData()
   formData.append('file', file)
   const { data } = await apiClient.post('/resumes', formData, {
@@ -431,6 +440,8 @@ export async function uploadResume(file: File): Promise<{ resume_id: string; par
 
 /** 查询简历列表。 */
 export async function fetchResumes(params: { page: number; page_size: number }): Promise<ResumeListResponse> {
+  // 简历列表用于管理页、准备页和面试页弹窗。
+  // 分页参数由页面决定，API 层只保持后端字段命名。
   const { data } = await apiClient.get<ResumeListResponse>('/resumes', { params })
   return data
 }
@@ -442,12 +453,16 @@ export async function deleteResume(resumeId: string): Promise<void> {
 
 /** 获取简历原始文件（二进制）。 */
 export async function fetchResumeFile(resumeId: string): Promise<Blob> {
+  // 预览 PDF/DOC 文件时需要 Blob，不能按 JSON 解析响应。
+  // 调用方负责创建和释放 object URL。
   const { data } = await apiClient.get(`/resumes/${resumeId}/file`, { responseType: 'blob' })
   return data as Blob
 }
 
 /** 创建面试会话。 */
 export async function createInterview(payload: CreateInterviewPayload): Promise<CreateInterviewResponse> {
+  // 同一个接口既支持立即面试，也支持带 scheduled_start_at 的预约会话。
+  // 页面必须根据 response.status 决定跳转面试页还是提示预约成功。
   const { data } = await apiClient.post('/interviews', payload)
   return data
 }
@@ -468,6 +483,8 @@ export async function fetchInterviewSchedules(params: {
   date_from?: string
   date_to?: string
 }): Promise<InterviewScheduleListResponse> {
+  // 这是预约管理页使用的 schedule 维度接口。
+  // date_from/date_to/status 用于筛选日历范围和列表状态。
   const { data } = await apiClient.get<InterviewScheduleListResponse>('/interview-schedules', { params })
   return data
 }
@@ -486,6 +503,8 @@ export async function cancelInterviewSchedule(scheduleId: string, reason = ''): 
 
 /** 开始预约面试。 */
 export async function startInterviewSchedule(scheduleId: string): Promise<InterviewScheduleStartResponse> {
+  // schedule 维度的 start 会把预约状态推进为 in_progress，并返回面试会话信息。
+  // 成功后页面需要把 first_question 同步进 interviewStore。
   const { data } = await apiClient.post<InterviewScheduleStartResponse>(`/interview-schedules/${scheduleId}/start`)
   return data
 }
@@ -507,6 +526,8 @@ export async function submitTurn(
   interviewId: string,
   payload: SubmitTurnPayload,
 ): Promise<SubmitTurnJobResponse> {
+  // 文本提交不会直接返回下一题，而是返回异步 job。
+  // 前端通过 fetchTurnJobResult 轮询，避免 LLM/TTS 处理期间阻塞 UI。
   const { data } = await apiClient.post(`/interviews/${interviewId}/turns`, payload)
   return data
 }
@@ -516,6 +537,8 @@ export async function submitAudioTurn(
   interviewId: string,
   payload: SubmitAudioTurnPayload,
 ): Promise<SubmitTurnJobResponse> {
+  // 音频提交同样返回 job_id。
+  // stage 放在 form 字段中，file 放二进制，后端会进行 ASR 后复用轮次处理逻辑。
   const formData = new FormData()
   formData.append('stage', payload.stage)
   formData.append('file', payload.file)
@@ -530,12 +553,16 @@ export async function fetchTurnJobResult(
   interviewId: string,
   jobId: string,
 ): Promise<SubmitTurnJobResultResponse> {
+  // PROCESSING 状态下 result 为 null，READY 时才包含 SubmitTurnResponse。
+  // interviewId 放在路径中，后端会校验 job 是否属于该会话。
   const { data } = await apiClient.get(`/interviews/${interviewId}/turn-jobs/${jobId}`)
   return data
 }
 
 /** 结束面试并触发报告。 */
 export async function finishInterview(interviewId: string): Promise<{ report_status: string }> {
+  // finish 可能触发报告生成和数据库状态写入，超时时间略长于普通请求。
+  // 返回后报告仍可能处于 GENERATING，页面需要跳转报告页继续查询。
   const { data } = await apiClient.post(`/interviews/${interviewId}/finish`, undefined, { timeout: 30000 })
   return data
 }
@@ -548,6 +575,8 @@ export async function pauseInterview(interviewId: string): Promise<{ interview_i
 
 /** 查询面试报告。 */
 export async function fetchReport(interviewId: string): Promise<ReportResponse> {
+  // 报告接口会返回 GENERATING/READY/FAILED 三种状态。
+  // READY 前各结构化数组可能为空，页面应按 status 分支渲染。
   const { data } = await apiClient.get(`/report/${interviewId}`)
   return data
 }
@@ -585,6 +614,8 @@ export async function fetchInterviewStatus(
   interviewId: string,
   params?: { status?: 'ACTIVE' | 'PAUSED' },
 ): Promise<InterviewStatusResponse> {
+  // 状态接口用于恢复会话、轮询阶段和获取累计时长。
+  // params.status 兼容“恢复暂停会话”场景，由后端决定是否推进状态。
   const { data } = await apiClient.get<InterviewStatusResponse>(`/interviews/${interviewId}/status`, { params })
   return data
 }
@@ -601,6 +632,8 @@ export async function fetchScheduledInterviews(params: {
   scheduled_to?: string
   statuses?: string[]
 }): Promise<ScheduledInterviewListResponse> {
+  // 这是 interview session 维度的预约列表，供面试大厅和顶部提醒使用。
+  // statuses 数组按逗号拼接，保持 URL 查询参数简洁。
   const { data } = await apiClient.get<ScheduledInterviewListResponse>('/interviews/schedules', {
     params: {
       scheduled_from: params.scheduled_from,
@@ -625,6 +658,8 @@ export async function uploadJd(payload: {
   content_text?: string
   company_id?: string
 }) {
+  // JD 支持文件上传和纯文本录入，两种方式统一走 FormData。
+  // title、content_text、company_id 都是可选字段，后端负责最终归一化。
   const formData = new FormData()
   formData.append('job_role', payload.job_role)
   if (payload.title) {

@@ -12,6 +12,13 @@ sys.path.append("backend")
 
 from app.services.code_execution_service import CodeExecutionService  # noqa: E402
 
+# 代码执行服务测试说明：
+# 1. 通过 mock subprocess.run 验证编译命令选择和错误映射，不真实执行用户代码。
+# 2. Java release 21 降级是本地环境兼容关键点，需要防止重构时被移除。
+# 3. 输出截断、超时和首个失败用例返回也是判题体验的重要边界。
+# 4. 测试只关心 CodeExecutionService 的行为，不依赖数据库或 FastAPI 应用。
+# 5. 使用 CompletedProcess 构造子进程结果，保持断言接近真实 subprocess 行为。
+
 
 class CodeExecutionServiceTestCase(unittest.TestCase):
     """验证代码执行服务的关键降级逻辑。"""

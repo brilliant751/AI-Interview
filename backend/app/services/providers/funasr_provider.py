@@ -14,6 +14,11 @@ from app.core.config import get_settings
 from app.core.errors import ApiError
 
 
+# FunASRProviderClient 是本地 ASR SDK 适配器：
+# 1. 模型采用惰性加载，只有真正收到语音识别请求时才初始化。
+# 2. 识别前会把输入音频写入临时文件，适配 SDK 常见的文件路径接口。
+# 3. 候选模型按配置优先、默认模型兜底的顺序尝试，提升本地环境兼容性。
+# 4. 所有 SDK 初始化或推理失败都转换成 ApiError，便于 VoiceService 统一处理。
 class FunASRProviderClient:
     """封装本地 FunASR 的语音识别调用。"""
 
@@ -46,6 +51,7 @@ class FunASRProviderClient:
                 continue
             tried.append(model_name)
             try:
+                # 逐个尝试候选模型，避免某个配置模型缺失时直接让整个 ASR 不可用。
                 return AutoModel(model=model_name, device=self.settings.asr_device)
             except Exception:
                 continue

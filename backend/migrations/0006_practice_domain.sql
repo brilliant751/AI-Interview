@@ -2,6 +2,11 @@
 -- 说明：
 -- 1. 该脚本显式重建 legacy weak practice 表，避免 CREATE TABLE IF NOT EXISTS 静默保留旧约束。
 -- 2. 复制规则与仓储启动升级逻辑保持一致：保留合法数据，按 created_at/session_question_id/rowid 的稳定顺序去重。
+-- 3. practice_sessions 保存一次练习会话的元信息。
+-- 4. practice_session_questions 保存题目快照，保证历史练习可回放。
+-- 5. practice_answers 用唯一约束防止同一题重复提交。
+-- 6. foreign_keys 临时关闭是为了兼容旧表重建和数据迁移顺序。
+-- 7. 迁移结束后应恢复外键检查，保持后续写入一致性。
 
 PRAGMA foreign_keys=OFF;
 

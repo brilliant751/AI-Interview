@@ -17,6 +17,12 @@ from app.services.coding_practice_service import CodingPracticeService
 
 router = APIRouter(prefix="/coding-practice", tags=["coding-practice"])
 
+# 在线编程接口保持轻量：
+# 1. 路由层只接收题目、会话、运行和提交请求。
+# 2. 题目进度合并、会话归属校验、判题调用全部放在 CodingPracticeService。
+# 3. 所有接口都需要登录用户，避免编程记录和草稿被匿名访问。
+# 4. RUN 用于自测，SUBMIT 用于正式判题，二者响应结构保持一致。
+
 
 def get_service(request: Request) -> CodingPracticeService:
     """从应用状态获取编程练习服务。"""
